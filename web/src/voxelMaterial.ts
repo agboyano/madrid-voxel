@@ -4,7 +4,7 @@ import { FOLIAGE_CLASSES } from './foliage';
 import { dataTexture } from './util';
 
 // material ids, as in scripts/voxelize.py
-export const MAT = { SOLID: 0, WALL: 1, GLASS: 2, LEAF: 3, WATER: 4, LAMP: 5, METAL: 6, PKIN: 7, GRASS: 8, MARK: 9, SOIL: 10, CAR: 11,
+export const MAT = { SOLID: 0, WALL: 1, GLASS: 2, LEAF: 3, WATER: 4, LAMP: 5, METAL: 6, FLOODLIT: 7, GRASS: 8, MARK: 9, SOIL: 10, CAR: 11,
   ROOF: 12, CONCRETE: 13, CLOCK: 14, BRONZE: 15, SIGN: 16, JET: 17, SIGNBAND: 18, RIBBON: 19, CLASSIC: 20, WINDOW: 21, TENEMENT: 22 } as const;
 
 type U<T> = { value: T };
@@ -33,7 +33,7 @@ export interface VoxelUniforms {
   uWinFloors: U<number[]>;
   uWinCol: U<THREE.Vector3[]>;
   uAlbedo: U<number>;
-  uPkinLight: U<THREE.Color>;
+  uFloodlight: U<THREE.Color>;
   uStage: U<number>;
   uBldOn: U<THREE.Texture>;
   uZOn: U<number>;
@@ -68,7 +68,7 @@ export function makeUniforms(meta: Meta): VoxelUniforms {
     uWinFloors: { value: new Array(8).fill(0) },
     uWinCol: { value: Array.from({ length: 8 }, () => new THREE.Vector3(0.7, 0.25, 0.05)) },
     uAlbedo: { value: 0.7 },
-    uPkinLight: { value: new THREE.Color(0.95, 0.74, 0.4) },
+    uFloodlight: { value: new THREE.Color(0.95, 0.74, 0.4) },
     uStage: { value: 0 },
     uBldOn: { value: tiny(THREE.RedFormat, new Uint8Array(1)) },
     uZOn: { value: 0 },
@@ -174,7 +174,7 @@ const ZONES_PARS = `
 const FRAG_PARS = `
   uniform sampler2D uPalette; uniform sampler2D uLampMap;
   uniform vec2 uSize; uniform float uNight; uniform float uTime; uniform vec3 uHorizon;
-  uniform float uDrop; uniform sampler2D uFlood; uniform float uWet; uniform float uSnow; uniform float uAlbedo; uniform vec3 uPkinLight;
+  uniform float uDrop; uniform sampler2D uFlood; uniform float uWet; uniform float uSnow; uniform float uAlbedo; uniform vec3 uFloodlight;
   varying vec3 vVox; varying vec3 vN; varying float vAO; varying float vGz; flat varying int vPal; varying float vHide;
   float hash13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
   float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -273,9 +273,9 @@ const SURFACE = `
       vec2 zone = vec2(floor(u / 12.0) + wpos * 13.7 + vN.x * 2.3, floor(lvl / 4.0) + vN.z * 4.1);
       gEmissive = windowLight(cell, zone, floor(lvl / 4.0)) * uNight;
     } else { gRough = 0.4; gMetal = 0.3; }
-  } else if (m == ${MAT.PKIN}) {
+  } else if (m == ${MAT.FLOODLIT}) {
     float tower = smoothstep(20.0, 28.0, lvl), wash = 1.0 - 0.3 * smoothstep(28.0, 190.0, lvl);
-    vec3 light = mix(vec3(1.0, 0.78, 0.5) * 0.6 * (1.0 - 0.6 * smoothstep(4.0, 18.0, lvl)), uPkinLight * wash * 2.4, tower);
+    vec3 light = mix(vec3(1.0, 0.78, 0.5) * 0.6 * (1.0 - 0.6 * smoothstep(4.0, 18.0, lvl)), uFloodlight * wash * 2.4, tower);
     gEmissive = vert ? col * light * uNight : vec3(0.0);
   } else if (m == ${MAT.WINDOW}) {
     gRough = 0.15; gMetal = 0.35;

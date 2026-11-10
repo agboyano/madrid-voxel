@@ -116,13 +116,6 @@ export class Sky {
   }
 }
 
+// floodlit landmarks (material FLOODLIT) at night: warm white
 const WARM = new THREE.Color(0.95, 0.74, 0.4);
-const PKIN_COLOURS = [0xa890e0, 0x30d060, 0xf070a8, 0x4a80ff, 0xffffff];
-export function pkinLight(day: number, t: number, out: THREE.Color) {
-  const r = Math.abs(Math.sin(day * 91.17 + 7.3)) * 1e4 % 1;
-  if (r < 0.6) return out.copy(WARM);
-  if (r < 0.9) return out.set(PKIN_COLOURS[Math.floor((r - 0.6) / 0.3 * PKIN_COLOURS.length)]).convertSRGBToLinear().lerp(WARM, 0.35);
-  const k = t / 6, i = Math.floor(k) % PKIN_COLOURS.length, f = k % 1;
-  return out.set(PKIN_COLOURS[i]).convertSRGBToLinear().lerp(new THREE.Color(PKIN_COLOURS[(i + 1) % PKIN_COLOURS.length]).convertSRGBToLinear(), smoothF(f)).lerp(WARM, 0.35);
-}
-const smoothF = (x: number) => x * x * (3 - 2 * x);
+export function floodlight(out: THREE.Color) { return out.copy(WARM); }

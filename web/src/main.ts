@@ -4,7 +4,6 @@ import { Bar } from './bar';
 import { Caption } from './caption';
 import { installCity } from './city';
 import { Daylight } from './daylight';
-import { Flood } from './flood';
 import { loadFoliage } from './foliage';
 import { loadWindows } from './windows';
 import { Fountains } from './fountains';
@@ -21,7 +20,7 @@ import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
 import { dateOf, dayOfYear, hourAt, setSite, solarNoon } from './sun';
 import { $, coarsePointer, ease, el, fetchJson, lerp } from './util';
-import { pkinLight } from './sky';
+import { floodlight } from './sky';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
 import type { World } from './world';
 import { makeUniforms, makeVoxelMaterial } from './voxelMaterial';
@@ -30,9 +29,6 @@ import './style.css';
 declare global {
   interface Window { __ready?: boolean; __three?: object; __life?: StreetLife; __streamer?: TileStreamer }
 }
-
-// Warszawa-Bulwary gauge, cm (scale since 1 Nov 2025)
-const RIVER = { 'tiny creek': -355, 'record low': 104, typical: 185, '2010 flood': 879, '1844 flood': 963 }; // below the record, the estimated bed (scripts/flood.py)
 
 const TODAY = dayOfYear(new Date());
 const DAYS = { midsummer: 172, midwinter: 355, today: TODAY };
@@ -57,15 +53,15 @@ const controls = makeControls();
 const post = makePost(renderer, scene, camera);
 const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);
-const bar = new Bar({ days: DAYS, weathers: ['typical', ...Object.keys(WEATHERS)], river: RIVER, onDay: (d) => { setDay(d); share(); trackLater('date', { day: d }); },
+const bar = new Bar({ days: DAYS, weathers: ['typical', ...Object.keys(WEATHERS)], onDay: (d) => { setDay(d); share(); trackLater('date', { day: d }); },
   onDayEnd: () => { if (weatherName === 'typical') setWeather('typical'); },
   onHour: (h) => { setHour(h); share(); trackLater('hour', { hour: +h.toFixed(1) }); },
-  onWeather: (w) => { setWeather(w); share(); track('weather', { weather: w }); }, onRiver: (cm) => { flood?.setGauge(cm); trackLater('river', { cm }); } });
+  onWeather: (w) => { setWeather(w); share(); track('weather', { weather: w }); } });
 const precip = new Precip(scene);
 const map = new THREE.Box3();
 const tiltShift = qs.get('tilt') !== '0' && innerWidth >= 600 && !phone;
 let world: World | null = null, labels: Labels | null = null, hud: Hud | null = null;
-let life: StreetLife | null = null, flood: Flood | null = null, fountains: Fountains | null = null;
+let life: StreetLife | null = null, fountains: Fountains | null = null;
 let city: Awaited<ReturnType<typeof installCity>> | null = null;
 let uniforms: ReturnType<typeof makeUniforms> | null = null, streamer: TileStreamer | null = null, views: Record<string, View> = {};
 let fly: ((now: number) => void) | null = null;
@@ -78,8 +74,6 @@ perf.show(level);
 let setWindows: ((hour: number, day: number) => void) | null = null;
 
 nav.cancelFly = () => { fly = null; };
-bar.setRiver(RIVER.typical);
-bar.showRiver(false);
 new ResizeObserver(() => { barRect = null; }).observe(bar.el);
 el('div', '', `<div>by Agboyano, based on <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">warsaw-vibe-voxel</a> by Piotr Migdał</div>
   <div>PNOA-LiDAR and PNOA © IGN/CNIG, Catastro, Ayuntamiento de Madrid and <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></div>`).id = 'credits';
@@ -289,8 +283,6 @@ async function boot() {
   fetchJson<{ places: Place[] }>('data/places.json').then(({ places }) => bar.search.setItems([...searchItems(meta),
     ...places.map(([name, kind, x, y, size, alt]) => ({ name, alt, kind, go: () => goPlace(x, y, size, { name, kind }) }))]));
   fountains = new Fountains(scene, meta.jets ?? []);
-  flood = new Flood(scene, uniforms, meta);
-  flood.load().then(() => { bar.river.input.disabled = false; flood!.setGauge(RIVER.typical); }).catch((e) => console.warn('flood', e));
   fetchJson<TrafficData>('data/traffic.json').then((td) => {
     life = nav.life = new StreetLife(scene, td);
     life.world = world;
@@ -301,7 +293,7 @@ async function boot() {
   window.__ready = true;
 }
 
-let lastT = performance.now(), riverT = 0, riverSeen = -1e9;
+let lastT = performance.now();
 const frames: number[] = [];
 const t0 = lastT;
 renderer.setAnimationLoop((now) => {
@@ -317,7 +309,7 @@ renderer.setAnimationLoop((now) => {
   const viewDist = camera.position.distanceTo(controls.target);
   daylight.setFogFrom(viewDist);
   const t = (performance.now() - t0) / 1000;
-  if (uniforms) { uniforms.uTime.value = t; pkinLight(daylight.day, t, uniforms.uPkinLight.value); }
+  if (uniforms) { uniforms.uTime.value = t; floodlight(uniforms.uFloodlight.value); }
   setWindows?.(daylight.hour, daylight.day);
   fountains?.update(t, daylight.night);
   precip.update(t, camera.position, daylight.weather, daylight.night);
@@ -337,11 +329,6 @@ renderer.setAnimationLoop((now) => {
   if (daylight.redraws !== redraws) busy = true;
   perf.frame(now, document.hidden, renderer.info.render.triangles);
   report(now);
-  if (flood && now - riverT > 250) {
-    riverT = now;
-    if (flood.inView(camera, 2500) || Math.abs(bar.river.value - RIVER.typical) > 20) riverSeen = now;
-    bar.showRiver(now - riverSeen < 2000);
-  }
   barRect ??= bar.rect;
   labels?.update(camera, world, barRect, [...(hud?.rects ?? []), ...perf.rects]);
 });

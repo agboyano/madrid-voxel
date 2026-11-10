@@ -47,7 +47,7 @@ export class LifeMeshes {
       std({ vertexColors: true, roughness: 0.15, metalness: 0.5 }), C, { shadow: true });
     this.head = instanced(merge(box(0.4, 0.2, 0.1, -0.6, 0.65, 2.2), box(0.4, 0.2, 0.1, 0.6, 0.65, 2.2)), this.headMat, C);
     this.tail = instanced(merge(box(0.4, 0.2, 0.1, -0.6, 0.7, -2.2), box(0.4, 0.2, 0.1, 0.6, 0.7, -2.2)), new THREE.MeshBasicMaterial({ color: 0xffffff }), C, { color: true });
-    const L = tramSection; // Warsaw livery: yellow body, red skirt, light roof gear
+    const L = tramSection; // default livery (Warsaw's: yellow body, red skirt, light roof gear); no trams in central Madrid
     this.tram = instanced(merge(box(2.4, 0.9, L, 0, 0.15, 0, 0xc8322b), box(2.4, 1.9, L, 0, 1.05, 0, 0xf2c230), box(2.0, 0.35, L - 0.8, 0, 2.95, 0, 0xd9d6cf)),
       std({ vertexColors: true, roughness: 0.45, metalness: 0.1 }), MAX_TRAM_SECTIONS, { shadow: true });
     this.tramWin = instanced(box(2.46, 0.85, L - 1.2, 0, 1.6, 0), this.tramWinMat, MAX_TRAM_SECTIONS);

@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { hash, pushTo, smooth } from '../util';
 import type { World } from '../world';
 import { findCrossings } from './crossings';
-import { drawDancers, DANCE } from './dance';
 import { LifeMeshes, MAX_BIKES, MAX_CARS, MAX_PEOPLE, MAX_TRAM_SECTIONS, setCount } from './meshes';
 import { at, cellKey, landingLane, prepPath, pt, Turn, turnOf, type Pt } from './path';
 import { Trains } from './trains';
@@ -53,7 +52,6 @@ export class StreetLife {
   riders: Person[] = [];
   day = 180;
   private t = 0;
-  private hour = 12;
   private acc = 0;
   private readonly M: LifeMeshes;
   private readonly roads: Road[];
@@ -110,7 +108,7 @@ export class StreetLife {
     dt = Math.min(dt, 0.1);
     const A = this.active;
     if (!A || (A.x - focus.x) ** 2 + (A.z - focus.z) ** 2 > 120 * 120) this.setActive(focus.x, focus.z);
-    const hh = this.hour = ((hour % 24) + 24) % 24;
+    const hh = ((hour % 24) + 24) % 24;
     const bell = (c: number, w: number) => Math.exp(-(((hh - c) / w) ** 2));
     const density = {
       cars: Math.min(1, 0.18 + 0.55 * bell(8, 2.2) + 0.5 * bell(17, 2.6) + 0.45 * bell(13, 5)),
@@ -643,8 +641,7 @@ export class StreetLife {
     this.drawTrams(back, night);
     this.trains.render(0, night);
     const n = this.drawPeople(dt, lead) + this.drawRiders(dt, lead, this.people.length);
-    const nd = drawDancers(this.M, n, MAX_PEOPLE + MAX_BIKES, this.t, this.hour, this.world?.groundAt(DANCE.x, DANCE.y) ?? 0);
-    setCount(n + nd, this.M.legs, this.M.torso);
+    setCount(n, this.M.legs, this.M.torso);
     this.drawSignals();
   }
 

@@ -16,10 +16,10 @@ const CAR = 20, GAP = 1, V = 16, A = 0.7, B = 0.9, DWELL = 25, HEADWAY = 1800, S
 const MAX_CARS = 240;
 // liveries: [body, lower band, stripe]; cars per train
 const LIVERY: [RegExp, number, number, number, number][] = [
-  [/Szybka Kolej Miejska|SKM/i, 0xf2c230, 0xc8322b, 0xc8322b, 4],
-  [/Mazowieckie|\bKM\b/i, 0xeef0ec, 0x23824a, 0xf2c230, 5],
-  [/Polregio/i, 0xeceae6, 0xb8202e, 0x8c1c26, 3],
-  [/Intercity|PKPIC|PKP|DB|ČD|ÖBB|EC|IC/i, 0xdfe2e4, 0x1d3d6e, 0xd8892b, 8],
+  [/Cercanías|Rodalies|\bC-?\d/i, 0xeeeeea, 0xc8202e, 0x8c1c26, 3],  // Renfe Cercanías: white, red lower band
+  [/Iryo/i, 0xeae6e2, 0xb3122e, 0xb3122e, 8],
+  [/Ouigo/i, 0x2bb6d6, 0xe0257a, 0xe0257a, 8],
+  [/Renfe|AVE|Alvia|Avlo|Intercity|Media Distancia/i, 0xe6e8ea, 0x6a1f7a, 0xd8892b, 8],
 ];
 const OTHER: [number, number, number, number] = [0xe6e8ea, 0x3a4f63, 0x3a4f63, 4];
 const livery = (op: string, ref: string) => { const l = LIVERY.find(([re]) => re.test(op) || re.test(ref)); return l ? LIVERY.indexOf(l) : LIVERY.length; };
