@@ -1,7 +1,8 @@
 """Area of interest shared by all pipeline steps.
 
-Centre, size and rotation of the Madrid grid are the parameters below. The names exported to the rest of the
-pipeline (CX, CY, THETA, W, D, I0, J0, RAW, EU, EV, to_grid, to_world, world_bounds) keep the Warsaw interface;
+Centre, size and rotation of the Madrid grid come from pipeline.toml ([aoi] area and [areas.<name>]). The names
+exported to the rest of the pipeline (CX, CY, THETA, W, D, I0, J0, RAW, EU, EV, to_grid, to_world, world_bounds) keep
+the Warsaw interface;
 the cache path, lon/lat helpers, corners and the raster affine are adapted from dtla-voxel's aoi.py and
 fetch_dem.py (https://github.com/sigman78/dtla-voxel, MIT, see LICENSE-dtla-voxel).
 
@@ -12,6 +13,7 @@ northern edge.
 """
 import math
 import os
+import tomllib
 from pathlib import Path
 
 import numpy as np
@@ -22,15 +24,19 @@ from pyproj import Transformer
 VOXEL_SIZE = 1.0
 
 CRS = "EPSG:25830"
-# Puerta del Sol: centre of the OSM square (relation 7424032, wikidata Q427163).
-CX, CY = 440316.4, 4474264.1
-THETA = math.radians(0.0)  # grid rotation, counter-clockwise from east
-SIZE_X, SIZE_Y = 500.0, 500.0  # metres along +i and +j: the Phase 1 test area
+ROOT = Path(__file__).resolve().parent.parent
+# the area to build: centre, size and rotation from pipeline.toml ([aoi] area, or $MADRID_AREA)
+with open(ROOT / "pipeline.toml", "rb") as _f:
+    _cfg = tomllib.load(_f)
+AREA_NAME = os.environ.get("MADRID_AREA") or _cfg["aoi"]["area"]
+_a = _cfg["areas"][AREA_NAME]
+CX, CY = (float(v) for v in _a["centre"])
+THETA = math.radians(float(_a["rotation"]))  # grid rotation, counter-clockwise from east
+SIZE_X, SIZE_Y = (float(v) for v in _a["size"])  # metres along +i and +j
 
 W, D = round(SIZE_X / VOXEL_SIZE), round(SIZE_Y / VOXEL_SIZE)
 I0, J0 = W / 2, D / 2  # grid position of the centre
 
-ROOT = Path(__file__).resolve().parent.parent
 # Raw downloads and big intermediates live outside the repository.
 CACHE = Path(os.environ.get("MADRID_CACHE", Path.home() / "data" / "madrid-voxel-cache"))
 RAW = str(CACHE / "raw")  # downloads that do not depend on the AOI: LiDAR tiles, the whole tree inventory, climate

@@ -17,9 +17,9 @@ from pathlib import Path
 
 import laspy
 
-from aoi import CRS, RAW, bbox_lonlat, world_bounds
+from aoi import AREA_NAME, CRS, RAW, bbox_lonlat, world_bounds
 
-MARGIN = 50  # metres around the AOI, for edge cells and neighbourhood filters
+MARGIN = 0  # metres around the AOI: none, prep_lidar.py rasterises only the points inside it
 TILE = 1000  # metres, the CNIG distribution grid
 DIR = Path(RAW) / "pnoa_lidar"
 SERIES_URL = "https://centrodedescargas.cnig.es/CentroDescargas/lidar-tercera-cobertura"
@@ -75,7 +75,7 @@ Download them by hand (the CNIG download centre requires a reCAPTCHA):
      (series "LiDAR 3a Cobertura (2022-2025)", product "Nube de puntos clasificada", NPC02).
   2. Search by coordinates or on the map for the area
        {CRS}: X {x0:.0f} to {x1:.0f}, Y {y0:.0f} to {y1:.0f}
-       lon/lat: {w:.5f} to {e:.5f}, {s:.5f} to {n:.5f} (around Puerta del Sol)
+       lon/lat: {w:.5f} to {e:.5f}, {s:.5f} to {n:.5f} (area "{AREA_NAME}" in pipeline.toml)
      and pick the LAZ files (NPC02, 2024 flight, huso 30) whose 1 km square covers it.
   3. Save the .laz files, unrenamed, in:
        {DIR}

@@ -1,5 +1,24 @@
 # Pipeline configuration. Change values here, not in the scripts.
 
+[aoi]
+# Which area to build: a key of [areas] below. MADRID_AREA=<key> in the environment overrides it.
+area = "full"
+
+# Each area: centre (EPSG:25830 x, y), size in metres along the grid's +i and +j, rotation in degrees (counter-clockwise
+# from east). Downloads and rasters are cached per area ($MADRID_CACHE/areas/<key>).
+[areas.sol]
+# Phase 1-3 test area: 500 m around Puerta del Sol (centre of the OSM square, relation 7424032)
+centre = [440316.4, 4474264.1]
+size = [500, 500]
+rotation = 0
+
+[areas.full]
+# Templo de Debod / Plaza de Espana to the east edge of the Retiro, Glorieta de Bilbao to Atocha
+# (X 439 000 - 442 750, Y 4 472 950 - 4 475 700)
+centre = [440875.0, 4474325.0]
+size = [3750, 2750]
+rotation = 0
+
 [elevation]
 # Which point cloud feeds elevation and classification: a key of SOURCES in scripts/prep_lidar.py.
 source = "pnoa_npc02"
