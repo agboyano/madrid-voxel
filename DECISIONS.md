@@ -55,3 +55,15 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** `fetch_pnoa_lidar.py` does not download; it lists the tiles needed, validates the LAZ files placed in the cache by their headers and prints manual instructions.
 - **Reason:** the CNIG download centre protects downloads with reCAPTCHA and refuses scripted searches. `CLAUDE.md` rule 5 asks for manual instructions instead of alternative sources or workarounds.
 - **Rejected:** scripting the CNIG site; third-party mirrors of the PNOA files.
+
+## 2026-11-11: Keep the PNOA orthophoto for roof and vegetation colours
+
+- **Decision:** use the IGN PNOA orthophoto (July 2023, 0.25 m) for colours.
+- **Reason:** approved at Checkpoint 1; it is already downloaded, aligns with Catastro and the trees, and is a leaf-on summer image.
+- **Rejected:** the Ayuntamiento Geoportal orthophoto (not evaluated); the LiDAR points' own RGB (March 2024, leaf-off).
+
+## 2026-11-11: Overlap points (class 12) for heights, class from neighbours
+
+- **Decision:** use class 12 (overlap) points for surface heights, and take their semantic class from the non-overlap points of the same cell or its neighbours.
+- **Reason:** 42 % of the points in the AOI are class 12, largely on roofs; they are valid measurements but carry no ground, building or vegetation class. Approved at Checkpoint 1.
+- **Rejected:** dropping overlap points (halves the density, more empty cells); treating them as unclassified.
