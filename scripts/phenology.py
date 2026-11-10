@@ -1,25 +1,22 @@
-"""When each kind of tree leafs out, colours and drops its leaves, from two open sources:
+"""When each kind of tree leafs out, colours and drops its leaves, for Madrid's commonest trees.
 
-- the German Weather Service's phenological network (DWD, annual reporters, wild plants), stations east of 12.5° E
-  (Brandenburg, Berlin, Saxony: the closest climate to Warsaw's in the network), 1995-2024. Phases: 4 leaf unfolding
-  begins, 31 autumn colouring (half the leaves coloured), 32 leaf fall (half fallen); 61, 63, 64 the same for the larch.
-  Per species the median day and the spread between trees in one year (station dates around that year's mean).
-- iNaturalist's "Leaves" annotations (breaking buds, green, coloured) on research-grade-able observations in Poland,
-  Germany, Czechia, Slovakia and Lithuania, per week of the year: for what the DWD does not record (Norway maple, lindens
-  and poplars have no leaf or autumn series there, ash and robinia no autumn one). Colouring: the day coloured
-  observations outnumber green ones; leaf-out: the mean day of breaking buds. Both shifted by their median offset from
-  the DWD dates for the species both sources have. Leaf fall: colouring plus the DWD's median gap between the two.
-A phase neither source gives takes the median over the classes.
+Classes: the 13 commonest deciduous genera of the municipal inventory (Platanus, Styphnolobium, Aesculus, Ulmus,
+Celtis, Acer, Prunus, Robinia + Gleditsia, Populus + Salix, Melia, Fraxinus, Pyrus, Tilia), the other deciduous trees
+together, and the evergreens (conifers and the evergreen broadleaves Madrid plants: privet, holm oak, olive, magnolia...).
+
+Dates: iNaturalist's "Leaves" annotations (breaking buds, green, coloured) on observations in Spain, Portugal and Italy, per
+week of the year. Leaf-out: the mean day of breaking buds; colouring: the day coloured observations outnumber green
+ones; leaf fall: colouring plus GAP days. A phase the source does not give takes the median over the classes. The
+spread between trees in one year (SD) is the one measured on Warsaw's DWD series: iNaturalist gives no per-tree spread.
 
 Autumn colours: measured on Wikimedia Commons photos of each taxon's canopy, autumn and summer (scripts/foliage_photos.json:
-the method, the photos, both medians). The sunlit half of the leaf pixels; the renderer keeps its own summer greens, so
-all autumn colours are scaled by how much brighter those greens are than the photos' summer canopies (one factor, so
-the taxa keep their brightness relative to each other).
+the method, the photos, both medians), where a Madrid class shares the genus (Acer, Tilia, Fraxinus, Robinia, Populus,
+Aesculus); the others take their median. The renderer keeps its own summer greens, so all autumn colours are scaled by
+how much brighter those greens are than the photos' summer canopies.
 
-Lawns through the year: dated Commons photos of Warsaw lawns (scripts/grass_photos.json), the median colour per month,
-smoothed with its neighbours, at the renderer's brightness in summer; per month the factor on the palette's grass green.
-Summer leaves: the photos' median summer canopy, as one factor on the renderer's greens, at the lawns' exposure (so
-crowns keep their brightness relative to the grass under them).
+Lawns through the year: dated Commons photos of (Warsaw's) lawns (scripts/grass_photos.json), the median colour per
+month, smoothed with its neighbours, at the renderer's brightness in summer; per month the factor on the palette's grass
+green. Summer leaves: the photos' median summer canopy, as one factor on the renderer's greens.
 
 Output: web/public/data/phenology.json (per class: dates, spread, source) and, with the trees' positions
 (web/public/data/trees.json), web/public/data/foliage.bin: per 2 m cell the class of the tree whose crown it is in
@@ -27,9 +24,9 @@ Output: web/public/data/phenology.json (per class: dates, spread, source) and, w
 """
 import gzip
 import json
-import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -39,104 +36,56 @@ from scipy.spatial import cKDTree
 sys.path.insert(0, str(Path(__file__).parent))
 from aoi import D, RAW, W  # noqa: E402
 
-DWD = "https://opendata.dwd.de/climate_environment/CDC"
-WILD = f"{DWD}/observations_germany/phenology/annual_reporters/wild/historical"
-INAT = ("https://api.inaturalist.org/v1/observations/histogram?place_id=7800,7207,8264,8267,8266&term_id=36&term_value_id={v}"
-        "&taxon_id={t}&date_field=observed&interval=week_of_year&verifiable=true")
-CACHE = Path(RAW) / "dwd"
-YEARS = (1995, 2024)
+INAT_PLACES = "6774,7122,6973"  # Spain, Portugal, Italy: Mediterranean climates (Spain alone has too few annotations)
+INAT = ("https://api.inaturalist.org/v1/observations/histogram?place_id=" + INAT_PLACES +
+        "&term_id=36&term_value_id={v}&interval=week_of_year&taxon_id={t}&verifiable=true")
+INAT_TAXA = "https://api.inaturalist.org/v1/taxa?rank=genus&q={q}"
+UA = {"User-Agent": "madrid-voxel phenology"}
+CACHE = Path(RAW) / "phenology"
 OUT = Path(__file__).parent.parent / "web/public/data"
 PHASES = ("leaf", "colour", "fall")
 PHOTOS = Path(__file__).parent / "foliage_photos.json"
 LAWNS = Path(__file__).parent / "grass_photos.json"
 GRASS = "#86b45a"
-# the crowns' summer greens (LEAVES in voxelize.py)
+# the renderer's leaf greens (palette.py LEAVES)
 GREENS = ["#a3c65c", "#8db552", "#76a24a", "#618f43", "#4f7c3c", "#93bb6a", "#7da95f", "#689655", "#56834c", "#456f43"]
-
-# class: (DWD species file, iNaturalist taxon id, genera it stands for). 0 = no tree here.
-# PHOTO_CLASS: the class in foliage_photos.json measured for it
-PHOTO_CLASS = {1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "7", 7: "8", 8: "9", 9: "10", 10: "11", 11: "12", 12: "13", 15: "6"}
+GAP = 17  # days from colouring to leaf fall: the median gap in Warsaw's DWD series
+SD = dict(leaf=8.0, colour=12.0, fall=11.0)  # spread between trees in one year, days (Warsaw's DWD series)
+# class: genera it stands for (the first is looked up on iNaturalist). 0 = no tree here.
 CLASSES = {
-    1: ("Spitz-Ahorn", 54763, ["Acer"]),
-    2: ("Sommer-Linde", 54856, ["Tilia"]),
-    3: ("Esche", 125440, ["Fraxinus"]),
-    4: ("Robinie", 56088, ["Robinia", "Gleditsia"]),
-    5: ("Stiel-Eiche", 1520309, ["Quercus"]),
-    6: ("Rosskastanie", 84298, ["Aesculus"]),
-    7: ("Rotbuche", 55801, ["Fagus", "Carpinus"]),
-    8: ("Haenge-Birke", 83992, ["Betula"]),
-    9: ("Eberesche", 56063, ["Sorbus"]),
-    10: ("Europaeische-Laerche", 59747, ["Larix"]),
-    11: ("Sal-Weide", 53453, ["Salix"]),
-    12: ("Schwarz-Erle", 966205, ["Alnus"]),
-    15: (None, 47566, ["Populus"]),
+    1: ["Platanus"], 2: ["Styphnolobium", "Sophora"], 3: ["Aesculus"], 4: ["Ulmus"], 5: ["Celtis"], 6: ["Acer"],
+    7: ["Prunus", "Malus"], 8: ["Robinia", "Gleditsia"], 9: ["Populus", "Salix"], 10: ["Melia"], 11: ["Fraxinus"],
+    12: ["Pyrus"], 15: ["Tilia"],
 }
-OTHER, EVERGREEN = 13, 14  # deciduous trees with no series of their own (Prunus, Malus, Ulmus, Platanus, ...); conifers
-PHASE = {4: "leaf", 61: "leaf", 31: "colour", 63: "colour", 32: "fall", 64: "fall"}
-CONIFERS = {"Picea", "Pinus", "Thuja", "Taxus", "Pseudotsuga", "Abies", "Juniperus", "Chamaecyparis", "Tsuga", "Cupressocyparis"}
-# Mapa Koron Drzew species groups (Polish) for crowns with no inventory tree
-CROWN_SP = {"lipa": 2, "klon": 1, "jesion": 3, "robinia": 4, "dąb": 5, "kasztanowiec": 6, "grab": 7, "buk": 7, "brzoza": 8,
-            "jarząb": 9, "modrzew": 10, "wierzba": 11, "olsza": 12, "topola": 15, "świerk": EVERGREEN, "sosna": EVERGREEN,
-            "żywotnik": EVERGREEN}
+OTHER, EVERGREEN = 13, 14  # deciduous trees with no class of their own (Morus, Catalpa, Koelreuteria, ...); evergreens
+# the class in foliage_photos.json measured for a class's genus
+PHOTO_CLASS = {6: "1", 15: "2", 11: "3", 8: "4", 9: "6", 3: "7"}
+CONIFERS = {"Pinus", "Cupressus", "Cedrus", "Picea", "Thuja", "Taxus", "Abies", "Juniperus", "Chamaecyparis",
+            "Cupressocyparis", "Sequoiadendron", "Araucaria", "Platycladus"}
+EVERGREEN_BROADLEAF = {"Ligustrum", "Olea", "Magnolia", "Laurus", "Arbutus", "Citrus", "Photinia", "Eriobotrya",
+                       "Pittosporum", "Ceratonia", "Nerium", "Ilex", "Phillyrea", "Eucalyptus", "Schinus"}
+EVERGREEN_OAKS = ("Quercus ilex", "Quercus rotundifolia", "Quercus suber", "Quercus coccifera")
 
 
-def fetch(url, path):
+def fetch_json(url, path):
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        print("download", url)
-        urllib.request.urlretrieve(url, path)
-    return path
+        req = urllib.request.Request(url, headers=UA)
+        path.write_text(urllib.request.urlopen(req).read().decode())
+        time.sleep(1.1)
+    return json.loads(path.read_text())
 
 
-def species_file(name):
-    index = urllib.request.urlopen(f"{WILD}/").read().decode()
-    first, last = sorted(re.findall(rf"PH_Jahresmelder_Wildwachsende_Pflanze_{name}_(\d+)_(\d+)_hist\.txt", index), key=lambda m: m[1])[-1]
-    return f"PH_Jahresmelder_Wildwachsende_Pflanze_{name}_{first}_{last}_hist.txt"
-
-
-def stations_east():
-    p = fetch(f"{DWD}/help/PH_Beschreibung_Phaenologie_Stationen_Jahresmelder.txt", CACHE / "stations.txt")
-    keep = set()
-    for line in p.read_text(encoding="latin1").splitlines()[1:]:
-        f = [x.strip() for x in line.split(";")]
-        if len(f) > 3 and f[2] and float(f[3]) > 12.5:
-            keep.add(int(f[0]))
-    return keep
-
-
-def dwd(name, east):
-    p = CACHE / f"{name}.txt"
-    if not p.exists():
-        fetch(f"{WILD}/{species_file(name)}", p)
-    rows = []
-    for line in p.read_text(encoding="latin1").splitlines()[1:]:
-        f = line.split(";")
-        if len(f) < 8:
-            continue
-        st, yr, ph, doy = int(f[0]), int(f[1]), PHASE.get(int(f[4])), int(f[7])
-        if st in east and YEARS[0] <= yr <= YEARS[1] and ph:
-            rows.append((ph, yr, doy))
-    out = {}
-    for ph in PHASES:
-        a = np.array([(y, d) for p_, y, d in rows if p_ == ph])
-        if len(a) < 30:
-            continue
-        resid = np.concatenate([a[a[:, 0] == y, 1] - a[a[:, 0] == y, 1].mean() for y in np.unique(a[:, 0]) if (a[:, 0] == y).sum() >= 3])
-        out[ph] = dict(day=float(np.median(a[:, 1])), sd=float(resid.std()), n=int(len(a)), source="DWD")
-    return out
+def taxon_id(genus):
+    res = fetch_json(INAT_TAXA.format(q=urllib.parse.quote(genus)), CACHE / f"taxon_{genus}.json")["results"]
+    return next(r["id"] for r in res if r["name"] == genus and r["rank"] == "genus")
 
 
 def inat(taxon):
-    p = CACHE / f"inat_{taxon}.json"
-    if not p.exists():
-        h = {}
-        for v, key in ((37, "bud"), (38, "green"), (39, "coloured")):
-            req = urllib.request.Request(INAT.format(t=taxon, v=v), headers={"User-Agent": "warsaw-voxel phenology"})
-            d = json.load(urllib.request.urlopen(req))["results"]["week_of_year"]
-            h[key] = [d.get(str(w), 0) for w in range(1, 54)]
-            time.sleep(1.1)
-        p.write_text(json.dumps(h))
-    h = {k: np.array(v, float) for k, v in json.loads(p.read_text()).items()}
+    h = {}
+    for v, key in ((37, "bud"), (38, "green"), (39, "coloured")):
+        d = fetch_json(INAT.format(t=taxon, v=v), CACHE / f"inat_{taxon}_{v}_{INAT_PLACES.replace(',', '-')}.json")["results"]["week_of_year"]
+        h[key] = np.array([d.get(str(w), 0) for w in range(1, 54)], float)
     doy, k3 = np.arange(53) * 7 + 4.0, np.ones(3) / 3
     g, c = np.convolve(h["green"], k3, "same"), np.convolve(h["coloured"], k3, "same")
     share, out = c / np.maximum(g + c, 1e-9), {}
@@ -150,32 +99,27 @@ def inat(taxon):
 
 
 def phenology():
-    east = stations_east()
-    table = {k: dict(species=name or "", genera=genera, **{**{ph: None for ph in PHASES}, **(dwd(name, east) if name else {})})
-             for k, (name, _, genera) in CLASSES.items()}
-    nat = {k: inat(t) for k, (_, t, _) in CLASSES.items()}
-    sd = {ph: float(np.median([v[ph]["sd"] for v in table.values() if v[ph]])) for ph in PHASES}
-    gap = float(np.median([v["fall"]["day"] - v["colour"]["day"] for v in table.values() if v["fall"] and v["colour"]]))
-    for ph in ("leaf", "colour"):
-        both = [nat[k][ph]["day"] - v[ph]["day"] for k, v in table.items() if v[ph] and ph in nat[k]]
-        bias = float(np.median(both))
-        print(f"iNaturalist {ph} minus DWD: median {bias:+.1f} d over {len(both)} species ({', '.join(f'{b:+.0f}' for b in both)})")
-        for k, v in table.items():
-            if not v[ph] and ph in nat[k]:
-                v[ph] = dict(day=nat[k][ph]["day"] - bias, sd=sd[ph], n=nat[k][ph]["n"], source=f"iNaturalist, {bias:+.0f} d to the DWD scale")
-    for v in table.values():
-        if not v["fall"] and v["colour"]:
-            v["fall"] = dict(day=v["colour"]["day"] + gap, sd=sd["fall"], n=0, source=f"colouring + {gap:.0f} d (the DWD's median gap)")
-    med = {ph: dict(day=float(np.median([v[ph]["day"] for v in table.values() if v[ph]])), sd=sd[ph], n=0, source="median of the classes") for ph in PHASES}
+    table = {}
+    for k, genera in CLASSES.items():
+        nat = inat(taxon_id(genera[0]))
+        row = dict(species=genera[0], genera=genera)
+        for ph in ("leaf", "colour"):
+            row[ph] = dict(day=nat[ph]["day"], sd=SD[ph], n=nat[ph]["n"], source="iNaturalist (Spain, Portugal, Italy)") if ph in nat else None
+        row["fall"] = dict(day=row["colour"]["day"] + GAP, sd=SD["fall"], n=0, source=f"colouring + {GAP} d") if row["colour"] else None
+        table[k] = row
+    med = {ph: dict(day=float(np.median([v[ph]["day"] for v in table.values() if v[ph]])), sd=SD[ph], n=0,
+                    source="median of the classes") for ph in PHASES}
     for v in table.values():
         v.update({ph: v[ph] or med[ph] for ph in PHASES})
     table[OTHER] = dict(species="median of the classes", genera=[], **med)
-    table[EVERGREEN] = dict(species="conifers", genera=sorted(CONIFERS), leaf=None, colour=None, fall=None)
-    for k, c in autumn_colours().items():
-        table[k]["autumn"] = c
+    table[EVERGREEN] = dict(species="evergreens", genera=sorted(CONIFERS | EVERGREEN_BROADLEAF), leaf=None, colour=None, fall=None)
+    autumn = autumn_colours()
+    for k in table:
+        if k != EVERGREEN:  # a class with no photos of its own takes the median of those measured
+            table[k]["autumn"] = autumn.get(k, autumn[OTHER])
     for k in sorted(table):
         v = table[k]
-        print(k, v["species"] or v["genera"], v.get("autumn"), {ph: (round(v[ph]["day"]), v[ph]["source"][:11]) for ph in PHASES if v[ph]})
+        print(k, v["species"], v.get("autumn"), {ph: (round(v[ph]["day"]), v[ph]["source"][:11]) for ph in PHASES if v[ph]})
     return table
 
 
@@ -231,20 +175,6 @@ def grass_tints():
     return [[round(float(v), 3) for v in lin[m] * k / linear(GRASS)] for m in range(12)]
 
 
-def classify(t):
-    genus = (t.get("sp") or "").split(" ")[0]
-    if genus in CONIFERS:
-        return EVERGREEN
-    for k, (_, _, genera) in CLASSES.items():
-        if genus in genera:
-            return k
-    if not genus and t.get("crown_sp"):
-        for word, k in CROWN_SP.items():
-            if t["crown_sp"].startswith(word):
-                return k
-    return OTHER
-
-
 def city_median(table, cls, ph):
     # the day by which half of the city's deciduous trees have reached a phase
     days = [(table[k][ph]["day"], int((cls == k).sum())) for k in table if table[k][ph]]
@@ -253,14 +183,25 @@ def city_median(table, cls, ph):
     return round(float(d[o][np.searchsorted(np.cumsum(w[o]), w.sum() / 2)]))
 
 
+def classify(t):
+    sp = t.get("sp") or ""
+    genus = sp.split(" ")[0]
+    if genus in CONIFERS or genus in EVERGREEN_BROADLEAF or sp.startswith(EVERGREEN_OAKS):
+        return EVERGREEN
+    for k, genera in CLASSES.items():
+        if genus in genera:
+            return k
+    return OTHER
+
+
 def main():
     table = phenology()
     trees = json.load(open(OUT / "trees.json"))["trees"]
     cls = np.array([classify(t) for t in trees], np.uint8)
     city = {ph: city_median(table, cls, ph) for ph in PHASES}
     print("city medians:", city)
-    json.dump(dict(city=city, sources=["DWD Climate Data Center: phenological observations, annual reporters, wild plants (historical), stations east of 12.5° E, 1995-2024",
-                            "iNaturalist: Leaves annotations, Poland, Germany, Czechia, Slovakia, Lithuania",
+    json.dump(dict(city=city, sources=["iNaturalist: Leaves annotations, Spain, Portugal and Italy",
+                            "spread between trees and leaf-fall gap: Warsaw's DWD series (warsaw-vibe-voxel)",
                             "autumn colours: Wikimedia Commons photos, scripts/foliage_photos.json",
                             "lawns by month: Wikimedia Commons photos, scripts/grass_photos.json"],
                    classes=table, grass=grass_tints(), leaf=leaf_tint()), open(OUT / "phenology.json", "w"), indent=1, ensure_ascii=False)
