@@ -9,14 +9,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import numpy as np
 from pyproj import Transformer
 
-from aoi import CRS, RAW, W, D, to_world
+from aoi import AREA, CRS, W, D, to_world
 
-OUT = Path(RAW) / "notable.json"
+OUT = AREA / "notable.json"
 UA = {"User-Agent": "warsaw-vibe-voxel/1.0 (https://github.com/stared/warsaw-vibe-voxel)"}
 SPAN = "20251001/20260930"
 SPARQL = """

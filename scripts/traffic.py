@@ -17,7 +17,7 @@ from pyproj import Transformer
 from scipy.ndimage import grey_closing, maximum_filter1d
 from shapely.geometry import LineString
 
-from aoi import CRS, D, RAW, W, to_grid
+from aoi import AREA, CRS, D, W, to_grid
 
 DRIVE = {"motorway": 22, "trunk": 16, "primary": 14, "secondary": 13.9, "tertiary": 12.5, "unclassified": 11,
          "residential": 9, "motorway_link": 14, "trunk_link": 12, "primary_link": 11, "secondary_link": 11,
@@ -246,7 +246,7 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
     nd_mean: height of the walking/driving surface above the ground where it is a bridge deck (voxelize.py passes the
     deck height: the lowest LiDAR return around, not the cars or cable stays the 2025 flight caught on it).
     vol, solid: the finished volume and which palette ids bear weight; every path is then fitted to it (fit)."""
-    data = json.load(open(f"{RAW}/osm.json"))
+    data = json.load(open(AREA / "osm.json"))
     # nodes of any bridge way (road, path, tram, rail): drawn on the deck, so agents there move at deck height
     # (ways that carry traffic only: a bridge's outline, man_made=bridge, shares nodes with the street passing under
     # it -- cars on Wybrzeże Kościuszkowskie jumped 9 m up onto Poniatowski's viaduct and back down)

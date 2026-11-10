@@ -1,7 +1,7 @@
 """The rasters voxelize.py reads (data/prep.npz), from the common elevation format and the orthophoto.
 
-Replaces Warsaw's GUGiK mosaic. Inputs: {CACHE}/work/elevation_<source>.npz (prep_lidar.py) and
-{RAW}/ortho/ortho.tif (fetch_ortho.py). Output, row 0 = grid row 0, cell centres (the contract in NOTES.md):
+Replaces Warsaw's GUGiK mosaic. Inputs: {AREA}/elevation_<source>.npz (prep_lidar.py) and
+{AREA}/ortho/ortho.tif (fetch_ortho.py). Output, row 0 = grid row 0, cell centres (the contract in NOTES.md):
   dsm   float32 (2D, 2W)  0.5 m  absolute surface height; NaN where the cloud has no point
   dtm   float32 (D, W)    1 m    absolute ground height, no gaps
   orto  uint8   (5D, 5W, 3) 0.2 m sRGB
@@ -20,7 +20,7 @@ import numpy as np
 import rasterio
 from scipy import ndimage
 
-from aoi import CACHE, CX, CY, D, RAW, THETA, VOXEL_SIZE, W, to_world
+from aoi import AREA, CX, CY, D, THETA, VOXEL_SIZE, W, to_world
 from config import ELEVATION
 
 OUT = Path("data/prep.npz")
@@ -53,7 +53,7 @@ def sample_north_up(path, out_res, band=1024):
 
 
 def main():
-    z = np.load(CACHE / "work" / f"elevation_{ELEVATION['source']}.npz")
+    z = np.load(AREA / f"elevation_{ELEVATION['source']}.npz")
     info = json.loads(str(z["info"]))
     a = info["aoi"]
     if (a["CX"], a["CY"], a["W"], a["D"], a["voxel"]) != (CX, CY, W, D, VOXEL_SIZE) or \
@@ -64,7 +64,7 @@ def main():
     dtm = regrid(z["dtm"], res, DTM_RES).astype(np.float32) if res <= DTM_RES else \
         ndimage.zoom(z["dtm"], res / DTM_RES, order=1).astype(np.float32)
     cls = regrid(z["cls"], res, DTM_RES)
-    orto = sample_north_up(Path(RAW) / "ortho" / "ortho.tif", ORTO_RES)
+    orto = sample_north_up(AREA / "ortho" / "ortho.tif", ORTO_RES)
     assert dsm.shape == (2 * D, 2 * W) and dtm.shape == (D, W) and orto.shape == (5 * D, 5 * W, 3)
     assert not np.isnan(dtm).any(), "the DTM must have no gaps"
     OUT.parent.mkdir(exist_ok=True)

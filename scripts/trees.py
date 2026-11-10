@@ -15,7 +15,7 @@ from pathlib import Path
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).parent))
-from aoi import D, RAW, W, to_grid  # noqa: E402
+from aoi import AREA, D, W, to_grid  # noqa: E402
 
 
 def _num(v):
@@ -41,7 +41,7 @@ def botanical(name):
 def load(osm_trees):
     """osm_trees: [(oid, tags, Point(col, row))] from voxelize's OSM reader. Returns a list of dicts with grid x, y."""
     out = []
-    inv = Path(RAW) / "trees" / "trees.json"
+    inv = AREA / "trees.json"
     if inv.exists():
         for t in json.load(open(inv))["trees"]:
             c, r = (float(v) for v in to_grid(t["x"], t["y"]))

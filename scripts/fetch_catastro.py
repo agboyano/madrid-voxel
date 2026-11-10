@@ -1,4 +1,4 @@
-"""Catastro INSPIRE buildings over the AOI -> {RAW}/catastro/buildings.geojson and building_parts.geojson
+"""Catastro INSPIRE buildings over the AOI -> {AREA}/catastro/buildings.geojson and building_parts.geojson
 
 Source: Dirección General del Catastro, INSPIRE Buildings WFS (https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx),
 municipality of Madrid (INE 28079). The WFS answers bounding-box queries, so only the AOI plus MARGIN is read, in
@@ -18,17 +18,16 @@ import math
 import sys
 import time
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 import requests
 
-from aoi import CRS, RAW, world_bounds
+from aoi import AREA, CRS, world_bounds
 
 WFS = "https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx"
 UA = {"User-Agent": "madrid-voxel/0.1"}
 MARGIN = 50  # metres around the AOI
 TILE = 500  # metres per query, well under the service's area limit
-DIR = Path(RAW) / "catastro"
+DIR = AREA / "catastro"
 NS = {"gml": "http://www.opengis.net/gml/3.2",
       "bu-core2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-core2d/2.0",
       "bu-ext2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-ext2d/2.0"}

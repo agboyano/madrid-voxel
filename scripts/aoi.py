@@ -33,7 +33,11 @@ I0, J0 = W / 2, D / 2  # grid position of the centre
 ROOT = Path(__file__).resolve().parent.parent
 # Raw downloads and big intermediates live outside the repository.
 CACHE = Path(os.environ.get("MADRID_CACHE", Path.home() / "data" / "madrid-voxel-cache"))
-RAW = str(CACHE / "raw")
+RAW = str(CACHE / "raw")  # downloads that do not depend on the AOI: LiDAR tiles, the whole tree inventory, climate
+# downloads and rasters cut to this AOI (OSM, Catastro, orthophoto, the trees in it, the elevation rasters): one folder
+# per centre, size and rotation, so a new AOI never reuses another's
+AREA_KEY = f"{CX:.0f}_{CY:.0f}_{SIZE_X:.0f}x{SIZE_Y:.0f}_r{math.degrees(THETA):g}"
+AREA = CACHE / "areas" / AREA_KEY
 WEB_DATA = ROOT / "web" / "public" / "data"
 
 EU = np.array([math.cos(THETA), math.sin(THETA)])   # grid +i in world

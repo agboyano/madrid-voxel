@@ -1,4 +1,4 @@
-"""Most recent PNOA orthophoto over the AOI -> {RAW}/ortho/ortho.tif (+ ortho.json with flight dates)
+"""Most recent PNOA orthophoto over the AOI -> {AREA}/ortho/ortho.tif (+ ortho.json with flight dates)
 
 Source: IGN WMS "Ortofotos PNOA máxima actualidad" (https://www.ign.es/wms-inspire/pnoa-ma, layer
 OI.OrthoimageCoverage; IGN/CNIG, CC BY 4.0). The WMS serves the newest PNOA flight for each area; the layer
@@ -14,7 +14,6 @@ import json
 import math
 import sys
 import time
-from pathlib import Path
 
 import numpy as np
 import rasterio
@@ -22,7 +21,7 @@ import requests
 from PIL import Image
 from rasterio.transform import from_origin
 
-from aoi import CRS, D, RAW, W, to_world, world_bounds
+from aoi import AREA, CRS, D, W, to_world, world_bounds
 
 WMS = "https://www.ign.es/wms-inspire/pnoa-ma"
 LAYER, INFO_LAYER = "OI.OrthoimageCoverage", "OI.MosaicElement"
@@ -30,7 +29,7 @@ UA = {"User-Agent": "madrid-voxel/0.1"}
 RES = 0.25  # metres per pixel, the PNOA native resolution over Madrid
 MARGIN = 50  # metres around the AOI
 MAX_PX = 4000  # the service allows 4096
-DIR = Path(RAW) / "ortho"
+DIR = AREA / "ortho"
 OUT = DIR / "ortho.tif"
 
 

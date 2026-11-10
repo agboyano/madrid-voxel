@@ -1,4 +1,4 @@
-"""Madrid's municipal tree inventory over the AOI -> {RAW}/trees/trees.json
+"""Madrid's municipal tree inventory over the AOI -> {AREA}/trees.json
 
 Source: "Arbolado en parques y zonas verdes de Madrid (detalle)", datos.madrid.es dataset 300761-0-arbolado-especies
 (Ayuntamiento de Madrid, CC BY 4.0), updated twice a year (January and July). One point per municipally maintained
@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import requests
 
-from aoi import CRS, D, RAW, VOXEL_SIZE, W, to_grid
+from aoi import AREA, CRS, D, RAW, VOXEL_SIZE, W, to_grid
 
 DATASET = "300761-0-arbolado-especies"
 EDITION = "2026-07"  # Arbolado 2026, published 2026-07-09
@@ -29,7 +29,7 @@ UA = {"User-Agent": "madrid-voxel/0.1"}
 MARGIN = 20  # metres around the AOI
 DIR = Path(RAW) / "trees"
 SRC = DIR / f"arbolado_{EDITION}.csv"
-OUT = DIR / "trees.json"
+OUT = AREA / "trees.json"
 
 # Spanish column -> (English key, parser). Columns of the spec missing from a given edition are left out.
 _text = lambda v: v.strip() or None  # noqa: E731
@@ -81,6 +81,7 @@ def main():
     pad = MARGIN / VOXEL_SIZE
     keep = (i >= -pad) & (i < W + pad) & (j >= -pad) & (j < D + pad)
     sel = [t for t, k in zip(trees, keep) if k]
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"source": f"datos.madrid.es {DATASET} ({EDITION}), CC BY 4.0", "crs": CRS,
                                "columns": sorted(set(COLUMNS[k][0] for k in rows[0])), "trees": sel},
                               ensure_ascii=False))

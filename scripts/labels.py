@@ -17,10 +17,10 @@ from shapely.geometry import Point
 from shapely.strtree import STRtree
 
 import landmarks
-from aoi import RAW, W, D
+from aoi import AREA, W, D
 from osm import to_grid
 
-NOTABLE = Path(RAW) / "notable.json"
+NOTABLE = AREA / "notable.json"
 META = Path(__file__).resolve().parent.parent / "web/public/data/meta.json"
 IN_WARSAW = re.compile(r",?\s+(in|w)\s+(Warsaw|Warszawie)\b.*$|,\s*Warsaw$|\s*\((Śródmieście|Powiśle|Wola|Nowy Świat)\)$", re.I)
 

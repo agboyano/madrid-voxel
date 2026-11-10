@@ -1,22 +1,21 @@
 """OpenStreetMap for the AOI (+150 m margin) from public Overpass servers, as one Overpass-style JSON.
 
 Adapted from dtla-voxel scripts/fetch_osm.py (https://github.com/sigman78/dtla-voxel, commit 90bc1a6c, MIT, see
-LICENSE-dtla-voxel). Writes {RAW}/osm.json, the file scripts/osm.py reads.
+LICENSE-dtla-voxel). Writes {AREA}/osm.json, the file scripts/osm.py reads.
 
 The box is split into SPLIT x SPLIT queries of at most ~1.5 km (one query over the full area is too heavy for the
 public servers at busy times); elements are merged by (type, id). Geometry is clipped to the whole-AOI box (not the
-query tile), so ways crossing tile edges stay whole. Each tile is cached; delete {RAW}/osm_parts to download again.
+query tile), so ways crossing tile edges stay whole. Each tile is cached; delete {AREA}/osm_parts to download again.
 """
 import concurrent.futures as cf
 import json
 import math
 import sys
 import time
-from pathlib import Path
 
 import requests
 
-from aoi import RAW, SIZE_X, SIZE_Y, bbox_lonlat
+from aoi import AREA, SIZE_X, SIZE_Y, bbox_lonlat
 
 SERVERS = ["https://overpass-api.de/api/interpreter",
            "https://overpass.kumi.systems/api/interpreter",
@@ -24,7 +23,7 @@ SERVERS = ["https://overpass-api.de/api/interpreter",
            "https://overpass.private.coffee/api/interpreter"]
 UA = {"User-Agent": "madrid-voxel/0.1"}
 MARGIN = 150  # metres around the AOI
-OUT = Path(RAW) / "osm.json"
+OUT = AREA / "osm.json"
 SPLIT = max(1, math.ceil(max(SIZE_X, SIZE_Y) / 1500))
 
 
@@ -51,7 +50,7 @@ def main():
         print(f"OSM cached {OUT}")
         return
     s, w, n, e = bbox_lonlat(MARGIN)
-    parts = Path(RAW) / "osm_parts"
+    parts = AREA / "osm_parts"
     parts.mkdir(parents=True, exist_ok=True)
 
     def tile(ij):

@@ -11,7 +11,7 @@ Sources: each entry of SOURCES is an adapter from one flight's files and class c
 Adding a source (the municipal 2026 flight, NPC03) means a fetch_ script and one entry here; nothing downstream
 changes.
 
-Output: {CACHE}/work/elevation_{source}.npz, every array (rows, cols) on the grid at RES metres, row 0 = grid row 0:
+Output: {AREA}/elevation_{source}.npz, every array (rows, cols) on the grid at RES metres, row 0 = grid row 0:
   dsm        float32  highest point that is not noise or a vehicle (overlap points included); NaN where empty
   dtm        float32  ground (canonical GROUND) mean height, gaps filled by a multi-scale fill: no NaN
   ground_n   uint16   ground points per cell (0 where the DTM is filled)
@@ -34,7 +34,7 @@ import laspy
 import numpy as np
 from scipy import ndimage
 
-from aoi import CACHE, CRS, CX, CY, D, RAW, THETA, VOXEL_SIZE, W, to_grid, world_bounds
+from aoi import AREA, CRS, CX, CY, D, RAW, THETA, VOXEL_SIZE, W, to_grid, world_bounds
 from config import ELEVATION
 
 # Canonical classes: ASPRS codes, plus PNOA's own above 63. Adapters map their source's codes onto these.
@@ -164,7 +164,7 @@ def main():
     cls = np.where(need, cls[ri, ci], cls).astype(np.uint8)
 
     d0, d1 = (GPS_EPOCH + dt.timedelta(seconds=float(v) + (1e9 if src["gps_adjusted"] else 0)) for v in (t_min, t_max))
-    out = CACHE / "work" / f"elevation_{name}.npz"
+    out = AREA / f"elevation_{name}.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     info = dict(source=name, description=src["description"], res=res, crs=src["crs"], vertical=src["vertical"],
                 dates=[d0.date().isoformat(), d1.date().isoformat()], files=[p.name for p in files], points=int(npts),

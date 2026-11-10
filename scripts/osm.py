@@ -8,7 +8,7 @@ from pyproj import Transformer
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.ops import polygonize, unary_union
 
-from aoi import CRS, RAW, to_grid as _aoi_grid
+from aoi import AREA, CRS, to_grid as _aoi_grid
 
 _T = Transformer.from_crs(4326, CRS, always_xy=True)
 
@@ -28,7 +28,7 @@ AREA_KEYS = ("building", "building:part", "landuse", "leisure", "natural", "amen
 
 
 class OSM:
-    def __init__(self, path=f"{RAW}/osm.json"):
+    def __init__(self, path=AREA / "osm.json"):
         data = json.load(open(path))
         # fetch_osm.py stores the merged tiles' timestamp at the top; a raw Overpass answer has it under osm3s
         self.timestamp = data.get("timestamp") or data["osm3s"]["timestamp_osm_base"]

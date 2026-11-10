@@ -13,7 +13,7 @@ from affine import Affine
 from shapely.geometry import LineString
 from shapely.strtree import STRtree
 
-from aoi import CRS, RAW, to_grid
+from aoi import AREA, CRS, to_grid
 
 WALK = None
 IDS = set()
@@ -35,7 +35,7 @@ def _levels(t):
 def ways(osm):
     """(tunnels, stairs): the passages one level down outside buildings, and the steps from the street to them, each
     (way id, [node ids], LineString in grid metres)"""
-    data = json.load(open(f"{RAW}/osm.json"))
+    data = json.load(open(AREA / "osm.json"))
     blds = [g for _, _, t, g in osm.areas if "building" in t]
     tree = STRtree(blds)
     inside = lambda ln: any(blds[i].contains(ln.centroid) for i in tree.query(ln.centroid))

@@ -19,7 +19,7 @@ import numpy as np
 from scipy import ndimage
 
 import tiles
-from aoi import CACHE, CRS, CX, CY, D, THETA, VOXEL_SIZE, W, WEB_DATA, lonlat_to_grid
+from aoi import AREA, CRS, CX, CY, D, THETA, VOXEL_SIZE, W, WEB_DATA, lonlat_to_grid
 from config import ELEVATION
 from prep import regrid
 from prep_lidar import GROUPS, UNCLASSIFIED
@@ -59,7 +59,7 @@ def fill_surface(dsm, ground):
 
 
 def main():
-    z = np.load(CACHE / "work" / f"elevation_{ELEVATION['source']}.npz")
+    z = np.load(AREA / f"elevation_{ELEVATION['source']}.npz")
     info = json.loads(str(z["info"]))
     res = info["res"]
     on_grid = lambda a: regrid(a, res, VOXEL_SIZE)  # noqa: E731  # raster cells -> voxel columns

@@ -4,14 +4,13 @@ Used by voxelize.py beside the OSM footprints: OSM outlines carry the tags (name
 and the part structure the fusion relies on, Catastro the number of floors of every volume. See DECISIONS.md.
 """
 import json
-from pathlib import Path
 
 from shapely.geometry import MultiPolygon, Polygon
 from shapely.strtree import STRtree
 
-from aoi import RAW, to_grid
+from aoi import AREA, to_grid
 
-DIR = Path(RAW) / "catastro"
+DIR = AREA / "catastro"
 FLOOR_H = 3.2  # metres per floor above ground, as voxelize.py takes for OSM building:levels
 
 
