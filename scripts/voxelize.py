@@ -137,6 +137,10 @@ WALL_DEFAULTS = ["#d8cfc0", "#cbbfa8", "#e2d6bf", "#c4bbad", "#d9c7a7", "#cdc6ba
 # ---------------------------------------------------------------- rasters
 z = np.load("data/prep.npz")
 dsm, dtm, orto = z["dsm"], z["dtm"], z["orto"]
+# the point cloud's class per cell (prep.py), where the source has one: 0 everywhere otherwise
+cls = z["cls"] if "cls" in z else np.zeros(dtm.shape, np.uint8)
+LIDAR_VEG = np.isin(cls, (3, 4, 5))
+LIDAR_BRIDGE = cls == 17
 d4 = dsm.reshape(D, 2, W, 2)
 dsm_max = d4.max((1, 3))
 dsm_mean = d4.mean((1, 3))
@@ -538,8 +542,6 @@ for i_, sl in enumerate(ndimage.find_objects(wlab), 1):
     n_flat += 1
 note("water bodies flattened:", n_flat)
 from shapely.ops import unary_union as _uu
-_zl = [l for oid, t, l in osm.lines if t.get("name") == "Złota" and t.get("highway") in ("living_street", "pedestrian")]
-zlota_line = _uu(_zl) if _zl else None
 splash_pads = [geom for oid, typ, t, geom in osm.areas if t.get("fountain") == "splash_pad" and not tunnelish(t)]
 
 # zebra crossings + lane markings on asphalt
@@ -635,6 +637,31 @@ for oid, typ, t, geom in osm.areas:
     feats.append(dict(id=oid, typ=typ, tags=t, geom=geom, part=part, rr=rr, cc=cc, maxh=h, minh=mh or 0.0,
                       area=geom.area))
 note("building features:", len(feats), "parts:", sum(f["part"] for f in feats))
+# Catastro (DECISIONS.md 2026-11-11): OSM footprints stay, with their tags and parts; where OSM gives no height or
+# levels, the floors of the Catastro parts under the footprint stand in; Catastro buildings OSM lacks are added
+import catastro
+_floors = catastro.Floors()
+n_cfl = 0
+for f in feats:
+    if f["maxh"] is None:
+        n = _floors.under(f["geom"])
+        if n:
+            f["maxh"], f["h_src"] = n * catastro.FLOOR_H, "catastro"
+            n_cfl += 1
+_osm_b = _uu([f["geom"] for f in feats if not f["part"]]) if feats else Point(-1e6, -1e6)
+n_cnew = 0
+for k, (cid, props, geom) in enumerate(catastro.load("buildings")):
+    if geom.area < 10 or geom.intersection(_osm_b).area > 0.3 * geom.area:
+        continue
+    rr, cc = cells_of(geom)
+    if len(rr) == 0:
+        continue
+    n = _floors.under(geom)
+    feats.append(dict(id=-(k + 1), typ="catastro", tags={"building": "yes", "source": "Catastro", "ref:catastro": cid},
+                      geom=geom, part=False, rr=rr, cc=cc, maxh=n * catastro.FLOOR_H if n else None, minh=0.0,
+                      area=geom.area, h_src="catastro"))
+    n_cnew += 1
+note("Catastro: floors for OSM features without height", n_cfl, "| buildings missing from OSM added", n_cnew)
 
 outlines = [f for f in feats if not f["part"]]
 parts = [f for f in feats if f["part"]]
@@ -1202,7 +1229,10 @@ near_tree = np.zeros((D, W), bool)
 if len(tree_rc):
     near_tree[tree_rc[:, 0], tree_rc[:, 1]] = True
     near_tree = ndimage.binary_dilation(near_tree, iterations=3)
-veg = (~bmask) & (nd_mean > 2.2) & ((exg > 0.025) | (near_tree & (exg > -0.03)))
+# green in the (leaf-on) ortho, or the LiDAR's own vegetation class (the PNOA flight was leaf-off, so its class is the
+# surer sign under a bare crown); not where the LiDAR says building (eaves and cornices over the street)
+veg = (~bmask) & (nd_mean > 2.2) & ((exg > 0.025) | (near_tree & (exg > -0.03)) | LIDAR_VEG) & (cls != 6)
+note("vegetation cells from the LiDAR class alone (not green in the ortho):", int((veg & LIDAR_VEG & ~(exg > 0.025)).sum()))
 # nor inside any building's outline: one drawn only through its parts (Salvator church) left the cells between its
 # parts out of bmask, and its green copper roof grew 1 800 leaf voxels, pillars up its front
 _allb = np.zeros((D, W), bool)
@@ -1255,7 +1285,6 @@ leafidx = np.array(LEAVES, np.uint16)[(4 - lbin) + 5 * (~yellowish)]
 # stands under get trunks at their tops (local maxima of the canopy height, >= 5 m apart).
 n_new = n_trunk = 0
 from shapely.ops import unary_union
-zlota = unary_union([l for oid, t, l in osm.lines if t.get("name") == "Złota"])
 canopy_near = ndimage.binary_dilation(veg, iterations=2)
 _vd, (_vr, _vc) = ndimage.distance_transform_edt(~veg, return_indices=True)
 trunk_at = np.zeros((D, W), bool)
@@ -1301,9 +1330,8 @@ for t in all_trees:
         t["drawn"] = "none"  # under another tree's crown edge: its own crown is not resolved
         continue
     n_new += 1
-    # Zielona Złota (opened Aug 2026): elms planted at ~9 m (research.md)
-    p = Point(t["x"], t["y"])
-    hgt = (t.get("height") if t["src"] != "city" else None) or (9 if p.x > 1000 and p.distance(zlota) < 12 else None)
+    # a known tree the leaf-off LiDAR resolved no crown for: drawn young, at its inventory height when it has one
+    hgt = t.get("height")
     landmarks.small_tree(vol, g, r, c, stable_hash(t["id"]), LEAVES, C["trunk"], height=hgt)
     t["drawn"] = "procedural"
     t["z"] = int(g[r, c])
@@ -1386,12 +1414,11 @@ for t in all_trees:
             rec[k_out] = t[k_src]
     _tr.append(rec)
 Path(OUT).mkdir(parents=True, exist_ok=True)
-json.dump(dict(sources={"city": "Baza Obiektów Zieleni, mapa.um.warszawa.pl (Zieleń)", "osm": "OpenStreetMap natural=tree",
-                        "um": "api.um.warszawa.pl drzewa (2010-13 inventory)",
-                        "lidar": "a crown in the 2025 LiDAR with no known tree under it (trunk at its top)",
-                        "crown": "Mapa Koron Drzew (2019) polygon the tree stands in"},
+json.dump(dict(sources={"city": "Ayuntamiento de Madrid tree inventory, datos.madrid.es (CC BY 4.0)",
+                        "osm": "OpenStreetMap natural=tree",
+                        "lidar": "a crown in the PNOA-LiDAR with no known tree under it (trunk at its top)"},
                fields=dict(x="grid column", y="grid row", z="ground voxel", h="LiDAR crown top above ground, m",
-                           sp="species (Latin)", pl="species (Polish)", cm="trunk circumference, cm",
+                           sp="species (botanical)", cm="trunk circumference, cm", h_inv="inventory height, m",
                            drawn="lidar | procedural | none"), trees=_tr),
           open(Path(OUT) / "trees.json", "w"), ensure_ascii=False, separators=(",", ":"))
 
@@ -1430,37 +1457,7 @@ for geom in splash_pads:
         vol[z0, r, c] = v
 note("splash-pad fountain jets:", n_jets)
 
-# "Mountain" mist fountain mid-block on Złota: an oval lawn with ~22 cream sandstone boulders and stepping stones
-BOULDER, STEP = pal("#d6cfc0"), pal("#c9c3b6")
-n_b = 0
-for oid, typ, t, geom in osm.areas:
-    if t.get("amenity") != "fountain" or t.get("fountain") == "splash_pad" or geom.area > 80 or tunnelish(t):
-        continue
-    near_zlota = geom.centroid.distance(zlota_line) < 15 if zlota_line is not None else False
-    if not near_zlota:
-        continue
-    cy, cx = geom.centroid.y, geom.centroid.x
-    rng = np.random.default_rng(oid % (2 ** 32))
-    for r in range(int(cy) - 5, int(cy) + 6):
-        for c in range(int(cx) - 7, int(cx) + 8):
-            e = ((r + 0.5 - cy) / 4.5) ** 2 + ((c + 0.5 - cx) / 6.5) ** 2
-            if e > 1 or bmask[r, c]:
-                continue
-            z0 = g[r, c] - 1
-            vol[z0, r, c] = C["grass"] if e > 0.18 else pal("#5a5e61")
-            if e > 0.18 and stable_hash(r, c, 3) % 9 == 0:
-                vol[z0, r, c] = STEP
-    for _ in range(22):
-        a, rad = rng.uniform(0, 2 * np.pi), rng.uniform(0.45, 0.95)
-        r, c = int(cy + 4.5 * rad * np.sin(a)), int(cx + 6.5 * rad * np.cos(a))
-        if not bmask[r, c]:
-            vol[g[r, c], r, c] = BOULDER
-            if rng.random() < 0.35 and not bmask[r, c + 1]:
-                vol[g[r, c + 1], r, c + 1] = BOULDER
-            n_b += 1
-note("boulder fountain boulders:", n_b)
-
-# ---------------------------------------------------------------- planted beds (Zielona Złota, Plac Centralny)
+# ---------------------------------------------------------------- planted beds
 # small leisure=garden / flowerbed islands are raised perennial beds edged with concrete bench-kerbs (photos 2026)
 n_beds = 0
 for oid, typ, t, geom in osm.areas:
@@ -1510,32 +1507,6 @@ for oid, t, p in osm.nodes_with("highway", ("street_lamp",)):
     vol[z0 + hgt - 1, r, c] = C["lamp"]
     lamps.append((c, r, int(z0 + hgt - 1)))
 note("street lamps:", len(lamps))
-# Złota after the 2026 redesign: photos show slim lantern poles every ~15-20 m along the street, OSM maps only a
-# few. Infer lamps along the new Złota ways where OSM has none within 9 m.
-n_inf = 0
-lamp_xy = np.array([(c, r) for c, r, _ in lamps], float) if lamps else np.zeros((0, 2))
-for oid, t, line in osm.lines:
-    if t.get("name") != "Złota" or t.get("highway") not in ("living_street", "pedestrian") or line.length < 20:
-        continue
-    for k_, dist in enumerate(np.arange(8, line.length - 4, 18.0)):
-        p = line.interpolate(dist)
-        q_ = line.interpolate(min(dist + 1, line.length))
-        tx, ty = q_.x - p.x, q_.y - p.y
-        tl = max(np.hypot(tx, ty), 1e-6)
-        side = 5.5 if k_ % 2 else -5.5  # alternate kerbs, clear of the central walkway
-        c, r = kerb(int(p.x - ty / tl * side), int(p.y + tx / tl * side)) or (-1, -1)
-        if not (0 <= c < W and 0 <= r < D) or bmask[r, c]:
-            continue
-        if len(lamp_xy) and np.min(np.hypot(lamp_xy[:, 0] - c, lamp_xy[:, 1] - r)) < 9:
-            continue
-        z0 = g[r, c]
-        vol[z0:z0 + 6, r, c] = np.where(vol[z0:z0 + 6, r, c] == 0, C["pole"], vol[z0:z0 + 6, r, c])
-        vol[z0 + 6, r, c] = C["lamp"]
-        lamps.append((c, r, int(z0 + 6)))
-        lamp_xy = np.vstack([lamp_xy, [c, r]])
-        n_inf += 1
-note("inferred lamps on renovated Złota (photos, OSM incomplete):", n_inf)
-
 for oid, typ, t, geom in osm.areas_with("amenity", ("shelter",)):
     if t.get("shelter_type") not in (None, "public_transport", "basic_hut") or bmask[cells_of(geom)].any():
         continue
@@ -1562,6 +1533,10 @@ for layer in sorted({l for _, _, l in bridge_shapes}):  # upper decks win
     burn(deck_lay, [(p_, l + 1) for p_, c_, l in bridge_shapes if l == layer])
 near_way = ndimage.binary_dilation(deck_col > 0, iterations=3)
 deck_col = np.where((deck_col == 0) & (bridge_area > 0) & near_way, C["deck"], deck_col)
+# and the LiDAR's bridge class (17) near a bridge way, where OSM's bridge outline falls short
+_lb = (deck_col == 0) & LIDAR_BRIDGE & near_way
+deck_col = np.where(_lb, C["deck"], deck_col)
+note("deck cells from the LiDAR bridge class:", int(_lb.sum()))
 deck = (deck_col > 0) & (nd_mean > 2)
 deck = ndimage.binary_closing(deck, iterations=2)  # no slits of sky between the carriageways
 deck_col = np.where(deck & (deck_col == 0), C["deck"], deck_col)
