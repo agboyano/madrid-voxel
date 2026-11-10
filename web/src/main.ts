@@ -19,7 +19,7 @@ import { StreetLife } from './sim/life';
 import type { Kind, TrafficData } from './sim/types';
 import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
-import { dateOf, dayOfYear, hourAt, solarNoon } from './sun';
+import { dateOf, dayOfYear, hourAt, setSite, solarNoon } from './sun';
 import { $, coarsePointer, ease, el, fetchJson, lerp } from './util';
 import { pkinLight } from './sky';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
@@ -81,8 +81,8 @@ nav.cancelFly = () => { fly = null; };
 bar.setRiver(RIVER.typical);
 bar.showRiver(false);
 new ResizeObserver(() => { barRect = null; }).observe(bar.el);
-el('div', '', `<div>by <a href="https://p.migdal.pl/" target="_blank" rel="noopener">Piotr Migdał</a>, <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">source code</a></div>
-  <div>based on GUGiK 2025 and <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></div>`).id = 'credits';
+el('div', '', `<div>by Agboyano, based on <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">warsaw-vibe-voxel</a> by Piotr Migdał</div>
+  <div>PNOA-LiDAR and PNOA © IGN/CNIG, Catastro, Ayuntamiento de Madrid and <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></div>`).id = 'credits';
 if (qs.get('ui') === '0') document.body.classList.add('noui');
 addEventListener('resize', onResize);
 addEventListener('keydown', (e) => {
@@ -240,11 +240,8 @@ function searchItems(meta: Meta): SearchItem[] {
   return [
     ...Object.values(meta.views).map((v) => ({ name: v.label, kind: 'viewpoint', featured: true, go: () => goView(v) })),
     ...meta.labels.map((l) => ({ name: l.name, alt: [l.en, l.alt].join(' '), kind: l.kind, go: () => goPlace(l.x, l.y, Math.max(40, (l.R ?? 20) * 1.4), null, l.name) })),
-    { name: 'Follow a tram', alt: 'tramwaj tram ride follow jedź', kind: 'action', go: () => followNearest('tram') },
-    { name: 'Follow a car', alt: 'samochód car bus autobus ride follow jedź', kind: 'action', go: () => followNearest('car') },
-    { name: 'Zouk at Kopernik', alt: 'dance taniec zouk Centrum Nauki Kopernik evening wieczór', kind: 'action',
-      go: () => { if (daylight.hour < 19 || daylight.hour > 23) setHour(20.5); goPlace(2626, 2021, 30, { name: 'Zouk', kind: 'dancing in the evenings' }); } },
-    { name: 'Follow someone', alt: 'person people pieszy przechodzień idź walk with follow', kind: 'action', go: () => followNearest('person') },
+    { name: 'Follow a car', alt: 'coche car bus autobús ride follow', kind: 'action', go: () => followNearest('car') },
+    { name: 'Follow someone', alt: 'person people peatón walk with follow', kind: 'action', go: () => followNearest('person') },
   ];
 }
 
@@ -262,6 +259,7 @@ async function boot() {
   let meta: Meta;
   [meta, climate] = await Promise.all([fetchJson<Meta>('data/meta.json'), fetchJson<Climate>('data/climate.json')]);
   views = meta.views;
+  if (meta.lonlat) setSite(...meta.lonlat);
   places = meta.labels;
   uniforms = makeUniforms(meta);
   loadFoliage(meta, uniforms).then((city) => bar.setDays({ 'leaves out': city.leaf, 'trees in colour': city.colour, 'leaves down': city.fall, ...DAYS }))

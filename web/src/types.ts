@@ -49,6 +49,7 @@ export interface Meta {
   labels: Label[];
   views: Record<string, View>;
   sources: { osm: string };
+  lonlat?: [number, number];
 }
 
 export interface FloodInfo {

@@ -1,4 +1,7 @@
-const RAD = Math.PI / 180, LAT = 52.23 * RAD, LON = 21.01;
+const RAD = Math.PI / 180;
+// the map's centre (meta.json lonlat), set at boot; Puerta del Sol until then
+let LAT = 40.4169 * RAD, LON = -3.7033;
+export function setSite(lon: number, lat: number) { LAT = lat * RAD; LON = lon; }
 
 const lastSunday = (year: number, month: number) => { const d = new Date(Date.UTC(year, month + 1, 0)); return d.getUTCDate() - d.getUTCDay(); };
 export const dayOfYear = (d: Date) => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 864e5);

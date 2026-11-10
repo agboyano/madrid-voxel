@@ -1,7 +1,7 @@
-"""What Warsaw's weather is like on each day of the year, so the viewer shows a typical day and offers only what can
+"""What the city's weather is like on each day of the year, so the viewer shows a typical day and offers only what can
 happen then (no snow in June).
 
-Open-Meteo's historical archive (ERA5 reanalysis, 1995-2024) for central Warsaw, over a window of ±10 days around each
+Open-Meteo's historical archive (ERA5 reanalysis, 1995-2024) at the map's centre (aoi.py), over a window of ±10 days around each
 day of the year:
   clear / cloudy / rain / snow: the share of days of each kind (snow: >= 1 cm fresh; rain: >= 2 mm; cloudy: mean
          cloud >= 75%; clear: the rest), summing to 1
@@ -19,10 +19,12 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from aoi import RAW  # noqa: E402
+from aoi import D, RAW, W, grid_to_lonlat  # noqa: E402
 
-API = "https://archive-api.open-meteo.com/v1/archive?latitude=52.23&longitude=21.01&start_date=1995-01-01&end_date=2024-12-31&timezone=Europe%2FWarsaw"
-DAILY = Path(RAW) / "climate" / "warsaw_daily2.json"
+LON, LAT = (round(float(v), 2) for v in grid_to_lonlat(W / 2, D / 2))
+API = (f"https://archive-api.open-meteo.com/v1/archive?latitude={LAT}&longitude={LON}&start_date=1995-01-01"
+       "&end_date=2024-12-31&timezone=Europe%2FMadrid")
+DAILY = Path(RAW) / "climate" / f"daily_{LAT}_{LON}.json"
 OUT = Path(__file__).parent.parent / "web/public/data/climate.json"
 WINDOW = 10
 
@@ -53,7 +55,7 @@ def main():
 
     snowy = per_day(d["time"], (sf > 0.2).astype(float)) > 0
     r = lambda p: [round(float(x), 3) for x in p]
-    json.dump(dict(source="Open-Meteo historical weather API (ERA5), central Warsaw, 1995-2024",
+    json.dump(dict(source=f"Open-Meteo historical weather API (ERA5) at {LAT}, {LON}, 1995-2024",
                    **{k: r(v) for k, v in kinds.items()}, cover=r(per_day(d["time"], (depth >= 0.02).astype(float))),
                    snowy=[bool(x) for x in snowy]), open(OUT, "w"))
     none = np.nonzero(~snowy)[0] + 1
