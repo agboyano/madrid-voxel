@@ -708,6 +708,20 @@ allows it):
 5. Make `terrain.bin` and `foliage.bin` declare their step (or fix them in metres) so the pipeline and the viewer
    cannot disagree (`terrain.py:15`/`city.ts:240-254`; `phenology.py:270`/`foliage.ts:14`).
 
+### Madrid code and `VOXEL_SIZE` (kept up to date)
+
+`VOXEL_SIZE` is defined once in `scripts/aoi.py` and written to `meta.json` as `voxel`; the viewer does not read it yet. New Madrid code converts metres to cells through it:
+- `aoi.py`: `W`, `D`, `to_grid`, `to_world`, `corners`, `grid_transform`;
+- `prep_lidar.py`: the raster resolution comes from `pipeline.toml`, independent of `VOXEL_SIZE`;
+- `prep.py`: Warsaw's fixed raster cell sizes (0.5 / 1 / 0.2 m) in metres;
+- `voxelize_elevation.py`: heights to levels, `MIN_HEIGHT`, `DECK_THICK` and the terrain step;
+- `fetch_trees.py`: the AOI margin.
+
+Assumptions in Madrid code that still tie to 1 m:
+- `voxelize_elevation.py` passes ground levels to `tiles.py`, which stores them as uint8 metres;
+- its views' camera offsets (`+2.5`, `+1.5`) are in metres = levels;
+- `zones` blocks use `tiles.N` cells.
+
 ## dtla-voxel analysis
 
 Reference snapshot: `../dtla-voxel` at commit `90bc1a6ce6e87fa0eb93076557838ae1950bb778` (38 commits, MIT, "Copyright (c) 2026 SiGMan").
