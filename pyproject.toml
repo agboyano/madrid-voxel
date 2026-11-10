@@ -3,6 +3,7 @@ name = "warsaw-voxel-data"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "affine>=3.0.1",
     "numpy>=2.5.4",
     "pillow>=12.3.0",
     "pyproj>=3.8.0",
