@@ -637,6 +637,8 @@ def notable(osm, curated_qids, top_at):
     """Where the place is: the OSM object tagged with its Wikidata id (Wikidata's own point is often the whole
     complex's -- every museum and theatre in PKiN on one spot -- or an old address; a statue snapped to the nearest
     building landed on its roof); else Wikidata's point, on the building it falls in or next to."""
+    if not NOTABLE.exists():
+        return []
     wd = json.loads(NOTABLE.read_text())
     polys, tree = buildings(osm)
     by_q = tagged(osm)
@@ -753,10 +755,8 @@ def greens(osm, labels, top_at, wd):
 
 def assemble(curated, osm, top_at):
     curated = list(curated)
-    for facts, poly in landmarks.jazdow_houses(osm):
-        p = poly.representative_point()
-        curated.append(dict(facts, x=int(p.x), y=int(p.y), z=top_at(int(p.y), int(p.x))))
-    wd = json.loads(NOTABLE.read_text())
+    # Wikidata items on the map (notable.py); absent until Phase 4 builds them for Madrid
+    wd = json.loads(NOTABLE.read_text()) if NOTABLE.exists() else {}
     qids, views, sites = curated_wikidata(osm, wd)
     roof_height(curated, osm, top_at)
     picked = curated + notable(osm, qids, top_at)

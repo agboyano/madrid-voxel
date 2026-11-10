@@ -21,18 +21,10 @@ M_LEAF, M_GLASS, M_GRASS = 3, 2, 8
 # the viewer tints every leaf voxel by the city's leaf colour: a bed in the ortho's colour is stored without it
 LEAF_TINT = np.array(json.load(open("web/public/data/phenology.json"))["leaf"])
 PLANTS = ["#76a24a", "#618f43", "#4f7c3c", "#689655", "#56834c"]  # the street trees' own greens (voxelize LEAVES)
-# roofs that are a garden whole though OSM maps none on them, and their paths: junctions read off the 2025 ortho (grid
-# x, y) or the OSM nodes where a ramp reaches the roof, each link routed along the ortho's paving between its ends.
-# Kopernik (kopernik.org.pl 2020, Commons 2012-17, ortho 2025): beds edged in white concrete, gravel paths winding
-# between the skylight cones, the ramps up the north facade from Hoover Square and the south one from the metro
-WHOLE = {
-    "Centrum Nauki Kopernik": dict(
-        at=dict(nw=(2536, 1958), w2=(2553, 1961), mid=(2575, 1957), e2=(2600, 1957), e3=(2622, 1950), ne=(2622, 1925),
-                n2=(2595, 1920), n1=(2560, 1938), s0=(2576, 1984), s1=(2562, 2021), s2=(2582, 2013), s3=(2596, 2005),
-                s4=(2588, 2036), s5=(2607, 2041), s6=(2577, 2046), north=8078458521, south=8078458533),
-        links=["nw-w2", "w2-mid", "mid-e2", "e2-e3", "e3-ne", "ne-n2", "n2-n1", "n1-w2", "mid-s0", "s0-s3", "s0-s1",
-               "s1-s2", "s2-s3", "s2-s4", "s4-s5", "s4-s6", "s3-s5", "s1-s6", "ne-north", "s6-south"]),
-}
+# roofs that are a garden whole though OSM maps none on them, and their paths: junctions as grid (x, y) or the OSM
+# nodes where a ramp reaches the roof, each link routed along the ortho's paving between its ends, e.g.
+#   "Name": dict(at=dict(a=(x, y), b=(x, y), north=<osm node id>), links=["a-b", "b-north"])
+WHOLE = {}  # none yet for Madrid
 PATHS = []  # (end, end, [(x, y), ...]) for traffic.py: an end is a junction's name or an OSM node id
 
 

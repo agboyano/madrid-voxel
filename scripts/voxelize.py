@@ -213,6 +213,8 @@ note("OSM timestamp", osm.timestamp, "areas", len(osm.areas), "lines", len(osm.l
 
 
 def cells_of(geom, all_touched=False):
+    if geom.is_empty:
+        return np.zeros(0, int), np.zeros(0, int)
     minx, miny, maxx, maxy = geom.bounds
     c0, r0 = max(int(math.floor(minx)), 0), max(int(math.floor(miny)), 0)
     c1, r1 = min(int(math.ceil(maxx)), W), min(int(math.ceil(maxy)), D)
@@ -664,9 +666,6 @@ for p in parts:
     p["render"] = True
 render = [f for f in feats if f["render"]]
 
-pkin = next(f for f in feats if f["tags"].get("name") == "Pałac Kultury i Nauki")
-
-
 def tag(f, k):
     v = f["tags"].get(k)
     if v is None and f.get("parent") is not None:
@@ -899,12 +898,6 @@ def wall_style(f):
         (parse_colour(f["parent"]["tags"].get("building:colour")) if f.get("parent") else None)
     btype = tag(f, "building") or ""
     h = f["maxh"] or float(np.median(top[f["rr"], f["cc"]]))
-    inside_pkin = pkin["geom"].contains(f["geom"].representative_point())
-    if inside_pkin:
-        # OSM tags the stone #C6AE7F, a khaki; in photos the weathered sandstone is a mid warm grey (median 118,112,104 overcast, 2026)
-        if col is None or col == hex_rgb("#c6ae7f"):
-            col = hex_rgb("#827b72")  # lighter tones read pale cream in sun beside the photos (render 179,167,139 vs 104,100,87)
-        return pal(soften(col, 0.05), M_PKIN)
     glass = "glass" in mat_tag or (not mat_tag and h > 45 and btype in ("office", "commercial", "hotel", "yes", "retail")
                                    and "building:colour" not in t)
     if glass:
@@ -914,29 +907,15 @@ def wall_style(f):
     if mat_tag in ("brick",) and col is None:
         col = hex_rgb("#a95f45")
     core = CORE.contains(f["geom"].representative_point())
-    royal = not core and h < 26 and ROYAL.intersects(f["geom"])
-    mdm = not core and not royal and MDM.contains(f["geom"].representative_point())
     if col is None:
-        walls = CORE_WALLS if core else ROYAL_WALLS if royal else MDM_WALLS if mdm else WALL_DEFAULTS
+        walls = CORE_WALLS if core else WALL_DEFAULTS
         col = hex_rgb(walls[stable_hash(f["id"]) % len(walls)])
     if btype in SACRED or tag(f, "amenity") == "place_of_worship":
         return pal(soften(col), M_CLASSIC)  # stone or brick, tall windows: not the shader's office grid of storeys
-    if core or royal:
+    if core:
         return pal(soften(col), M_TENEMENT)
     return pal(soften(col), M_WALL)
 
-
-# the Royal Route's houses (Krakowskie Przedmieście, Nowy Świat; Commons 2018-2023 street photos): low classicist
-# fronts in white, cream, pale yellow, pink and salmon plaster with tall windows, not the generic beige office grid.
-# (buildings under 26 m whose outline comes within 14 m of its centreline)
-_rr = [l_ for _, t_, l_ in osm.lines if t_.get("name") in ("Nowy Świat", "Krakowskie Przedmieście") and t_.get("highway")]
-ROYAL = _uu([l_.buffer(14) for l_ in _rr]) if _rr else Point(-1e6, -1e6)
-ROYAL_WALLS = ["#efe9dc", "#ece7da", "#e6d7b8", "#e3bcae", "#eddcb6", "#f1ece2", "#d9a487", "#e8e2d4"]
-
-# MDM (1950-52, Marszałkowska from Plac Zbawiciela to Wilcza round Plac Konstytucji; Commons 2018-2026): warm
-# sandstone-clad blocks, the same few shades of honey and ochre
-MDM = LineString([(1036, 3700), (1036, 4020)]).buffer(110)
-MDM_WALLS = ["#d8c6a2", "#d2bd96", "#dccba8", "#cfb995"]
 
 ROOF_OVERRULED = []
 
@@ -946,9 +925,6 @@ def roof_style(f):
     if col is None and (f["tags"].get("roof:material") or "").lower() == "glass":
         return pal(soften(hex_rgb("#93adbf"), 0.06), M_GLASS)  # glass atrium roofs (Politechnika's hall): blue-grey
     h = float(np.median(top[f["rr"], f["cc"]]))
-    if pkin["geom"].contains(f["geom"].representative_point()) and col == hex_rgb("#666666"):
-        # OSM's dark grey: the ortho shows light stone-grey roofs (its own colours carry the tower's shadow)
-        return pal(soften(hex_rgb("#bab3a5"), 0.05), M_ROOF, q=12)
     lum_ = lambda c_: 0.299 * c_[0] + 0.587 * c_[1] + 0.114 * c_[2]
     # (a near-black tag on a tower too: the slabs on Wola tagged #170106 tar paper read light grey in the ortho; an
     # untagged roof up to 80 m as well, the 49 m slabs by Grzybowska had the dark default grey over light roofs;
@@ -1952,8 +1928,6 @@ if os.environ.get("LMCACHE"):  # the volume before the curated landmark details,
                      trunk_ok=trunk_ok_db, piers=landmarks.PIERS),
                 open("data/cache/pre_state.pkl", "wb"))
 labels, views = landmarks.details(vol, g, top, topi, bmask, feats, pal, C, osm, cells_of, note, leaf_ids)
-np.savez_compressed("data/debug/pkin_box.npz", vol=vol[:, 2360:2660, 600:900], g=g[2360:2660, 600:900],
-                    pal=np.array(pal.entries, np.int32))  # PKiN's block for facade work (r0=2360, c0=600)
 
 import labels as labels_mod
 labels = labels_mod.assemble(labels, osm, lambda r, c: max(int(g[r, c] + (topi[r, c] if bmask[r, c] else 0)),
@@ -2025,7 +1999,7 @@ _skip[[i for i, e in enumerate(pal.entries) if e[3] in (M_LEAF, M_LAMP, M_CAR)] 
 _rb, _cb = np.nonzero((deck_col > 0) & (_dd > 2))
 _lim = g[_rb, _cb] + np.clip(np.round(nd_mean[_rb, _cb]), 0, 40).astype(int) + 3
 _top = g[_rb, _cb].copy()
-for _z in range(int(g.min()), int(_lim.max()) + 1):
+for _z in range(int(g.min()), int(_lim.max()) + 1 if len(_lim) else 0):  # no bridge-way cells off a deck: nothing to do
     _m = (_z >= g[_rb, _cb]) & (_z < _lim)
     _v = vol[_z, _rb[_m], _cb[_m]]
     _top[np.nonzero(_m)[0][(_v != 0) & ~_skip[_v]]] = _z + 1
