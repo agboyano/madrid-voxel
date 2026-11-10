@@ -25,3 +25,33 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** keep Warsaw's `scripts/tiles.py` and tile reader as they are.
 - **Reason:** dtla-voxel's tiles are byte-compatible but add levels 2 and 4 and an optional detail block that Warsaw's `city.ts` does not use; `CLAUDE.md` rule 7 forbids format changes unless the plan says so.
 - **Rejected:** adopting dtla's `tiles.py` (needs viewer changes for no Madrid-specific gain).
+
+## 2026-11-10: AOI centre on the OSM Puerta del Sol square
+
+- **Decision:** centre the 500 × 500 m test AOI on the centre of the OSM square (relation 7424032) at X 440 316.4, Y 4 474 264.1, rotation 0°.
+- **Reason:** a reproducible, documented point on the square itself; the approximate point in `PLAN.md` is 26 m away and kilometre zero is at the square's southern edge.
+- **Rejected:** the approximate plan coordinates; kilometre zero.
+
+## 2026-11-10: Whole-city download for the tree inventory
+
+- **Decision:** download the municipal tree CSV once for the whole city (75 MB) and filter it locally to the AOI.
+- **Reason:** datos.madrid.es publishes the per-tree inventory only as one file (CSV, XLSX or shapefile); there is no area query. The CSV is the smallest format and is cached.
+- **Rejected:** the shapefile ZIP (49 MB but needs a GIS reader); the XLSX (64 MB, slower to parse).
+
+## 2026-11-10: Catastro from the INSPIRE WFS, not the ATOM files
+
+- **Decision:** read Catastro buildings and building parts from the INSPIRE Buildings WFS by bounding box, in 500 m tiles.
+- **Reason:** it reads only the AOI (`CLAUDE.md` rule 4) and returns the same INSPIRE features as the ATOM download, which is one GML for the whole municipality.
+- **Rejected:** the ATOM municipality download (far larger than the AOI).
+
+## 2026-11-10: Orthophoto from the IGN PNOA WMS (July 2023, 0.25 m)
+
+- **Decision:** take the orthophoto from the IGN WMS "PNOA máxima actualidad" at its native 0.25 m, axis-aligned in EPSG:25830, and warp it onto the rotated grid during raster preparation.
+- **Reason:** it is the newest PNOA flight over the AOI, it is served by area, and the CNIG file downloads sit behind the same reCAPTCHA as the LiDAR. Warping later means a new rotation needs no new download.
+- **Rejected for now:** the Ayuntamiento Geoportal orthophoto (possibly newer or a true orthophoto; to evaluate at the checkpoint); colours from the LiDAR points' own RGB (a Phase 3 option).
+
+## 2026-11-10: PNOA-LiDAR downloaded by hand
+
+- **Decision:** `fetch_pnoa_lidar.py` does not download; it lists the tiles needed, validates the LAZ files placed in the cache by their headers and prints manual instructions.
+- **Reason:** the CNIG download centre protects downloads with reCAPTCHA and refuses scripted searches. `CLAUDE.md` rule 5 asks for manual instructions instead of alternative sources or workarounds.
+- **Rejected:** scripting the CNIG site; third-party mirrors of the PNOA files.
