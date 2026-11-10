@@ -98,18 +98,18 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 
 ## Phase 3: Full fusion in the test area
 
-- [ ] Reorganise the fusion into 2D layers following the structure of LA's `layers.py` (ground, buildings, roofs, vegetation, bridge decks and flyovers).
-- [ ] Classification: ground, buildings, vegetation, water, from PNOA + OSM + Catastro.
-- [ ] Buildings: footprints (Catastro or OSM; document which and why) with LiDAR heights and roofs. Adapt Warsaw's rules: OSM/Catastro wins where the LiDAR sees nothing tall (building completed after the flight).
-- [ ] Trees: municipal inventory with species for seasonal foliage; trees with no LiDAR crown become young trees.
-- [ ] Optional: measure how many LiDAR crowns have no tree in the inventory (private courtyards, gardens). If there are many, fill them in with LA's NDVI and multiple-return detection, computing NDVI from the PNOA cloud's own infrared (or from the orthophoto if the cloud lacks it). Log the decision in `DECISIONS.md`.
+- [x] Reorganise the fusion into 2D layers following the structure of LA's `layers.py` (ground, buildings, roofs, vegetation, bridge decks and flyovers).
+- [x] Classification: ground, buildings, vegetation, water, from PNOA + OSM + Catastro.
+- [x] Buildings: footprints (Catastro or OSM; document which and why) with LiDAR heights and roofs. Adapt Warsaw's rules: OSM/Catastro wins where the LiDAR sees nothing tall (building completed after the flight).
+- [x] Trees: municipal inventory with species for seasonal foliage; trees with no LiDAR crown become young trees.
+- [x] Optional: measure how many LiDAR crowns have no tree in the inventory (private courtyards, gardens). If there are many, fill them in with LA's NDVI and multiple-return detection, computing NDVI from the PNOA cloud's own infrared (or from the orthophoto if the cloud lacks it). Log the decision in `DECISIONS.md`.
 - [ ] Flyovers and bridges from PNOA class 17.
-- [ ] Streets, pavements, squares, parks and water from OSM.
-- [ ] Pedestrian crossings and road markings, adapting LA's `road_markings.py`.
-- [ ] Street lamps: check how many OSM has in the AOI; if few, place them along kerbs as LA does.
-- [ ] Roof and vegetation colours from the orthophoto.
+- [x] Streets, pavements, squares, parks and water from OSM.
+- [x] Pedestrian crossings and road markings, adapting LA's `road_markings.py`.
+- [x] Street lamps: check how many OSM has in the AOI; if few, place them along kerbs as LA does.
+- [x] Roof and vegetation colours from the orthophoto.
 - [ ] Remove or stub out all the Warsaw-specific code listed in Phase 0.
-- [ ] Screenshots of the 3 reference views.
+- [x] Screenshots of the 3 reference views.
 
 **Checkpoint 3:** the test area is recognisable as Madrid. List of known defects.
 

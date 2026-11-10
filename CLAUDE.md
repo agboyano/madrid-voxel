@@ -87,12 +87,10 @@ Future (the pipeline must allow swapping the elevation or classification source 
 # Python dependencies (pipeline + screenshot harness)
 uv sync
 
-# Madrid data, step by step (Phases 1-2; build_data.sh is still Warsaw's until Phase 3)
-PYTHONPATH=scripts uv run python scripts/fetch_osm.py        # also fetch_trees, fetch_catastro, fetch_ortho
-PYTHONPATH=scripts uv run python scripts/fetch_pnoa_lidar.py # checks the hand-downloaded LAZ files
-PYTHONPATH=scripts uv run python scripts/prep_lidar.py       # -> $MADRID_CACHE/work/elevation_<source>.npz
-PYTHONPATH=scripts uv run python scripts/prep.py             # -> data/prep.npz for voxelize.py
-PYTHONPATH=scripts uv run python scripts/voxelize_elevation.py  # Phase 2 test tiles -> web/public/data
+# Madrid data: downloads (cached) -> rasters -> fusion -> web/public/data (~25 s for the test area from the cache)
+sh scripts/build_data.sh
+# the PNOA-LiDAR LAZ tiles are downloaded by hand; this lists the ones the AOI needs and checks them
+PYTHONPATH=scripts uv run python scripts/fetch_pnoa_lidar.py
 
 # Viewer in development (web/ pins pnpm; the lockfile is pnpm-lock.yaml)
 cd web && npx -y pnpm@12.11.2 install --frozen-lockfile && npx -y pnpm@12.11.2 exec vite

@@ -90,3 +90,21 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 
 - **Decision:** skip the optional DSM 2023 test.
 - **Reason:** only 1.2 % of roof cells have no LiDAR point and they fill cleanly; the visible defects come from fusion (facades, pitched roofs, trees), not from the elevation source. Pending the user's approval at Checkpoint 2.
+
+## 2026-11-11: Building footprints from OSM, floors from Catastro
+
+- **Decision:** OSM footprints, with heights from the LiDAR; Catastro gives floors where OSM has no height or levels, and adds the buildings OSM lacks.
+- **Reason:** OSM and Catastro footprints coincide (IoU 0.957); OSM carries the names, Wikidata links, colours and the building/part structure the fusion rules use, Catastro the floor count of every volume (OSM has levels on 21 % of buildings).
+- **Rejected:** Catastro footprints alone (no names, tags or parts, would need a new styling path); OSM alone (no floors for the "built after the flight" rule on 79 % of buildings).
+
+## 2026-11-11: Reuse Warsaw's fusion, reorganised into layers
+
+- **Decision:** keep Warsaw's fusion rules (`voxelize.py`), removing what is Warsaw-specific, and reorganise them into `layers.py` (2D, dtla-voxel's structure) and `voxelize.py` (3D fill).
+- **Reason:** the viewer's features (zones, traffic, windows, foliage, underpasses) depend on what Warsaw's fusion produces; a byte-identical split keeps that behaviour while giving the dtla-voxel structure.
+- **Rejected:** rebuilding the fusion on dtla-voxel's `layers.py` and `voxelize.py` (its LA class inference and palette do not apply, and the viewer's Warsaw data products would have to be re-derived).
+
+## 2026-11-11: Lamps from OSM, crossings from dtla-voxel, no NDVI tree detection
+
+- **Decision:** street lamps from OSM only; crossings with dtla-voxel's `road_markings.py`; no NDVI or multiple-return tree detection.
+- **Reason:** OSM maps 80 lamps in the test area (74 drawn). dtla-voxel's crossings follow traffic and fall back to marked nodes. Only 22 LiDAR crowns lack an inventory tree.
+- **Rejected:** dtla-voxel's lamps every 36 m along kerbs (would double the mapped lamps); NDVI from the leaf-off PNOA cloud (weak on deciduous crowns, see Phase 1).

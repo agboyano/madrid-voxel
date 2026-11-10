@@ -1131,3 +1131,56 @@ Screenshots: `docs/img/phase2-top.png`, `phase2-sol.png`, `phase2-street.png` (1
 
 - At street level a view's target must sit just below the camera: OrbitControls' tilt limit (`TILT` in `nav.ts`) lifts a camera that looks up.
 - Deleting and recreating `web/public/data/tiles` while the Vite dev server runs makes it serve `index.html` for the new files; the voxeliser therefore overwrites node files in place and only removes stale ones.
+
+## Fusion (Phase 3)
+
+`sh scripts/build_data.sh` runs the whole Madrid pipeline from the cache in about 25 s for the test area.
+
+### Structure
+
+- `palette.py`: material ids (must match `web/src/voxelMaterial.ts`), the shared `Palette`, the ground palette `C`, colour helpers.
+- `buildlog.py`: `note()`, the report and the output folders.
+- `layers.py`: the 2D fusion, `build()` returning the layers by name (dtla-voxel's structure, Warsaw's rules): ground level and classes, roads, the LiDAR rasters and classes, ortho indices, building features with styles, roof heights and undersides, bridge ways. The docstring lists every layer.
+- `voxelize.py`: the 3D fill from those layers, plus what is decided voxel by voxel: vegetation and trunks, fountains, street furniture, bridge decks, underpasses, landmarks, debris; then the export.
+- The split was checked to be byte-identical: every tile and viewer file hashed before and after (`data/debug/rebuild.sh`).
+- **Not moved yet:** the vegetation masks and the bridge deck heights are computed in `voxelize.py`, between 3D writes (trunks, deck surfaces). Moving them into `layers.py` means separating those reads and writes; worth doing with the band fill in Phase 5.
+
+### Sources and rules
+
+- **Ground:** the PNOA DTM through Warsaw's `ground_walls` (retaining walls snapped to one level, slopes smoothed); ground classes from OSM (roads, pavements, squares, parks, water, rail) as in Warsaw. Roads take their surface from OSM `surface` or the square they cross.
+- **Buildings: OSM footprints + Catastro floors.** OSM and Catastro footprints coincide at IoU 0.957 in the test area (Spain's OSM buildings largely come from Catastro). OSM is kept as the footprint because it carries names (82), Wikidata (58), colours (57) and the building/part structure the Warsaw rules rely on; it has levels on only 213 of 1 025 buildings. Catastro (`catastro.py`) gives the floors of the parts under an OSM feature without height (336 features here, 3.2 m per floor) and adds the Catastro buildings OSM lacks (overlap < 30 %, 2 here). Heights come from the LiDAR; Warsaw's rule stays: the OSM/Catastro height wins only where the LiDAR sees nothing tall (p90 < 35 % of it, a building finished after the flight) or misses a spire. No feature triggered it in the test area.
+- **Vegetation:** above-ground cells (nDSM > 2.2 m) green in the leaf-on orthophoto **or classed vegetation by the PNOA** (2 637 cells only the LiDAR finds: the flight was leaf-off), never where the PNOA classes building (eaves and cornices), under `MAX_TREE` = 40 m.
+- **Trees:** the municipal inventory is the backbone (423 trees in the AOI), with 21 OSM trees where no inventory tree stands within 2 m. 248 known trees get a trunk under their LiDAR crown; 179 have no crown in the leaf-off LiDAR and are drawn young at their inventory height. Only 22 LiDAR crowns have no known tree under them (private courtyards), so NDVI and multiple-return detection (optional task) is not needed here.
+- **Bridges and flyovers:** Warsaw builds decks from OSM bridge ways with heights from the DSM along each way; PNOA class 17 cells next to a bridge way are added to the deck. The test area has no bridge, so this is untested; the 16 downloaded tiles all contain class 17, so it is checked when the AOI grows (Phase 5).
+- **Crossings and markings:** `road_markings.py` (dtla-voxel) paints crossing bars across the carriageway following traffic, from OSM crossing ways or else marked crossing nodes; here 2 ways, 2 nodes, 5 ambiguous left unpainted. Cycle crossings red, lane markings from Warsaw (none here: no 2-lane avenue in the AOI).
+- **Street lamps:** OSM has 80 in the AOI and 74 are drawn (the rest fall on buildings), so dtla-voxel's lamps every 36 m along kerbs are not needed. The inferred bridge-deck lamps (Warsaw) stay for decks without OSM lamps.
+- **Colours:** roofs from the orthophoto median over each roof (Warsaw's `roof_style`); walls from OSM colours or a default palette; leaves from the palette, tinted by the viewer's season.
+- **Climate and sun:** `climate.py` queries Open-Meteo at the AOI centre (40.42, −3.70; Europe/Madrid); the viewer's sun takes the centre's lon/lat from `meta.json` (`lonlat`). Madrid and Warsaw share CET/CEST, so the viewer's UTC offset is unchanged.
+
+### Warsaw code still present
+
+Phase 4 items:
+- `labels.py` (Polish names, `FAR_TIERS`, `PICKS`, `NAMES`), `wikidata.py`, `notable.py`: replaced by `fetch_wikidata.py` from OSM wikidata tags; until then `notable.json` is absent and only greens get labels.
+- `phenology.py` (DWD and iNaturalist for Central Europe) and `web/public/data/phenology.json` (Warsaw's, restored as a placeholder): the seasonal cycle for Madrid's species.
+- `HISTORIC_CORE` (empty) and the wall palettes: the Madrid palette and Madrid de los Austrias.
+
+Not used by the Madrid build:
+- `flood.py` and `web/src/flood.ts` (the Vistula gauge): no river in the area; the viewer's flood loader fails quietly.
+- `window_counts.json` and `window_photos.py`: lit-window statistics counted on Warsaw photos, kept as generic behaviour by building type.
+
+Viewer, still to remove or generalise:
+- the Palace of Culture floodlight (`pkinLight` in `sky.ts`, `voxelMaterial.ts`);
+- the tram livery and the train and tram simulation (`sim/meshes.ts`, `sim/trains.ts`), idle with no tram paths;
+- the zouk dance floor at Warsaw grid coordinates (`sim/dance.ts`);
+- the `web/tools/*` camera poses;
+- `posthog-js` in `package.json`, unused now that the bootstrap is gone.
+
+Documents: `README.md`, `IDEAS.md`, `visual_ref.md` and `research_*.md` are Warsaw's (README rewrite in Phase 6).
+
+### Known defects in the test area
+
+- Roof colours split between clay tile and a cold grey: the ortho median over flat or mixed roofs picks up grey; Phase 4's palette should pull Madrid roofs toward tile, zinc and slate.
+- Street lamps are Warsaw's 1 × 1 columns 10 m high with a lit top: heavy at street level in Sol.
+- Tree crowns of young (procedural) trees are boxy; only 4 conifers in the inventory get conifer crowns.
+- No labels yet (Phase 4); the search lists 666 OSM places.
+- No bridges to test the class 17 decks.
