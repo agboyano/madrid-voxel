@@ -16,7 +16,7 @@ from scipy import ndimage
 
 import monuments
 import roofgardens
-from aoi import D as _D, W as _W, to_grid
+from aoi import AREA, D as _D, W as _W, to_grid
 
 M_WALL, M_GLASS, M_CONCRETE, M_CLOCK = 1, 2, 13, 14
 
@@ -26,8 +26,10 @@ LABELS = {}
 EXTRA_LABELS = {}
 # roofs to smooth (a membrane or a lattice the LiDAR reads as noise): OSM id -> description
 SMOOTH_ROOFS = {}
-# Madrid's historic core, for its own wall palette (Phase 4: Madrid de los Austrias), as EPSG:25830 (x, y); empty: none
-HISTORIC_CORE = []
+# Madrid's historic core, for its own wall palette (palette.AUSTRIAS_WALLS) and tiled roofs: Madrid de los Austrias,
+# between Calle de Bailen, Calle Mayor, the east side of Plaza Mayor, Calle de Toledo, Plaza de la Cebada and Calle de
+# Segovia; traced roughly, EPSG:25830 (x, y)
+HISTORIC_CORE = [(439458, 4474153), (439764, 4474195), (440061, 4474204), (440187, 4474036), (440083, 4473815), (439972, 4473705), (439717, 4473651), (439422, 4473820)]
 
 
 def historic_core():
@@ -689,7 +691,7 @@ _ORTO = None
 def _orto():
     global _ORTO
     if _ORTO is None:
-        _ORTO = np.load("data/prep.npz", mmap_mode="r")["orto"]  # 2025 ortho, 5 px per grid metre
+        _ORTO = np.load(AREA / "prep.npz", mmap_mode="r")["orto"]  # the ortho, 5 px per grid metre
     return _ORTO
 
 

@@ -99,5 +99,22 @@ C = {  # ground & misc palette (MagicaVoxel-like pastel)
 PERENNIALS = [pal(c, M_LEAF) for c in ["#8e6fae", "#a690c4", "#6f9a4f", "#8aa27a", "#5f8a49", "#7c9c5a", "#c98fb0"]]
 LEAVES = [pal(c, M_LEAF) for c in ["#a3c65c", "#8db552", "#76a24a", "#618f43", "#4f7c3c",
                                     "#93bb6a", "#7da95f", "#689655", "#56834c", "#456f43"]]
-WALL_DEFAULTS = ["#d8cfc0", "#cbbfa8", "#e2d6bf", "#c4bbad", "#d9c7a7", "#cdc6ba", "#e6ddcc", "#bdb09b",
-                 "#d3c3b0", "#c9c9c2"]
+# Central Madrid's materials (Phase 4), shades per material; a building takes one by a stable hash of its id.
+# Roofs: Arab clay tile (most roofs), slate (Madrid de los Austrias' spires and mansards, palaces), zinc (19th-century
+# mansards), flat terraces (azoteas, light grey-beige). Walls: light render (revoco: cream, ochre, pale yellow, warm
+# white, salmon), exposed brick (ladrillo visto, neo-mudejar and post-war housing), granite (berroquena, monuments).
+ROOF_TILE = ["#b0603f", "#a65a3c", "#b96b49"]
+ROOF_SLATE = ["#4f545a", "#5a5f65"]
+ROOF_ZINC = ["#8d9397", "#999fa3"]
+ROOF_TERRACE = ["#bbb4a8", "#c5bfb3", "#aea89d"]
+ROOF_SHADES = {"tile": ROOF_TILE, "slate": ROOF_SLATE, "zinc": ROOF_ZINC, "terrace": ROOF_TERRACE}
+# OSM roof:material -> one of the above
+ROOF_MATERIALS = {"roof_tiles": "tile", "tile": "tile", "tiles": "tile", "slate": "slate", "metal": "zinc", "zinc": "zinc",
+                  "tin": "zinc", "copper": None, "concrete": "terrace", "gravel": "terrace", "asphalt": "terrace",
+                  "tar_paper": "terrace", "stone": "terrace"}
+WALL_RENDER = ["#e8dcc2", "#e3cfa3", "#ead9b0", "#efe6d2", "#dcc39a", "#e7c9a6", "#d9b98f", "#f0e8d8"]
+WALL_BRICK = ["#a85f42", "#b36b4b", "#9d5a40"]
+WALL_GRANITE = ["#a9a69e", "#b3b0a8"]
+# Madrid de los Austrias: Madrid red (almagre), ochre, cream and brick
+AUSTRIAS_WALLS = ["#9e4a32", "#b5643f", "#d1a15e", "#e2cfa6", "#c58a52", "#a85f42"]
+WALL_DEFAULTS = WALL_RENDER + WALL_BRICK  # about one building in four of exposed brick

@@ -6,7 +6,7 @@ and adds what is drawn voxel by voxel (vegetation and trunks, fountains, street 
 landmarks), then exports the tiles and the viewer's data.
 
 Output (web/public/data/): tiles/ (tiles.py), meta.json (palette, lamps, labels, views), trees.json, traffic.json,
-qa_roadmask.bin.gz; data/ground.npz for terrain.py.
+qa_roadmask.bin.gz; {AREA}/ground.npz for terrain.py.
 Volume axes: vol[z, row, col]; row grows south, col grows east, z up.
 """
 
@@ -21,7 +21,7 @@ import numpy as np
 from scipy import ndimage
 from shapely.geometry import LineString
 
-from aoi import CRS, CX, CY, D, THETA, VOXEL_SIZE, W, grid_to_lonlat
+from aoi import AREA, CRS, CX, CY, D, THETA, VOXEL_SIZE, W, grid_to_lonlat
 import landmarks
 import roofgardens
 
@@ -864,7 +864,7 @@ note("final height", Hm, "palette", len(pal.entries))
 _ids = vol[g - 1, np.arange(D)[:, None], np.arange(W)[None, :]]
 _lut = np.array([e[:3] for e in pal.entries], np.uint8)
 _lut[[i for i, e in enumerate(pal.entries) if e[3] == M_GRASS]] = _lut[C["bare"]]
-np.savez_compressed("data/ground.npz", g=g.astype(np.int16), rgb=_lut[_ids],
+np.savez_compressed(AREA / "ground.npz", g=g.astype(np.int16), rgb=_lut[_ids],
                     b=np.where(bmask, topi, 0).astype(np.int16))  # building height above ground (photo-pose tools)
 import tiles
 EXPORT_IDS = dict(face_ids={i for i, e in enumerate(pal.entries) if e[3] == M_CLOCK},

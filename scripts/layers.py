@@ -25,13 +25,14 @@ from shapely.geometry import Point
 from shapely.ops import substring
 from shapely.strtree import STRtree
 
-from aoi import D, W
+from aoi import AREA, D, W
 from osm import OSM
 import landmarks
 import roofgardens
 
 from buildlog import note
-from palette import C, M_GLASS, M_ROOF, M_WALL, WALL_DEFAULTS, hex_rgb, pal, parse_colour, parse_len, soften, stable_hash
+from palette import (AUSTRIAS_WALLS, C, M_GLASS, M_ROOF, M_WALL, ROOF_MATERIALS, ROOF_SHADES, WALL_BRICK, WALL_DEFAULTS,
+                     WALL_GRANITE, hex_rgb, pal, parse_colour, parse_len, soften, stable_hash)
 
 
 def ground_walls(dtm, dtm_s):
@@ -126,7 +127,7 @@ def build():
     """Every 2D layer of the fusion, by name."""
 
     # ---------------------------------------------------------------- rasters
-    z = np.load("data/prep.npz")
+    z = np.load(AREA / "prep.npz")
     dsm, dtm, orto = z["dsm"], z["dtm"], z["orto"]
     # the point cloud's class per cell (prep.py), where the source has one: 0 everywhere otherwise
     cls = z["cls"] if "cls" in z else np.zeros(dtm.shape, np.uint8)
@@ -811,10 +812,8 @@ def build():
     SACRED = {"church", "cathedral", "chapel", "basilica", "synagogue", "mosque", "temple", "shrine"}
     M_CLASSIC, M_TENEMENT = 20, 22
     CORE = CORE_GEOM
-    # the Old Town's plasters where OSM gives no colour (photos of the Rynek and the streets off it: ochre, terracotta,
-    # salmon, ivory, cream, an odd sage; the Rynek photos: warm, rarely cool)
-    CORE_WALLS = ["#d9a441", "#b55a3f", "#d98f6e", "#efe3c4", "#c98a5a", "#e6d3a3", "#e8c78f", "#b9775a", "#dcb47c",
-                  "#9daa87", "#c2866e", "#e9d6b4"]
+    # the historic core's walls where OSM gives no colour (Madrid de los Austrias, palette.AUSTRIAS_WALLS)
+    CORE_WALLS = AUSTRIAS_WALLS
 
 
     def wall_style(f):
@@ -831,10 +830,13 @@ def build():
         if mat_tag in ("concrete",) and col is None:
             col = hex_rgb("#c9c6bd")
         if mat_tag in ("brick",) and col is None:
-            col = hex_rgb("#a95f45")
+            col = hex_rgb(WALL_BRICK[stable_hash(f["id"]) % len(WALL_BRICK)])
+        if mat_tag in ("stone", "granite") and col is None:
+            col = hex_rgb(WALL_GRANITE[stable_hash(f["id"]) % len(WALL_GRANITE)])
         core = CORE.contains(f["geom"].representative_point())
+        sacred = btype in SACRED or tag(f, "amenity") == "place_of_worship"
         if col is None:
-            walls = CORE_WALLS if core else WALL_DEFAULTS
+            walls = WALL_GRANITE if sacred else CORE_WALLS if core else WALL_DEFAULTS
             col = hex_rgb(walls[stable_hash(f["id"]) % len(walls)])
         if btype in SACRED or tag(f, "amenity") == "place_of_worship":
             return pal(soften(col), M_CLASSIC)  # stone or brick, tall windows: not the shader's office grid of storeys
@@ -846,8 +848,21 @@ def build():
     ROOF_OVERRULED = []
 
 
+    def roof_material(col, shape):
+        """Madrid's roof material for an ortho colour: clay tile where red-orange, slate where dark; a grey roof is a
+        flat terrace (azotea, ~40 % of the roofs round Sol), zinc only on a mansard."""
+        c_ = np.asarray(col, float)
+        if c_[0] > c_[2] + 30 and c_[0] > c_[1] + 12:
+            return "tile"
+        lum_c = 0.299 * c_[0] + 0.587 * c_[1] + 0.114 * c_[2]
+        if lum_c < 95:
+            return "slate"
+        return "zinc" if shape in ("mansard", "gambrel") else "terrace"
+
+
     def roof_style(f):
         col = parse_colour(tag(f, "roof:colour"))
+        from_osm = col is not None
         if col is None and (f["tags"].get("roof:material") or "").lower() == "glass":
             return pal(soften(hex_rgb("#93adbf"), 0.06), M_GLASS)  # glass atrium roofs (Politechnika's hall): blue-grey
         h = float(np.median(top[f["rr"], f["cc"]]))
@@ -868,7 +883,7 @@ def build():
                 if col is None or (np.linalg.norm(np.subtract(col, oc)) > 110 and lum_(col) < 110 and lum_(oc) > lum_(col) - 15):
                     if col is not None:
                         ROOF_OVERRULED.append((f["id"], tag(f, "roof:colour")))
-                    col = oc
+                    col, from_osm = oc, False
         if col is None:
             col = hex_rgb("#7d7f84")
         col = np.array(col, float) * 1.05  # ortho is slightly dark
@@ -883,10 +898,16 @@ def build():
         # it near white (Pac Palace, the Blue Palace, Holy Cross); photos show a soft grey-green, in two shades
         if not glassy and col[1] > col[0] + 14 and col[2] > col[0] + 4 and col.mean() > 110:
             return pal(soften(hex_rgb(["#86a99a", "#7d9f91"][stable_hash(f["id"]) % 2]), 0.05), M_ROOF, q=12)
-        if red:
-            # one of three tile shades: the house's ortho median mixed in dormers and skylights (pink and orange roofs
-            # side by side where the ortho shows one red-brown)
-            return pal(soften(hex_rgb(["#a4533b", "#9a4b35", "#ad5d41"][stable_hash(f["id"]) % 3]), 0.05), M_ROOF, q=12)
+        # Madrid's roof materials (palette.ROOF_SHADES): from the OSM roof:material, else, where OSM gives no colour,
+        # from the ortho colour; one shade per building. A roof:colour tag from OSM keeps its own colour.
+        mat = ROOF_MATERIALS.get((tag(f, "roof:material") or "").lower())
+        if mat is None and red:
+            mat = "tile"
+        if mat is None and not from_osm and not glassy:
+            mat = roof_material(col, tag(f, "roof:shape"))
+        if mat:
+            shades = ROOF_SHADES[mat]
+            return pal(soften(hex_rgb(shades[stable_hash(f["id"]) % len(shades)]), 0.05), M_ROOF, q=12)
         col = tuple(np.clip(col.mean() + (col - col.mean()) * 0.6, 0, 255))
         return pal(soften(col, 0.1), M_ROOF, q=12)
 
