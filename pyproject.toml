@@ -12,3 +12,8 @@ dependencies = [
     "shapely>=2.2.0",
     "webcolors>=25.10.0",
 ]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.65.0",
+]
