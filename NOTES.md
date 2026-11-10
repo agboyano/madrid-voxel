@@ -1051,3 +1051,69 @@ Figures from `scripts/lidar_report.py` (re-run it for NPC03 or the municipal 202
 - **Classification quality at Sol** (`docs/img/phase1-lidar-classes.png`, highest non-overlap point per 1 m cell): buildings and streets are clean. Parked cars are class 64 along the kerbs, so they do not pollute ground or buildings. Unclassified points (class 1, 0.6–3.7 m above the ground) gather in the square: kiosks, the Cercanías entrance and street furniture. The antenna (class 70) is one object about 12 m above the ground. No awnings or vehicles were found classified as building or ground at this scale.
 - **Colour and NIR:** every point has RGB and NIR (16-bit values 256–65 280, none zero).
 - **NDVI test, Paseo del Prado** (X 441 200–441 330, Y 4 474 050–4 474 350; `docs/img/phase1-lidar-ndvi-prado.png`): NDVI = (NIR − R) / (NIR + R) from the points' own values. Lawns around the Fuente de Neptuno are clearly positive (ground p90 +0.35). Trees are weak: high vegetation median +0.16 (p90 +0.40), because the deciduous trees were leafless in March. Buildings −0.01. NIR is usable for grass and evergreens, but not on its own to detect deciduous crowns from this flight; the leaf-off flight also means sparse crowns for plane trees.
+
+## Elevation pipeline (Phase 2)
+
+```
+fetch_pnoa_lidar.py (check)  ->  prep_lidar.py  ->  $MADRID_CACHE/work/elevation_<source>.npz  (common format)
+                                                       |-> prep.py              -> data/prep.npz  (Warsaw voxelize.py contract)
+fetch_ortho.py --------------------------------------->|
+                                                       '-> voxelize_elevation.py -> web/public/data  (Phase 2 test)
+```
+
+Commands, from the repository root:
+
+```
+PYTHONPATH=scripts uv run python scripts/prep_lidar.py          # ~3 s for the test AOI (one LAZ tile)
+PYTHONPATH=scripts uv run python scripts/prep.py
+PYTHONPATH=scripts uv run python scripts/voxelize_elevation.py
+uv run python scripts/screenshot.py phase2-top --view top --date 5-15 --hour 12
+```
+
+### Common elevation format (`elevation_<source>.npz`)
+
+The boundary between a point-cloud source and the rest of the pipeline. Every array is on the rotated `aoi.py` grid at the resolution set in `pipeline.toml` (`[elevation] resolution`, 1.0 m for NPC02), row 0 = grid row 0; each point is assigned to the cell it falls in, so there is no north-up raster and no second resampling. Changing the rotation only means re-running `prep_lidar.py`.
+
+| Array | Type | Content |
+| --- | --- | --- |
+| `dsm` | float32 | highest point that is not noise or a vehicle (overlap points included); NaN where empty |
+| `dtm` | float32 | mean of ground points; gaps filled by a multi-scale (push-pull) fill and smoothed (σ 3 m) only where filled; never NaN |
+| `ground_n` | uint16 | ground points per cell (0 where the DTM is filled) |
+| `cls` | uint8 | canonical class of the highest non-overlap point; cells with only overlap points take the class of the nearest cell with its own points; 0 where empty |
+| `cls_filled` | bool | cells whose class came from a neighbour |
+| `top_building`, `top_vegetation`, `top_bridge` | float32 | highest point of each class group; NaN where none |
+| `n_all`, `n_overlap`, `n_vegetation_nonlast`, `n_vehicle` | uint16 | point counts |
+| `info` | JSON | source, description, resolution, CRS, vertical reference, flight dates, files, point count and the AOI parameters |
+
+Canonical classes are the ASPRS codes plus PNOA's own from 64 (vehicle 64, wall 65, solar panel 67, antenna 70, NPC03 roof/facade/courtyard classes 71–75). **Adding a source** (the municipal 2026 flight, NPC03): write its `fetch_` script and add an entry to `SOURCES` in `prep_lidar.py` with its folder, file pattern, CRS, vertical reference, a class equivalence table onto the canonical codes, its noise and overlap codes and its GPS time type; then set `source` (and, for a denser flight, `resolution`) in `pipeline.toml`. `prep.py` checks that the stored AOI parameters match `aoi.py`, so stale rasters are refused.
+
+### What Warsaw's fusion expects, and how Madrid feeds it
+
+`prep.py` writes `data/prep.npz` exactly as Warsaw's `voxelize.py` reads it (see "Raster contract" above): `dsm` float32 (2D, 2W) at 0.5 m, `dtm` float32 (D, W) at 1 m with no gaps, `orto` uint8 (5D, 5W, 3) at 0.2 m, row 0 = grid row 0, values at cell centres, absolute orthometric heights. From the 1 m rasters the DSM is each cell repeated 2 × 2 (nearest neighbour, so no detail is invented and the ×2 that `voxelize.py` hard-codes is kept); the DTM is taken 1:1; the orthophoto (north-up, 0.25 m) is sampled bilinearly at the centres of the rotated 0.2 m cells. NaN marks empty DSM cells (`voxelize.py` handles NaN with `isfinite` in the places that check). Nothing in Warsaw's `voxelize.py` had to change for this; it is not run yet because it needs the Phase 3 inputs (OSM fusion, trees, landmarks).
+
+The pipeline map shows nothing in Warsaw's code that needs a 0.5 m raster from the source: the 0.5 m DSM only feeds 2 × 2 maxima/means per 1 m cell and `wall_clean`. With NPC02 the intermediate resolution therefore stays at 1 m.
+
+### Phase 2 test voxels (`voxelize_elevation.py`)
+
+Ground and surface only, generic palette: each column is soil and paving up to the DTM, then by class: buildings, antennas and walls solid to the surface with a roof-coloured top voxel; unclassified structures (kiosks, the Cercanías entrance) solid grey; vegetation as a crown hanging below the surface (60 % of the height); bridges as a 1.5 m deck. A column holds something above the ground only if the surface is ≥ 1.5 m above it. Vehicles (class 64) are left out of the DSM, so parked cars do not become blocks. Empty DSM cells take the median of their valid 3 × 3 neighbours (twice), then the ground. The output is the minimum the viewer needs: tiles through the unchanged `tiles.py`, `meta.json` (with `voxel`), `terrain.bin` in `terrain.py`'s format, and `zones.bin/json` with one block per 128 m tile and no buildings, so nothing waits to be shown whole. `places.json` and `traffic.json` are absent; the viewer logs two JSON errors and carries on.
+
+Test AOI result: 4 × 4 level-1 nodes, 328 KB in `web/public/data`, height 72 levels over base 640 m. Columns: building 70.4 %, vegetation 2.6 %, unclassified structures 0.2 %, no bridges.
+
+### Quality of the NPC02 elevation (test AOI)
+
+Screenshots: `docs/img/phase2-top.png`, `phase2-sol.png`, `phase2-street.png` (15 May, noon).
+
+- **Roof holes:** of the 157 356 cells inside Catastro footprints (62.9 % of the AOI), **1.22 % have no point** and 0.69 % have only overlap points. Empty cells are filled with the 3 × 3 median; overlap-only cells take their neighbours' class. 98.5 % of footprint cells end up as building. Roofs read as continuous surfaces; holes are not a visible problem.
+- **Courtyards and light wells:** they come out open and at the right depth (dark pits in the top view). 2.95 % of footprint cells are below half their building's median height; 91 % of those are inside the footprint rather than on its edge, i.e. real courtyards and light wells, which Catastro footprints include.
+- **Roof edges and cornices:** 7.1 % of the AOI is building-class surface higher than 6 m *outside* the Catastro footprints, mostly a 1 m strip along the facades where eaves and cornices overhang the street. Those mixed cells make the walls ragged, with vertical notches that show as dark stripes in the oblique and street views. Phase 3 should cut walls to the footprints (Warsaw's `wall_clean` and footprint rules) and keep the overhang as eaves only above a clearance.
+- **Stepped roofs:** pitched roofs become 1 m terraces; with the roof colour only on each column's top voxel, the risers show as wall colour with red speckles. Expected at 1 m; the full palette and orthophoto colours come in Phases 3–4.
+- **Trees:** leaf-off (flown 17–18 March), so plane-tree crowns are sparse and come out as thin green pillars and scattered blocks. Phase 3 uses the inventory (species, height) for crowns rather than the LiDAR shape.
+- **Street furniture:** kiosks, the Cercanías entrance, the statue and signs come out as unclassified grey blocks in the square; scattered 1-voxel specks remain where class 1 points stand over 1.5 m.
+- **Artefacts:** no spikes or pits from noise; the DTM fill under buildings is smooth. Small ground bumps remain where ground points sit on raised features.
+
+**Conclusion:** NPC02 alone gives roofs without significant holes at 1 m. The optional Ayuntamiento DSM 2023 test is not needed on these numbers; the remaining defects (ragged facades, terraced pitched roofs, sparse trees) are matters for the Phase 3 fusion, not for the elevation source.
+
+### Viewer notes learnt in Phase 2
+
+- At street level a view's target must sit just below the camera: OrbitControls' tilt limit (`TILT` in `nav.ts`) lifts a camera that looks up.
+- Deleting and recreating `web/public/data/tiles` while the Vite dev server runs makes it serve `index.html` for the new files; the voxeliser therefore overwrites node files in place and only removes stale ones.

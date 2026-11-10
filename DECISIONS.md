@@ -67,3 +67,26 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** use class 12 (overlap) points for surface heights, and take their semantic class from the non-overlap points of the same cell or its neighbours.
 - **Reason:** 42 % of the points in the AOI are class 12, largely on roofs; they are valid measurements but carry no ground, building or vegetation class. Approved at Checkpoint 1.
 - **Rejected:** dropping overlap points (halves the density, more empty cells); treating them as unclassified.
+
+## 2026-11-11: Intermediate elevation rasters at 1 m, rasterised on the rotated grid
+
+- **Decision:** `prep_lidar.py` writes the common elevation format at 1 m (`pipeline.toml`), assigning each point to its cell of the rotated grid; `prep.py` expands the DSM to the 0.5 m that Warsaw's `voxelize.py` expects by nearest neighbour.
+- **Reason:** NPC02 has 5.9 own points/m², about 1.5 per 0.5 m cell, too few for a 0.5 m surface without interpolating most cells; nothing in Warsaw's code needs true 0.5 m detail. Rasterising on the rotated grid avoids a second resampling.
+- **Rejected:** a 0.5 m DSM from NPC02 (many empty cells); rasterising north-up and rotating (two resamplings); changing the six places in `voxelize.py` that hard-code ×2 (not needed).
+
+## 2026-11-11: Ground gaps by multi-scale fill; vehicles out of the surface
+
+- **Decision:** the DTM fills cells without ground points (72 % of the AOI, mostly under buildings) with a push-pull multi-scale average, smoothed only where filled. Vehicle points (class 64) are left out of the DSM.
+- **Reason:** `voxelize.py` requires a gap-free DTM, and the fill is O(n) for the full area. Parked cars are not part of the city's surface; the viewer animates its own vehicles.
+- **Rejected:** Delaunay or griddata interpolation (slow on the full area); the Ayuntamiento DTM (a second source, against the single-source rule).
+
+## 2026-11-11: A minimal voxeliser for the elevation test
+
+- **Decision:** test the elevation with `voxelize_elevation.py`, which writes only what the viewer needs, instead of running Warsaw's `voxelize.py`.
+- **Reason:** Phase 2 asks for ground and elevation only; Warsaw's `voxelize.py` needs the Phase 3 inputs and stops on Warsaw names (it looks the Palace of Culture up by name).
+- **Rejected:** stubbing Warsaw's `voxelize.py` for this phase (more changes to code that Phase 3 reworks anyway).
+
+## 2026-11-11: No Ayuntamiento DSM 2023 for now
+
+- **Decision:** skip the optional DSM 2023 test.
+- **Reason:** only 1.2 % of roof cells have no LiDAR point and they fill cleanly; the visible defects come from fusion (facades, pitched roofs, trees), not from the elevation source. Pending the user's approval at Checkpoint 2.

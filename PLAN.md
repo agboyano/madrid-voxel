@@ -82,14 +82,14 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 
 ## Phase 2: Minimal elevation test
 
-- [ ] Adapt LA's `prep_lidar.py` to turn the NPC02 cloud into rasters of ground (equivalent to a DTM), surface (equivalent to Warsaw's NMPT) and classes. Use the PNOA classification instead of LA's class inference. Guidelines:
+- [x] Adapt LA's `prep_lidar.py` to turn the NPC02 cloud into rasters of ground (equivalent to a DTM), surface (equivalent to Warsaw's NMPT) and classes. Use the PNOA classification instead of LA's class inference. Guidelines:
   - **Rasterise directly into the rotated grid:** assign each point to its cell in the `aoi.py` frame (centre + rotation); never rasterise in UTM and rotate afterwards, to avoid resampling twice. Changing the rotation in Phase 4 must only mean re-running this step.
   - **Resolution as a pipeline parameter,** set according to source density. With NPC02 (~5 pts/m²) the main resolution is 1 m. Use 0.5 m only if the Warsaw code needs it for something specific (check in the Phase 0 pipeline map); in that case, measure the percentage of empty cells and interpolate them explicitly.
   - **Compatibility:** the rasters must have the format, origin and orientation that Warsaw's fusion expects, so it can be reused unchanged. Document exactly what it expects in `NOTES.md`.
-- [ ] Design the elevation source abstraction layer (common intermediate format) so that adding the municipal 2026 flight in the future only means writing a new `fetch_` and an adapter. The raster resolution must be changeable through configuration without touching code.
-- [ ] Generate voxels for the test AOI with ground and elevation only, generic palette.
-- [ ] Screenshots from 3 views (top-down, oblique over Sol, street level).
-- [ ] Assess quality: holes in roofs, roof edges and cornices, inner courtyards, trees, artefacts. Measure the percentage of 1 m roof cells with no points and how they are filled.
+- [x] Design the elevation source abstraction layer (common intermediate format) so that adding the municipal 2026 flight in the future only means writing a new `fetch_` and an adapter. The raster resolution must be changeable through configuration without touching code.
+- [x] Generate voxels for the test AOI with ground and elevation only, generic palette.
+- [x] Screenshots from 3 views (top-down, oblique over Sol, street level).
+- [x] Assess quality: holes in roofs, roof edges and cornices, inner courtyards, trees, artefacts. Measure the percentage of 1 m roof cells with no points and how they are filled.
 - [ ] **Optional, only if roofs come out with many holes or very ragged edges:** download the Ayuntamiento DSM 2023 for the AOI (`fetch_dsm.py`), build a variant with its heights and compare screenshots. Bear in mind it dates from 2023 (the LiDAR is from 2024) and is unclassified.
 
 **Checkpoint 2:** the user approves the NPC02 elevation result, or decides whether it is worth complementing with the DSM 2023. Log it in `DECISIONS.md`.
