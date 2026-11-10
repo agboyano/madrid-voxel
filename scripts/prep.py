@@ -1,4 +1,4 @@
-"""The rasters voxelize.py reads (data/prep.npz), from the common elevation format and the orthophoto.
+"""The rasters voxelize.py reads ({AREA}/prep.npz), from the common elevation format and the orthophoto.
 
 Replaces Warsaw's GUGiK mosaic. Inputs: {AREA}/elevation_<source>.npz (prep_lidar.py) and
 {AREA}/ortho/ortho.tif (fetch_ortho.py). Output, row 0 = grid row 0, cell centres (the contract in NOTES.md):
@@ -14,7 +14,6 @@ the orthophoto is read north-up and sampled on the rotated grid with bilinear in
 usage: PYTHONPATH=scripts uv run python scripts/prep.py
 """
 import json
-from pathlib import Path
 
 import numpy as np
 import rasterio
@@ -23,7 +22,7 @@ from scipy import ndimage
 from aoi import AREA, CX, CY, D, THETA, VOXEL_SIZE, W, to_world
 from config import ELEVATION
 
-OUT = Path("data/prep.npz")
+OUT = AREA / "prep.npz"
 DSM_RES, DTM_RES, ORTO_RES = 0.5, 1.0, 0.2  # metres, fixed by voxelize.py
 
 
