@@ -84,7 +84,7 @@ def wait_idle(page, timeout_s: int) -> None:
 
 
 def capture(url: str, out: Path, width: int, height: int, timeout_s: int, settle_ms: int,
-            level: float | None) -> None:
+            level: float | None, click: str | None = None) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, executable_path=CHROMIUM, args=CHROMIUM_ARGS)
         page = browser.new_page(viewport={"width": width, "height": height})
@@ -100,6 +100,11 @@ def capture(url: str, out: Path, width: int, height: int, timeout_s: int, settle
             page.wait_for_timeout(1000)
             wait_idle(page, timeout_s)
         page.wait_for_timeout(settle_ms)
+        if click:  # a landmark's label, by its shown name: selects it and opens its info card
+            # (labels move every frame, so Playwright never finds them "stable": the event is sent directly)
+            page.locator("#labels .txt", has=page.locator("b", has_text=click)).first.dispatch_event("click")
+            page.wait_for_timeout(2500)
+            wait_idle(page, timeout_s)
         out.parent.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(out))
         print(f"{out.relative_to(ROOT)} ({time.monotonic() - t0:.1f} s)")
@@ -117,6 +122,7 @@ def main() -> None:
     ap.add_argument("--height", type=int, default=1000)
     ap.add_argument("--timeout", type=int, default=180, help="seconds to wait for the viewer")
     ap.add_argument("--level", type=float, default=1.0, help="Render size slider, 0-1 (negative: leave it adaptive)")
+    ap.add_argument("--click", help="click the label with this name (opens its info card) before capturing")
     ap.add_argument("--settle", type=int, default=2500, help="milliseconds to wait after loading")
     args = ap.parse_args()
 
@@ -125,7 +131,7 @@ def main() -> None:
         query = build_query(args)
         capture(f"{args.url}?{query}", OUT_DIR / f"{args.name}.png",
                 args.width, args.height, args.timeout, args.settle,
-                None if args.level < 0 else args.level)
+                None if args.level < 0 else args.level, args.click)
     finally:
         if server:
             server.terminate()

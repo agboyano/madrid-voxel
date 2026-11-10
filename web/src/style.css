@@ -45,7 +45,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; /* p
 #credits { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; position: fixed; right: 12px; bottom: 12px; z-index: 4; padding: 3px 9px; border-radius: 10px; background: rgba(16,17,20,.5); color: rgba(255,255,255,.7);
   font: 10.5px Inter, system-ui, sans-serif; }
 #credits a { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.35); }
-.noui #bar, .noui #credits { display: none; }
+/* a selected landmark's info card, bottom left */
+#card { position: fixed; left: 12px; bottom: 104px; z-index: 5; max-width: 300px; padding: 10px 12px 9px; border-radius: 10px;
+  background: rgba(16,17,20,.82); color: #fff; font: 12px/1.35 Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 2px; }
+#card[hidden] { display: none; }
+#card b { font-size: 14px; padding-right: 18px; }
+#card i { font-style: normal; color: #d6d6d6; }
+#card span { color: #a8a8a8; }
+#card dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 6px 0 0; }
+#card dt { color: #a8a8a8; }
+#card dd { margin: 0; }
+#card p { display: flex; gap: 12px; margin: 6px 0 0; }
+#card a { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.35); }
+#card .close { position: absolute; top: 4px; right: 6px; border: 0; background: none; color: #bbb; font-size: 17px; cursor: pointer; }
+.noui #bar, .noui #credits, .noui #card { display: none; }
 
 /* walk mode: no centre dot any more (you look by dragging, not by aiming) */
 

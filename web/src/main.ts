@@ -21,6 +21,7 @@ import type { Facts, Label, Meta, Place, View } from './types';
 import { dateOf, dayOfYear, hourAt, setSite, solarNoon } from './sun';
 import { $, coarsePointer, ease, el, fetchJson, lerp } from './util';
 import { floodlight } from './sky';
+import { Card } from './card';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
 import type { World } from './world';
 import { makeUniforms, makeVoxelMaterial } from './voxelMaterial';
@@ -58,6 +59,7 @@ const bar = new Bar({ days: DAYS, weathers: ['typical', ...Object.keys(WEATHERS)
   onHour: (h) => { setHour(h); share(); trackLater('hour', { hour: +h.toFixed(1) }); },
   onWeather: (w) => { setWeather(w); share(); track('weather', { weather: w }); } });
 const precip = new Precip(scene);
+const card = new Card();
 const map = new THREE.Box3();
 const tiltShift = qs.get('tilt') !== '0' && innerWidth >= 600 && !phone;
 let world: World | null = null, labels: Labels | null = null, hud: Hud | null = null;
@@ -219,6 +221,7 @@ function goView(v: View) {
 
 function onLabel(l: Label) {
   track('label', { name: l.name });
+  card.show(l);
   const v = Object.values(views).find((w) => w.label === l.name);
   if (v && nav.mode === 'orbit') goView(v);
   else goPlace(l.x, l.y, 60, null, l.name);
