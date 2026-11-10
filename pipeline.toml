@@ -1,0 +1,8 @@
+# Pipeline configuration. Change values here, not in the scripts.
+
+[elevation]
+# Which point cloud feeds elevation and classification: a key of SOURCES in scripts/prep_lidar.py.
+source = "pnoa_npc02"
+# Metres per cell of the intermediate rasters, chosen from the source density: 1.0 with NPC02 (~5 pts/m2).
+# Independent of VOXEL_SIZE (scripts/aoi.py); a denser flight (municipal 2026, ~30 pts/m2) can use 0.5 or 0.25.
+resolution = 1.0
