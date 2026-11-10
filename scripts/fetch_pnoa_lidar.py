@@ -5,6 +5,9 @@ This script does not download: it works out which 1 x 1 km tiles the AOI needs, 
 {RAW}/pnoa_lidar/ by reading their headers (not the file names), and prints manual download instructions for
 whatever is missing. Exit code 0 when the AOI is covered, 1 otherwise.
 
+CNIG file names give the north-west corner of the tile in km: PNOA_2024_MAD_440-4474_H30_NPC02.LAZ covers
+X 440 000-441 000, Y 4 473 000-4 474 000 (checked against the headers).
+
 NPC03 (same files with improved classification) can replace NPC02 when it is published for Madrid: put those files
 in the same folder instead; nothing else changes.
 """
@@ -27,6 +30,11 @@ def needed_tiles():
     x0, y0, x1, y1 = world_bounds(MARGIN)
     return [(x, y) for x in range(math.floor(x0 / TILE), math.ceil(x1 / TILE))
             for y in range(math.floor(y0 / TILE), math.ceil(y1 / TILE))]
+
+
+def cnig_name(tx, ty):
+    """Expected CNIG file name for the tile whose lower-left corner is (tx, ty) km."""
+    return f"PNOA_2024_MAD_{tx}-{ty + 1}_H30_NPC02.LAZ"
 
 
 def describe(path):
@@ -60,6 +68,7 @@ def main():
     print(f"""
 Missing PNOA-LiDAR coverage for {len(missing)} 1 km tile(s) (lower-left corner in km, {CRS}):
   {', '.join(f'X {tx} Y {ty}' for tx, ty in missing)}
+  expected file names: {', '.join(cnig_name(tx, ty) for tx, ty in missing)}
 
 Download them by hand (the CNIG download centre requires a reCAPTCHA):
   1. Open {SERIES_URL}
