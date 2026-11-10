@@ -66,11 +66,11 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [x] `scripts/aoi.py`: define the Madrid AOI with centre, size and rotation as parameters (initial rotation 0°), starting from LA's `aoi.py`.
 - [x] Use LA's `fetch_*.py` as the template for all downloads: read only the area needed and cache in `$MADRID_CACHE`.
 - [x] `fetch_osm.py`: Overpass download limited to the AOI.
-- [ ] `fetch_pnoa_lidar.py`: 1 × 1 km LAZ tiles of the 3rd coverage (NPC02) covering the AOI. It is the **single source for elevation and classification**. Find out whether the Centro de Descargas del CNIG allows automated downloads; if not, give manual download instructions (rule 5 in `CLAUDE.md`). If NPC03 is ever published for Madrid, use it instead.
+- [x] `fetch_pnoa_lidar.py`: 1 × 1 km LAZ tiles of the 3rd coverage (NPC02) covering the AOI. It is the **single source for elevation and classification**. Find out whether the Centro de Descargas del CNIG allows automated downloads; if not, give manual download instructions (rule 5 in `CLAUDE.md`). If NPC03 is ever published for Madrid, use it instead.
 - [x] `fetch_trees.py`: tree inventory from datos.madrid.es, filtered to the AOI. Map the Spanish column names to English identifiers.
 - [x] `fetch_catastro.py`: INSPIRE buildings for municipality 28079, clipped to the AOI.
 - [x] `fetch_ortho.py`: most recent orthophoto available for the AOI.
-- [ ] Report in `NOTES.md`: for each source, date, CRS, height reference and actual resolution. For the PNOA, using `pdal info` or similar:
+- [x] Report in `NOTES.md`: for each source, date, CRS, height reference and actual resolution. For the PNOA, using `pdal info` or similar:
   - Measured density in pts/m² (~5 expected) and capture date from the header.
   - Classes present and point count per class (check that the bridge class, 17, exists).
   - Whether the points carry near-infrared (RGBNir): compute a test NDVI over an area with trees, for example Paseo del Prado.
