@@ -389,6 +389,7 @@ foot_shapes, road_shapes, bridge_shapes, cycle_shapes, road_lines = [], [], [], 
 bridge_rails = []  # (line, colour) the rails of tracks on bridges, drawn on the deck like those on the ground
 bridge_lines = []  # (line, half width, layer) of every way on a bridge: the deck's height profile is taken along them
 bridge_roads = []  # (line, width) of carriageways on bridges, for the inferred deck lamps
+crossing_roads = []  # (id, tags, centreline, width) of surface carriageways, for road_markings.py
 _paved = [(g_, t_["surface"]) for _, _, t_, g_ in osm.areas
           if t_.get("surface") in SURF and ("area:highway" in t_ or (t_.get("highway") and t_.get("area") == "yes"))]
 _ptree = STRtree([g_ for g_, _ in _paved])
@@ -435,6 +436,7 @@ for oid, t, line in osm.lines:
         if base in ("trunk", "primary", "secondary", "tertiary", "unclassified", "residential"):
             road_lines.append((oid, line, C[_k]))
         road_shapes.append((poly, C[_k]))
+        crossing_roads.append((oid, t, line, w))
     elif hw == "cycleway":  # one red the whole way, whatever its stretches are tagged (asphalt, paving stones): drawn last
         cycle_shapes.append((poly, C["cycle"]))
     elif hw == "steps":
@@ -544,29 +546,20 @@ note("water bodies flattened:", n_flat)
 from shapely.ops import unary_union as _uu
 splash_pads = [geom for oid, typ, t, geom in osm.areas if t.get("fountain") == "splash_pad" and not tunnelish(t)]
 
-# zebra crossings + lane markings on asphalt
-asph = np.isin(gcol, [C["asphalt"], C["asphalt_l"], C["parking"], C["road_paving"]])
-n_cross = 0
+# crossings (road_markings.py, from dtla-voxel): bars across the carriageway, following traffic, from the OSM
+# crossing ways, else from marked crossing nodes; cycle crossings red across the road; lane markings on asphalt
+import road_markings
+asph = np.isin(gcol, [C["asphalt"], C["asphalt_l"], C["parking"], C["road_paving"], C["trambed"]])
+_xw, _xd = road_markings.build_crosswalk_mask(osm.lines, osm.nodes, crossing_roads, road_mask)
+gcol[_xw & asph] = C["mark"]
+note("zebra crossings:", _xd)
 for oid, t, line in osm.lines:
-    if not (t.get("footway") == "crossing" or t.get("cycleway") == "crossing" or
-            (t.get("highway") in ("footway", "cycleway", "path") and "crossing" in t)):
+    if not (t.get("highway") == "cycleway" or t.get("cycleway") == "crossing") or "crossing" not in t \
+            or t.get("crossing") in ("unmarked", "no") or tunnelish(t):
         continue
-    if t.get("crossing") in ("unmarked", "no") or tunnelish(t):
-        continue
-    cyc = t.get("highway") == "cycleway" or t.get("cycleway") == "crossing"
-    rr, cc = cells_of(line.buffer(1.5 if cyc else 2.2, cap_style="flat"))
-    if len(rr) == 0:
-        continue
-    n_cross += 1
-    for r, c in zip(rr, cc):
-        if not asph[r, c] and gcol[r, c] not in (C["asphalt"], C["trambed"]):
-            continue
-        tpos = line.project(Point(c + 0.5, r + 0.5))
-        if cyc:
-            gcol[r, c] = C["cycle"]
-        elif int(tpos) % 2 == 0:
-            gcol[r, c] = C["mark"]
-note("zebra crossings:", n_cross)
+    rr, cc = cells_of(line.buffer(1.5, cap_style="flat"))
+    k = asph[rr, cc] & ~_xw[rr, cc]
+    gcol[rr[k], cc[k]] = C["cycle"]
 
 lane_lines = []
 for oid, t, line in osm.lines:
