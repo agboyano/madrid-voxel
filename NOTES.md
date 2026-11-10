@@ -994,3 +994,44 @@ Non-format differences:
 | 5 | Profiling | Use `web/tools/profile.mjs` and `docs/rendering-profile.html` as the methodology and report template. Extend Warsaw's own `perf.ts` / `bench.mjs` / `mem*.mjs`. Fix the Windows Chromium path (`profile.mjs:11-14`). Keep results out of git (`/artifacts/` in `.gitignore`, as dtla `e142849` did). | Medium-high |
 | **6. Publication** | `.github/workflows/pages.yml` | Copy; drop the `test-data-cache.mjs` step; set Vite `base`; check data size limits; no attribution in workflow files. | Low |
 
+
+## Madrid data sources (Phase 1)
+
+AOI: 500 × 500 m centred on Puerta del Sol, the centre of the OSM square (relation 7424032, wikidata Q427163) at X 440 316.4, Y 4 474 264.1 (EPSG:25830). Rotation 0°, so grid +i is east and +j is south. World bounds X 440 066–440 566, Y 4 474 014–4 474 514. All downloads go to `$MADRID_CACHE/raw` (default `~/data/madrid-voxel-cache/raw`), which `aoi.RAW` points to.
+
+| Source | Script | Output in the cache | Date | CRS | Height reference | Resolution / precision |
+| --- | --- | --- | --- | --- | --- | --- |
+| OpenStreetMap (Overpass) | `fetch_osm.py` | `osm.json` (7.3 MB, 25 566 elements) | data as of 2026-11-10T22:05Z | WGS84 lon/lat | none | vector |
+| Municipal tree inventory (datos.madrid.es 300761-0-arbolado-especies) | `fetch_trees.py` | `trees/trees.json` (541 trees in AOI + 20 m) | 2026-07 edition, published 2026-07-09 | ETRS89 / UTM 30N (EPSG:25830) | tree `height_m` above ground | point per tree; coordinates to the mm |
+| Catastro INSPIRE Buildings WFS | `fetch_catastro.py` | `catastro/buildings.geojson` (596), `building_parts.geojson` (4 106) | live service, read 2026-11-10 | EPSG:25830 | no heights: floors above/below ground only | stated horizontal accuracy 0.1 m |
+| PNOA orthophoto, most recent (IGN WMS `pnoa-ma`) | `fetch_ortho.py` | `ortho/ortho.tif` (2401 × 2401 px), `ortho.json` | flight 2023-07 over the whole AOI | EPSG:25830 (requested axis-aligned) | n/a | 0.25 m native |
+| PNOA-LiDAR 3rd coverage NPC02 (CNIG) | `fetch_pnoa_lidar.py` | `pnoa_lidar/*.laz` | **pending manual download** | | | |
+
+Notes per source:
+
+- **OSM:** in the AOI there are 1 088 elements tagged `building`, 2 294 `highway`, 139 crossings, 262 `highway=street_lamp` nodes (so Phase 3 probably does not need lamps placed along kerbs) and 231 elements with a `wikidata` tag.
+- **Trees:** the dataset is published only for the whole city (CSV, 75 MB, 799 110 trees), so it is downloaded once and filtered locally; this is the one exception to area-limited downloads. Palms, municipal nurseries and forest masses are not in it. The 2026 CSV has 12 of the 15 columns in the spec (`estructura_datosarbolado.pdf`, July 2025): `EDAD_RELATIVA`, `SINGULARIDAD`, `VITALIDAD` and `ESTADO_GENERAL` are missing. The most common species in the AOI are *Ligustrum japonicum* (229), *Cercis siliquastrum* (67), *Pyrus calleryana* 'Chanticleer' (52), *Platanus × hispanica* (35) and *Aesculus hippocastanum* (33). Median height 4.5 m, maximum 17 m.
+- **Catastro:** the WFS answers bounding-box queries, so it is read in 500 m tiles. `Building` carries year built, current use, condition and dwelling/unit counts; its own `numberOfFloorsAboveGround` is empty in Madrid, so floors come from `BuildingPart` (linked by `building_id`, all parts matched). Uses in the AOI: 403 residential, 120 retail, 47 office, 25 public services, 1 industrial. Median year built 1900. Data error: building `0443102VK4704C` has year 979.
+- **Orthophoto:** the July 2023 flight is a year older than the LiDAR (spring 2024). It is not a true orthophoto, so the roofs of tall buildings lean a little away from their Catastro footprints (`docs/img/phase1-sources-overlay-sol.jpg`). The WMS is the IGN's official viewing service; the CNIG download centre has the same orthophotos as files, behind the same reCAPTCHA as the LiDAR. A newer or true orthophoto from the Ayuntamiento Geoportal is an alternative to evaluate.
+- **Alignment:** Catastro footprints and municipal trees drawn over the orthophoto fit roof edges and street tree rows (`docs/img/phase1-sources-overlay.jpg`), so all three EPSG:25830 sources agree without any shift.
+- **PNOA-LiDAR:** the CNIG download centre protects downloads with reCAPTCHA v3 (`preAutorizarDescarga`), and its file search refuses scripted requests (HTTP 403). Under `CLAUDE.md` rule 5 the files are downloaded by hand; `fetch_pnoa_lidar.py` lists the 1 km tiles the AOI needs (lower-left corners X 440 / Y 4473 and X 440 / Y 4474 km), checks the files by their headers and prints the instructions.
+
+### Tree inventory columns (Spanish -> English)
+
+Defined once, in `COLUMNS` in `scripts/fetch_trees.py`.
+
+| Spanish column | English key | Meaning |
+| --- | --- | --- |
+| `ASSETNUM` | `id` | unique tree id |
+| `NUM_PARQUE` | `park_id` | historic, singular or forest park id (empty elsewhere) |
+| `NUM_DISTRITO` / `NBRE_DISTRITO` | `district_id` / `district` | administrative district |
+| `NUM_BARRIO` / `NBRE_BARRIO` | `neighbourhood_id` / `neighbourhood` | neighbourhood (barrio) |
+| `X`, `Y` | `x`, `y` | EPSG:25830 metres |
+| `CODIGO_ESPECIE` | `species_code` | species code |
+| `ESPECIE` | `species` | scientific name, upper case |
+| `PERIMETRO` | `trunk_cm` | trunk circumference at 1.3 m, cm |
+| `ALTURA_TOTAL` | `height_m` | total height, m (decimal comma in the CSV) |
+| `EDAD_RELATIVA` | `age_class` | relative age (not in the 2026 CSV) |
+| `SINGULARIDAD` | `singular` | `CAT_CM` / `CAT_PGOUM` (not in the 2026 CSV) |
+| `VITALIDAD` | `vitality` | Alta / Media / Baja (not in the 2026 CSV) |
+| `ESTADO_GENERAL` | `condition` | Sano … Muerto (not in the 2026 CSV) |
