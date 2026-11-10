@@ -17,7 +17,7 @@ from pyproj import Transformer
 from scipy.ndimage import grey_closing, maximum_filter1d
 from shapely.geometry import LineString
 
-from aoi import D, RAW, W, to_grid
+from aoi import CRS, D, RAW, W, to_grid
 
 DRIVE = {"motorway": 22, "trunk": 16, "primary": 14, "secondary": 13.9, "tertiary": 12.5, "unclassified": 11,
          "residential": 9, "motorway_link": 14, "trunk_link": 12, "primary_link": 11, "secondary_link": 11,
@@ -25,7 +25,7 @@ DRIVE = {"motorway": 22, "trunk": 16, "primary": 14, "secondary": 13.9, "tertiar
 CLASS = {"primary": 3, "trunk": 3, "secondary": 3, "tertiary": 2, "unclassified": 1, "residential": 1}
 WALK = {"footway", "pedestrian", "path", "steps", "living_street", "platform", "cycleway"}
 
-_T = Transformer.from_crs(4326, 2180, always_xy=True)
+_T = Transformer.from_crs(4326, CRS, always_xy=True)
 
 
 def _num(v, default=None):
@@ -182,7 +182,7 @@ def join_bike_ways(peds, pn, note, nodes_xy=None, fit_ok=None):
                     best[m] = (nd, (i, n))
                     heapq.heappush(q, (nd, m))
     linked = 0
-    if nodes_xy is not None:  # gaps: OSM's ways stopping short of each other, stretches dropped as through a wall
+    if nodes_xy is not None and any(e.get("bk") for e in peds):  # gaps: OSM's ways stopping short of each other, stretches dropped as through a wall
         from scipy.spatial import cKDTree
         z_of = {}
         for e in peds:

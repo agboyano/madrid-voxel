@@ -13,12 +13,12 @@ from affine import Affine
 from shapely.geometry import LineString
 from shapely.strtree import STRtree
 
-from aoi import RAW, to_grid
+from aoi import CRS, RAW, to_grid
 
 WALK = None
 IDS = set()
 FOOT = ("footway", "path", "pedestrian", "cycleway", "corridor")
-_T = Transformer.from_crs(4326, 2180, always_xy=True)
+_T = Transformer.from_crs(4326, CRS, always_xy=True)
 
 
 def _levels(t):
