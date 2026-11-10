@@ -34,7 +34,7 @@ The user starts this phase with a new, empty repository (not a GitHub fork) cont
 - [x] Read `scripts/` and `web/src/` and write a pipeline map in `NOTES.md`: each script, its inputs, its outputs, execution order and the format of intermediate files. Since it is not run, infer this from the code.
 - [x] Identify everything Warsaw-specific (landmarks, trees, Vistula/`flood.py`, trams, Palace of Culture, palette) and list it in `NOTES.md` with file and line.
 - [x] Voxel size inventory in `NOTES.md` ("1 m assumptions" section): list, with file and line, every place in the pipeline and viewer where 1 m is fixed, explicitly or implicitly. Check at least:
-  - Quadtree levels (1, 2, 4, 8 m) and cell size in `tiles.py`, `stream.ts` and the viewer's reader.
+  - Tile levels (1 and 8 m, plus the `1f` foliage set; there are no 2 or 4 m levels) and cell size in `tiles.py`, `stream.ts` and the viewer's reader.
   - Height encoding in the tiles: data type and maximum representable height (check whether a 250 m building would fit with 0.5 m voxels).
   - Object scales: pedestrians, trees, street lamps, crossings, vehicles.
   - Landmarks and hand-tuned corrections in voxel coordinates.
@@ -138,6 +138,7 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [ ] Adapt LA's profiling harness to measure shadows, post-processing and tile memory.
 - [ ] Review defects at scale (map edges, tunnels, flyovers, construction sites).
 - [ ] Test mobile performance (Playwright emulation) and adjust levels of detail if needed.
+- [ ] Option, only if distant blocks drawn as grey 8 m clay or frame rate are a problem at full area: add 2 and 4 m tile levels with dtla-voxel's `tiles.py` (trailing `detail` block) and port its screen-space level selection (`tileSelection.ts`) to the viewer. Byte-compatible with the current tiles, about +10 % data, but a large viewer change (foliage, building ids, window shader and collisions assume level 1 is the finest). Log the decision in `DECISIONS.md`.
 - [ ] Final screenshots of 5 iconic views.
 
 **Checkpoint 5:** full area approved.
