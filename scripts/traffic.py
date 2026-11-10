@@ -104,12 +104,10 @@ def fit(p, offs, vol, solid, W, D, step=0.5, decks=False):
     return out, int((zf > z0 + 0.5).sum() * step), longest * step
 
 
-# Riders per hour on a bike way, relative: ZDM's counts (2023 video counts at 53 points, 25 counters; 2025: 66 and 31)
-# put Świętokrzyski and Łazienkowski bridges at ~7000 a day, the other Vistula bridges at 1200-4200, Bulwar Pattona
-# by Świętokrzyski the busiest point of all, the main corridors (Al. Ujazdowskie, Towarowa, Czerniakowska) at
-# 800-1200 an hour at the peak; a bike way elsewhere carries a few hundred a day
-BIKE_BRIDGES = {"Most Świętokrzyski": 6, "Most Łazienkowski": 6, "Most Gdański": 4, "Most Siekierkowski": 3,
-                "Most Śląsko-Dąbrowski": 2.5, "Most Poniatowskiego": 2, "Most Grota-Roweckiego": 2.5}
+# Riders per hour on a bike way, relative to an ordinary bike way (1). Warsaw weighted its busiest bridges and
+# riverside boulevards from the city's bike counts; Madrid has no such weights yet, so every bike way counts alike.
+BIKE_BRIDGES = {}  # bridge name (as in OSM) -> relative riders, for bridges busier than an ordinary bike way
+BUSY_WAYS = ()  # words in a way's name that mark a busier riverside route (weight 4)
 
 
 def bike_weight(t):
@@ -122,7 +120,7 @@ def bike_weight(t):
     for b, wt in BIKE_BRIDGES.items():
         if b in name:
             return wt
-    if "Bulwar" in name or "Wybrzeże" in name:
+    if any(w in name for w in BUSY_WAYS):
         return 4
     return 1 if hw == "cycleway" or t.get("bicycle") == "designated" else 0.3
 

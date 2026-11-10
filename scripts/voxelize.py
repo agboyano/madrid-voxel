@@ -1,4 +1,5 @@
-"""Fuse GUGiK 2025 LiDAR (DSM/DTM) + orthophoto + current OSM into a 1 m voxel volume.
+"""Fuse the LiDAR rasters (prep.py: DSM, DTM, classes) + orthophoto + OSM + Catastro + the tree inventory into a
+1 m voxel volume.
 
 Output (web/public/data/): voxels.vxl (column runs), meta.json (palette, lamps, labels), ground.bin.
 Volume axes: vol[z, row, col]; row grows south, col grows east, z up.
@@ -22,7 +23,7 @@ from shapely.geometry import LineString, Point
 from shapely.ops import substring
 from shapely.strtree import STRtree
 
-from aoi import CX, CY, D, THETA, W
+from aoi import CRS, CX, CY, D, THETA, VOXEL_SIZE, W, grid_to_lonlat
 from osm import OSM
 import landmarks
 import roofgardens
@@ -147,6 +148,7 @@ dsm_mean = d4.mean((1, 3))
 dtm_s = ndimage.uniform_filter(dtm, 3)
 SLAB = 3
 BASE = math.floor(dtm.min()) - SLAB
+MAX_TREE = 40  # metres: the tallest crowns in central Madrid (Retiro's plane trees and cedars) stay under it
 
 
 def ground_walls(dtm, dtm_s):
@@ -1241,7 +1243,7 @@ wall_edge = (btop_near > 0) & (nd_mean > 0.6 * btop_near) & (nd_mean > 6)
 veg &= ~wall_edge | (near_tree & (nd_mean < 25))
 step = ndimage.maximum_filter(nd_mean, 3) - ndimage.minimum_filter(nd_mean, 3)
 veg &= ~((btop_near > 0) & (step > 7) & (nd_mean > 0.5 * btop_near))
-veg &= nd_mean < 32  # no trees taller than ~30 m in central Warsaw
+veg &= nd_mean < MAX_TREE  # taller is a structure, not a crown
 # no trees growing out of a stadium shell (its fins and roof edge are LiDAR-high and greenish in the ortho)
 stad = np.zeros((D, W), np.uint16)
 burn(stad, [(geom, 1) for oid, typ, t, geom in osm.areas_with("leisure", ("stadium",))])
@@ -1699,93 +1701,6 @@ for i_, sl in enumerate(ndimage.find_objects(lab_), 1):
         vol[z0_:z1_, r_, c_] = np.where(vol[z0_:z1_, r_, c_] == 0, C["fence"], vol[z0_:z1_, r_, c_])
     n_pyl += 1
 note("bridge pylons from LiDAR:", n_pyl)
-# Most Świętokrzyski's stays (LiDAR only catches them as a blur): an A-pylon on the Praga bank, 87.5 m above the river,
-# 48 cables 51-171 m long in a semi-fan over spans of 180 m (river) + 140 m -> 12 per side per plane, anchored down
-# the top 30 m of the pylon, landing on both deck edges (structurae.net/structures/swietokrzyski-bridge, ITB 2001)
-from shapely.ops import linemerge as _lm
-_sw = _lm([l for oid, t, l in osm.lines if t.get("name") == "Most Świętokrzyski" and t.get("highway") in ROADS])
-_sw = max(getattr(_sw, "geoms", [_sw]), key=lambda l: l.length) if not _sw.is_empty else None
-n_cab = 0
-stay = pal("#c9cdd0")  # matte grey-white: the shiny metal read as glare from afar
-if _sw is not None and n_pyl:
-    lab_, _ = ndimage.label(pyl)
-    blobs = [(i_, sl) for i_, sl in enumerate(ndimage.find_objects(lab_), 1) if sl is not None]
-    best = None
-    for i_, sl in blobs:
-        rr_, cc_ = np.nonzero(lab_[sl] == i_)
-        cy_, cx_ = rr_.mean() + sl[0].start, cc_.mean() + sl[1].start
-        dd = _sw.distance(Point(cx_, cy_))
-        if dd < 25 and (best is None or dd < best[0]):
-            hz = float(max(g[r_ + sl[0].start, c_ + sl[1].start] + nd_max[r_ + sl[0].start, c_ + sl[1].start] for r_, c_ in zip(rr_, cc_)))
-            best = (dd, cx_, cy_, hz)
-    if best:
-        _, px, py, ptop = best
-        sp = _sw.project(Point(px, py))
-        L = _sw.length
-        # the pylon as the photos and the LiDAR show it: an A-frame across the deck, two 2.5 m legs piercing the deck
-        # between the carriageways and the cycle paths (+-10 m; the 2025 returns at 5-15 m above the deck) leaning in
-        # to meet 50 m above it, then a single 3 m mast to the top; the LiDAR blob extruded from the ground read as a
-        # solid tower
-        q0, q1 = _sw.interpolate(max(sp - 2, 0)), _sw.interpolate(min(sp + 2, L))
-        tx_, ty_ = q1.x - q0.x, q1.y - q0.y; tl = max(math.hypot(tx_, ty_), 1e-6); tx_, ty_ = tx_ / tl, ty_ / tl
-        nx_, ny_ = -ty_, tx_
-        pr, pc = int(py), int(px)
-        gz_ = int(g[pr, pc])
-        dz_ = gz_ + int(deck_h[pr, pc] if deck_h[pr, pc] > 0 else 12)
-        rr0, rr1, cc0, cc1 = pr - 30, pr + 31, pc - 30, pc + 31
-        blk = vol[gz_:, rr0:rr1, cc0:cc1]  # the LiDAR blob, all of it: the A-frame below replaces it
-        blk[blk == C["fence"]] = 0
-        pylc = pal("#d6d8d6", M_CONCRETE)
-        zmeet = dz_ + 50
-        for zz in range(gz_, int(ptop) + 1):
-            w_ = 10.0 if zz <= dz_ else max(0.0, 10.0 * (zmeet - zz) / (zmeet - dz_))
-            for lat in ((-1, 1) if w_ > 1.2 else (0,)):
-                for a in np.arange(-1.25, 1.3, 0.5):
-                    for b in np.arange(-1.25, 1.3, 0.5):
-                        if lat == 0 and (abs(a) > 1.5 or abs(b) > 1.0):
-                            continue
-                        x_ = px + tx_ * a + nx_ * (lat * w_ + b)
-                        y_ = py + ty_ * a + ny_ * (lat * w_ + b)
-                        vol[zz, int(y_), int(x_)] = pylc
-        for side, span in ((-1, 180.0), (1, 140.0)):
-            for k in range(12):
-                d = 30 + (span - 35) * (k + 1) / 12
-                s_ = sp + side * d
-                if not (0 <= s_ <= L):
-                    continue
-                q0, q1 = _sw.interpolate(s_), _sw.interpolate(min(s_ + 1, L))
-                tx_, ty_ = q1.x - q0.x, q1.y - q0.y
-                tl = max(math.hypot(tx_, ty_), 1e-6)
-                za = ptop - 2 - 28 * (k / 11)  # anchors spread down the pylon head: semi-fan
-                for lat in (-1, 1):
-                    ex, ey = q0.x - ty_ / tl * lat * 9, q0.y + tx_ / tl * lat * 9  # two inclined planes landing +-9 m (LiDAR)
-                    er, ec = int(ey), int(ex)
-                    if not (0 <= er < D and 0 <= ec < W):
-                        continue
-                    ez = g[er, ec] + (deck_h[er, ec] if deck_h[er, ec] > 0 else 12) + 1
-                    # one voxel per step along the major axis: a thin straight line, not a rope of double voxels; where
-                    # a step moves along two or three axes at once, the voxels in between too, so the stay is one
-                    # face-connected chain from pylon to deck (corner-touching voxels hold nothing up)
-                    n = int(max(abs(ex - px), abs(ey - py), abs(ez - za))) + 1
-                    prev = None
-                    for j in range(n + 1):
-                        f_ = j / n
-                        x_, y_, z_ = px + (ex - px) * f_, py + (ey - py) * f_, za + (ez - za) * f_
-                        cur = [int(y_), int(x_), int(z_)]
-                        pts_ = [cur]
-                        if prev is not None:
-                            p_ = list(prev)
-                            pts_ = []
-                            for ax in (2, 0, 1):  # down first, then across
-                                if p_[ax] != cur[ax]:
-                                    p_[ax] = cur[ax]
-                                    pts_.append(tuple(p_))
-                        for r_, c_, zz_ in pts_:
-                            if 0 <= r_ < D and 0 <= c_ < W and 0 <= zz_ < vol.shape[0] and vol[zz_, r_, c_] == 0:
-                                vol[zz_, r_, c_] = stay
-                        prev = cur
-                    n_cab += 1
-note("Most Świętokrzyski stays:", n_cab)
 # lamps on the bridges: OSM maps almost none on the Vistula bridges (0 on Świętokrzyski and Poniatowskiego), but they
 # are lit -- put one every 32 m on each kerb of the deck, as for Złota, unless OSM has a lamp within 12 m. A kerb is
 # deck that carries no way of its own, with no carriageway or track within 4 m beyond it: the inner side of a
@@ -1944,10 +1859,12 @@ for ln in sorted(tram_lines, key=lambda l: -l.length):
         path.append([round(p.x, 1), round(p.y, 1), int(g[r, c])])
     trams.append(path)
 note("tram paths:", len(trams), "total km", round(sum(len(p) for p in trams) * 2 / 1000, 2))
-meta = dict(W=W, D=D, H=Hm, base=BASE, tiles=tile_info, center=[CX, CY], theta_deg=math.degrees(THETA), crs="EPSG:2180", trams=trams, jets=jets,
+meta = dict(W=W, D=D, H=Hm, base=BASE, voxel=VOXEL_SIZE, tiles=tile_info, center=[CX, CY], theta_deg=math.degrees(THETA),
+            crs=CRS, lonlat=[round(float(v), 6) for v in grid_to_lonlat(W / 2, D / 2)], trams=trams, jets=jets,
             palette=[list(e) for e in pal.entries], lamps=lamps, floods=floods, labels=labels, views=views,
-            sources=dict(osm=osm.timestamp, lidar="GUGiK NMPT/NMT 2025 (GK-FOTO.6201.5.2025)",
-                         ortho="GUGiK ortofotomapa 2025, 5 cm"))
+            sources=dict(osm=osm.timestamp, lidar=json.loads(str(z["info"]))["description"] if "info" in z else "",
+                         ortho="PNOA most recent orthophoto (IGN), 0.25 m", buildings="Catastro INSPIRE + OSM",
+                         trees="Ayuntamiento de Madrid tree inventory"))
 json.dump(meta, open(OUT / "meta.json", "w"))
 import traffic
 # QA aid: drivable-surface mask (1 = carriageway/road area, 2 = tram bed) for web/tools/qa.mjs
