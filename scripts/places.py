@@ -9,18 +9,20 @@ from pathlib import Path
 
 from shapely.ops import unary_union
 
-from aoi import W, D
+from aoi import AREA, D, W
 from osm import OSM
-from wikidata import CACHE
 
 
 OUT = Path(__file__).resolve().parent.parent / "web/public/data/places.json"
 osm = OSM()
-wd = json.loads(CACHE.read_text()) if CACHE.exists() else {}
-PL_KIND = {"place of worship": "kościół church", "station": "dworzec stacja", "stop": "przystanek", "theatre": "teatr",
-           "museum": "muzeum", "gallery": "galeria", "library": "biblioteka", "university": "uczelnia uniwersytet",
-           "park": "ogród", "square": "plac", "street": "ulica", "cinema": "kino", "hotel": "hotel", "memorial": "pomnik",
-           "artwork": "rzeźba", "restaurant": "restauracja", "cafe": "kawiarnia", "school": "szkoła", "hospital": "szpital"}
+_wd = AREA / "wikidata.json"  # fetch_wikidata.py
+wd = json.loads(_wd.read_text())["items"] if _wd.exists() else {}
+# Spanish words for each kind, so a search in Spanish finds the place
+ES_KIND = {"place of worship": "iglesia church", "station": "estación", "stop": "parada", "theatre": "teatro",
+           "museum": "museo", "gallery": "galería", "library": "biblioteca", "university": "universidad",
+           "park": "parque jardín", "square": "plaza", "street": "calle", "cinema": "cine", "hotel": "hotel",
+           "memorial": "monumento", "artwork": "escultura", "restaurant": "restaurante", "cafe": "café cafetería",
+           "school": "colegio", "hospital": "hospital"}
 
 
 def inside(x, y):
@@ -46,19 +48,19 @@ def kind_of(t):
     return None
 
 
-RANK = {"square": 0, "Osiedle Jazdów": 1, "park": 1, "station": 2, "street": 3, "building": 4, "domek fiński": 4, "museum": 4, "theatre": 4, "attraction": 4, "hotel": 5}
+RANK = {"square": 0, "park": 1, "station": 2, "street": 3, "building": 4, "museum": 4, "theatre": 4, "attraction": 4, "hotel": 5}
 best = {}
 
 
 def english(t):
     e = wd.get(t.get("wikidata"), {})
-    return " ".join(dict.fromkeys(filter(None, [t.get("name:en"), e.get("en"), e.get("pl")])))
+    return " ".join(dict.fromkeys(filter(None, [t.get("name:en"), e.get("en"), e.get("es")])))
 
 
 def add(name, kind, geom, alt=""):
     if not kind:
         return
-    alt = " ".join(filter(None, [alt, PL_KIND.get(kind)]))
+    alt = " ".join(filter(None, [alt, ES_KIND.get(kind)]))
     p = geom.representative_point() if geom.geom_type != "Point" else geom
     if not inside(p.x, p.y):
         return
@@ -86,28 +88,6 @@ for _, _, t, poly in osm.areas:
 for _, t, pt in osm.nodes:
     if t.get("name"):
         add(t["name"], kind_of(t), pt, english(t))
-
-# the Finnish houses of Osiedle Jazdów (1945, ~27 left; Otwarty Jazdów: NGOs, culture and grassroots groups): every
-# one found by its address ("Jazdów 3/5") and by "domki fińskie", named after its OSM name or the groups inside it
-import re
-jazdow = unary_union(streets.get("Jazdów", [])).buffer(120) if streets.get("Jazdów") else None
-domki = []
-for _, _, t, poly in osm.areas:
-    nr = t.get("addr:housenumber", "")
-    if jazdow is None or t.get("building") not in ("detached", "house", "ruins", "yes") or not re.fullmatch(r"\d+A?/\d+", nr) \
-            or not jazdow.contains(poly.representative_point()):
-        continue
-    inside_ = [t2["name"] for _, t2, pt in osm.nodes if t2.get("name") and poly.buffer(1.5).contains(pt)]
-    name = t.get("name") or (inside_[0] if len(inside_) == 1 else f"Jazdów {nr}")
-    alt = " ".join([f"Jazdów {nr}", "domek fiński Finnish house", *[n for n in inside_ if n != name]])
-    c = poly.representative_point()
-    for k in [k for k, r in best.items() if k[0] == name and (r[2] - c.x) ** 2 + (r[3] - c.y) ** 2 < 30 ** 2]:
-        del best[k]  # the same house under its amenity/office kind
-    add(name, "domek fiński", poly, alt)
-    domki.append(poly)
-if domki:
-    add("Domki fińskie", "Osiedle Jazdów", unary_union(domki).convex_hull, "Finnish houses Otwarty Jazdów Jazdow")
-    print(len(domki), "Finnish houses on Jazdów")
 
 places = sorted(best.values(), key=lambda r: (RANK.get(r[1], 6), -r[4]))
 OUT.write_text(json.dumps({"places": places}, ensure_ascii=False, separators=(",", ":")))
