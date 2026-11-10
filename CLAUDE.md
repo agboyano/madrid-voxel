@@ -83,15 +83,16 @@ Future (the pipeline must allow swapping the elevation or classification source 
 
 ## Commands
 
-Update this section once they are defined in Phase 0:
-
 ```
-# Data (download + voxelise)
+# Python dependencies (pipeline + screenshot harness)
+uv sync
+
+# Data (download + voxelise). Not yet adapted to Madrid; see the pipeline map in NOTES.md
 sh scripts/build_data.sh
 
-# Viewer in development
-cd web && npm install && npm run dev
+# Viewer in development (web/ pins pnpm; the lockfile is pnpm-lock.yaml)
+cd web && npx -y pnpm@12.11.2 install --frozen-lockfile && npx -y pnpm@12.11.2 exec vite
 
-# Screenshots
-python scripts/screenshot.py
+# Screenshots (starts the dev server if needed; writes docs/img/<name>.png)
+uv run python scripts/screenshot.py <name> --view overview --date 6-15 --hour 17
 ```

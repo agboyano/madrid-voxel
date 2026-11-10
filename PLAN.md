@@ -10,8 +10,8 @@ At every checkpoint, also run an attribution audit and include the result in the
 
 The user starts this phase with a new, empty repository (not a GitHub fork) containing only `CLAUDE.md`, `PLAN.md`, `docs/research.md` and `.claude/settings.json`.
 
-- [ ] Check that `.claude/settings.json` exists with attribution disabled (`"attribution": {"commit": "", "pr": "", "sessionUrl": false}`) and that `/status` lists it among the loaded setting sources. If it is missing, stop and tell the user.
-- [ ] Install a **local, unversioned** `commit-msg` hook at `.git/hooks/commit-msg` (make it executable) that rejects AI attribution:
+- [x] Check that `.claude/settings.json` exists with attribution disabled (`"attribution": {"commit": "", "pr": "", "sessionUrl": false}`) and that `/status` lists it among the loaded setting sources. If it is missing, stop and tell the user.
+- [x] Install a **local, unversioned** `commit-msg` hook at `.git/hooks/commit-msg` (make it executable) that rejects AI attribution:
 
   ```sh
   #!/bin/sh
@@ -22,35 +22,35 @@ The user starts this phase with a new, empty repository (not a GitHub fork) cont
   fi
   ```
 
-- [ ] Test the hook: a commit message containing `Co-Authored-By: Claude <noreply@anthropic.com>` must be rejected, and a normal message accepted. Do not leave the test commit in the history.
-- [ ] Check that the git identity (`git config user.name` and `user.email`) is the user's, and record it in `NOTES.md` without changing it.
-- [ ] Clone `https://github.com/stared/warsaw-vibe-voxel` into `../warsaw-vibe-voxel` (outside the repository, read-only) and record the commit hash used (it will go in `NOTES.md`).
-- [ ] Copy the Warsaw working tree into this repository **without its `.git` folder** and without overwriting the four files above. Copy its `LICENSE` as `LICENSE-warsaw-vibe-voxel`.
-- [ ] Commit it as a single commit by the user, for example `Import warsaw-vibe-voxel at <hash> (MIT, © 2026 Piotr Migdał)`, with no attribution trailers.
-- [ ] Check that the Warsaw tiles already generated are in the repository (`web/public/data`). If they are not, stop and tell the user.
-- [ ] Install the Node dependencies and start **only the viewer** with those tiles (`cd web && npm install && npm run dev`), without changing anything. **Do not run the Warsaw data pipeline** or download its data.
-- [ ] Install the project's Python dependencies (without running the scripts) and record in `NOTES.md` any installation problems, especially with geospatial libraries (PDAL, GDAL, laspy, rasterio).
-- [ ] Record the size of `web/public/data` in `NOTES.md` as a reference.
-- [ ] Read `scripts/` and `web/src/` and write a pipeline map in `NOTES.md`: each script, its inputs, its outputs, execution order and the format of intermediate files. Since it is not run, infer this from the code.
-- [ ] Identify everything Warsaw-specific (landmarks, trees, Vistula/`flood.py`, trams, Palace of Culture, palette) and list it in `NOTES.md` with file and line.
-- [ ] Voxel size inventory in `NOTES.md` ("1 m assumptions" section): list, with file and line, every place in the pipeline and viewer where 1 m is fixed, explicitly or implicitly. Check at least:
+- [x] Test the hook: a commit message containing `Co-Authored-By: Claude <noreply@anthropic.com>` must be rejected, and a normal message accepted. Do not leave the test commit in the history.
+- [x] Check that the git identity (`git config user.name` and `user.email`) is the user's, and record it in `NOTES.md` without changing it.
+- [x] Clone `https://github.com/stared/warsaw-vibe-voxel` into `../warsaw-vibe-voxel` (outside the repository, read-only) and record the commit hash used (it will go in `NOTES.md`).
+- [x] Copy the Warsaw working tree into this repository **without its `.git` folder** and without overwriting the four files above. Copy its `LICENSE` as `LICENSE-warsaw-vibe-voxel`.
+- [x] Commit it as a single commit by the user, for example `Import warsaw-vibe-voxel at <hash> (MIT, © 2026 Piotr Migdał)`, with no attribution trailers.
+- [x] Check that the Warsaw tiles already generated are in the repository (`web/public/data`). If they are not, stop and tell the user.
+- [x] Install the Node dependencies and start **only the viewer** with those tiles (`cd web && npm install && npm run dev`), without changing anything. **Do not run the Warsaw data pipeline** or download its data.
+- [x] Install the project's Python dependencies (without running the scripts) and record in `NOTES.md` any installation problems, especially with geospatial libraries (PDAL, GDAL, laspy, rasterio).
+- [x] Record the size of `web/public/data` in `NOTES.md` as a reference.
+- [x] Read `scripts/` and `web/src/` and write a pipeline map in `NOTES.md`: each script, its inputs, its outputs, execution order and the format of intermediate files. Since it is not run, infer this from the code.
+- [x] Identify everything Warsaw-specific (landmarks, trees, Vistula/`flood.py`, trams, Palace of Culture, palette) and list it in `NOTES.md` with file and line.
+- [x] Voxel size inventory in `NOTES.md` ("1 m assumptions" section): list, with file and line, every place in the pipeline and viewer where 1 m is fixed, explicitly or implicitly. Check at least:
   - Quadtree levels (1, 2, 4, 8 m) and cell size in `tiles.py`, `stream.ts` and the viewer's reader.
   - Height encoding in the tiles: data type and maximum representable height (check whether a 250 m building would fit with 0.5 m voxels).
   - Object scales: pedestrians, trees, street lamps, crossings, vehicles.
   - Landmarks and hand-tuned corrections in voxel coordinates.
   - Shadows, lighting, camera (distances, zoom limits) and the streaming refinement criterion.
   - Finally, a short estimate of what moving to 0.5 m voxels would involve: affected files, expected data size and risks.
-- [ ] Clone `https://github.com/sigman78/dtla-voxel` into `../dtla-voxel` (outside the repository, read-only).
-- [ ] Analyse `../dtla-voxel` and document in `NOTES.md`, for each piece, what it does, what it depends on and how much adaptation Madrid would need:
+- [x] Clone `https://github.com/sigman78/dtla-voxel` into `../dtla-voxel` (outside the repository, read-only).
+- [x] Analyse `../dtla-voxel` and document in `NOTES.md`, for each piece, what it does, what it depends on and how much adaptation Madrid would need:
   - `prep_lidar.py` and `fetch_*.py` (point cloud and area-limited downloads).
   - `voxelize.py`: fill in 128-row bands; compare with Warsaw's `voxelize.py`.
   - `layers.py` (2D fusion) and `aoi.py` (rotated grid).
   - `road_markings.py` and street lamp placement.
   - `.github/workflows/` and the profiling harness (`artifacts/profiling`, `docs/rendering-profile.html`).
   - Tree detection from NDVI and multiple returns (optional).
-- [ ] Check that the tile format (`tiles.py`) is identical in both projects.
-- [ ] Create `scripts/screenshot.py` (Playwright, headless) that starts the viewer, opens a view from URL parameters (`cam`, `hour`, etc.) and saves a screenshot in `docs/img/`. Test it with the Warsaw tiles and save 2 or 3 screenshots as a visual reference of how the result should look.
-- [ ] Create `NOTES.md` and `DECISIONS.md`.
+- [x] Check that the tile format (`tiles.py`) is identical in both projects.
+- [x] Create `scripts/screenshot.py` (Playwright, headless) that starts the viewer, opens a view from URL parameters (`cam`, `hour`, etc.) and saves a screenshot in `docs/img/`. Test it with the Warsaw tiles and save 2 or 3 screenshots as a visual reference of how the result should look.
+- [x] Create `NOTES.md` and `DECISIONS.md`.
 
 **Checkpoint 0:** Warsaw viewer running with reference screenshots, Python dependencies installed, `NOTES.md` with the pipeline map, the list of Warsaw-specific code and a proposal of which pieces of `../dtla-voxel` to copy and in which phase.
 
