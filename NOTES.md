@@ -1168,12 +1168,15 @@ Not used by the Madrid build:
 - `flood.py` and `web/src/flood.ts` (the Vistula gauge): no river in the area; the viewer's flood loader fails quietly.
 - `window_counts.json` and `window_photos.py`: lit-window statistics counted on Warsaw photos, kept as generic behaviour by building type.
 
-Viewer, still to remove or generalise:
-- the Palace of Culture floodlight (`pkinLight` in `sky.ts`, `voxelMaterial.ts`);
-- the tram livery and the train and tram simulation (`sim/meshes.ts`, `sim/trains.ts`), idle with no tram paths;
-- the zouk dance floor at Warsaw grid coordinates (`sim/dance.ts`);
-- the `web/tools/*` camera poses;
-- `posthog-js` in `package.json`, unused now that the bootstrap is gone.
+Viewer (cleaned after Checkpoint 3):
+- the floodlight is generic (`floodlight()` in `sky.ts`, material `FLOODLIT` = 7);
+- `flood.ts` and the river gauge slider are gone, as is the zouk dance floor;
+- train liveries are Renfe's, Iryo's and Ouigo's; the tram keeps a default livery, idle with no tram paths.
+
+Still left in the viewer:
+- the `web/tools/*` camera poses in Warsaw coordinates;
+- `posthog-js` in `package.json` (`stats.ts` imports it lazily; it never runs without the removed bootstrap);
+- comments explaining tuning with Warsaw examples.
 
 Documents: `README.md`, `IDEAS.md`, `visual_ref.md` and `research_*.md` are Warsaw's (README rewrite in Phase 6).
 

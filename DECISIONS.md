@@ -108,3 +108,8 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** street lamps from OSM only; crossings with dtla-voxel's `road_markings.py`; no NDVI or multiple-return tree detection.
 - **Reason:** OSM maps 80 lamps in the test area (74 drawn). dtla-voxel's crossings follow traffic and fall back to marked nodes. Only 22 LiDAR crowns lack an inventory tree.
 - **Rejected:** dtla-voxel's lamps every 36 m along kerbs (would double the mapped lamps); NDVI from the leaf-off PNOA cloud (weak on deciduous crowns, see Phase 1).
+
+## 2026-11-11: Checkpoint 3 — bridge test deferred, viewer cleaned now
+
+- **Decision:** test the class 17 decks when the AOI grows in Phase 5; remove the Warsaw remnants from the viewer now (floodlight schedule, Vistula flood, zouk floor, Polish train liveries).
+- **Reason:** the test area has no bridge, and the download caches are not keyed by AOI, so moving the AOI to a bridge would reuse the wrong cached data. Approved by the user at Checkpoint 3.

@@ -103,12 +103,12 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [x] Buildings: footprints (Catastro or OSM; document which and why) with LiDAR heights and roofs. Adapt Warsaw's rules: OSM/Catastro wins where the LiDAR sees nothing tall (building completed after the flight).
 - [x] Trees: municipal inventory with species for seasonal foliage; trees with no LiDAR crown become young trees.
 - [x] Optional: measure how many LiDAR crowns have no tree in the inventory (private courtyards, gardens). If there are many, fill them in with LA's NDVI and multiple-return detection, computing NDVI from the PNOA cloud's own infrared (or from the orthophoto if the cloud lacks it). Log the decision in `DECISIONS.md`.
-- [ ] Flyovers and bridges from PNOA class 17.
+- [ ] Flyovers and bridges from PNOA class 17. Implemented (class 17 cells near OSM bridge ways join the decks); the test area has no bridge, so the check moves to Phase 5 (approved at Checkpoint 3).
 - [x] Streets, pavements, squares, parks and water from OSM.
 - [x] Pedestrian crossings and road markings, adapting LA's `road_markings.py`.
 - [x] Street lamps: check how many OSM has in the AOI; if few, place them along kerbs as LA does.
 - [x] Roof and vegetation colours from the orthophoto.
-- [ ] Remove or stub out all the Warsaw-specific code listed in Phase 0.
+- [x] Remove or stub out all the Warsaw-specific code listed in Phase 0. Labels, Wikidata and phenology are replaced in Phase 4; Warsaw's documents in Phase 6 (see NOTES.md).
 - [x] Screenshots of the 3 reference views.
 
 **Checkpoint 3:** the test area is recognisable as Madrid. List of known defects.
@@ -137,6 +137,7 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [ ] Measure and record in `NOTES.md`: build time, peak RAM, cache size and `web/public/data` size.
 - [ ] Adapt LA's profiling harness to measure shadows, post-processing and tile memory.
 - [ ] Review defects at scale (map edges, tunnels, flyovers, construction sites).
+- [ ] Check the bridge and flyover decks from PNOA class 17 (deferred from Phase 3), and key the download caches by AOI first: `osm.json`, the Catastro tiles and the orthophoto are cached under fixed names.
 - [ ] Test mobile performance (Playwright emulation) and adjust levels of detail if needed.
 - [ ] Option, only if distant blocks drawn as grey 8 m clay or frame rate are a problem at full area: add 2 and 4 m tile levels with dtla-voxel's `tiles.py` (trailing `detail` block) and port its screen-space level selection (`tileSelection.ts`) to the viewer. Byte-compatible with the current tiles, about +10 % data, but a large viewer change (foliage, building ids, window shader and collisions assume level 1 is the finest). Log the decision in `DECISIONS.md`.
 - [ ] Final screenshots of 5 iconic views.
