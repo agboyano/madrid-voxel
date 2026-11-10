@@ -1,82 +1,74 @@
-"""Mosaic GUGiK 2025 DSM (0.5 m), DTM (1 m) and orthophoto, then resample onto the rotated AOI grid.
+"""The rasters voxelize.py reads (data/prep.npz), from the common elevation format and the orthophoto.
 
-Outputs (row 0 = grid row 0): dsm at 0.5 m, dtm at 1 m, orto at 0.2 m.
+Replaces Warsaw's GUGiK mosaic. Inputs: {CACHE}/work/elevation_<source>.npz (prep_lidar.py) and
+{RAW}/ortho/ortho.tif (fetch_ortho.py). Output, row 0 = grid row 0, cell centres (the contract in NOTES.md):
+  dsm   float32 (2D, 2W)  0.5 m  absolute surface height; NaN where the cloud has no point
+  dtm   float32 (D, W)    1 m    absolute ground height, no gaps
+  orto  uint8   (5D, 5W, 3) 0.2 m sRGB
+The elevation rasters are resampled from the configured resolution to these fixed cell sizes by nearest neighbour
+(at 1 m the DSM is each cell repeated 2 x 2, so the ratio voxelize.py hard-codes is kept without inventing detail);
+the orthophoto is read north-up and sampled on the rotated grid with bilinear interpolation.
+
+usage: PYTHONPATH=scripts uv run python scripts/prep.py
 """
-import glob
-import math
+import json
+from pathlib import Path
 
 import numpy as np
 import rasterio
-from rasterio.enums import Resampling
-from rasterio.merge import merge
-from rasterio.windows import from_bounds
 from scipy import ndimage
 
-from aoi import D, RAW, W, to_world, world_bounds
+from aoi import CACHE, CX, CY, D, RAW, THETA, VOXEL_SIZE, W, to_world
+from config import ELEVATION
 
-MINX, MINY, MAXX, MAXY = (round(v) for v in world_bounds(margin=10))
-BOUNDS = (MINX, MINY, MAXX, MAXY)
-
-
-def mosaic(pattern, res, nodata=-9999):
-    """Mosaic on the sheets' own pixel grid (bounds snapped to it), so merging copies pixels instead of resampling.
-    With integer-metre bounds every output pixel centre fell exactly between two source pixels (the GUGiK grids are
-    offset by half a pixel), and nearest-neighbour broke the tie by float noise: an arbitrary half-pixel jitter."""
-    srcs = [rasterio.open(p) for p in sorted(glob.glob(f"{RAW}/{pattern}"))]
-    t = srcs[0].transform
-    snap = lambda v, o: o + math.floor((v - o) / res) * res
-    b = (snap(MINX, t.c), snap(MINY, t.f), snap(MAXX, t.c) + res, snap(MAXY, t.f) + res)
-    arr, tr = merge(srcs, bounds=b, res=res, resampling=Resampling.nearest, nodata=nodata, target_aligned_pixels=False)
-    return arr, tr
+OUT = Path("data/prep.npz")
+DSM_RES, DTM_RES, ORTO_RES = 0.5, 1.0, 0.2  # metres, fixed by voxelize.py
 
 
-def mosaic_rgb(pattern, res):
-    # sheets carry slightly different WKT for EPSG:2180, so paste windows manually
-    out = np.zeros((round((MAXY - MINY) / res), round((MAXX - MINX) / res), 3), np.uint8)
-    for p in sorted(glob.glob(f"{RAW}/{pattern}")):
-        with rasterio.open(p) as r:
-            b = r.bounds
-            l, bo, rt, t = max(b.left, MINX), max(b.bottom, MINY), min(b.right, MAXX), min(b.top, MAXY)
-            if l >= rt or bo >= t:
-                continue
-            c0, c1 = round((l - MINX) / res), round((rt - MINX) / res)
-            r0, r1 = round((MAXY - t) / res), round((MAXY - bo) / res)
-            win = from_bounds(MINX + c0 * res, MAXY - r1 * res, MINX + c1 * res, MAXY - r0 * res, r.transform)
-            a = r.read(window=win, out_shape=(3, r1 - r0, c1 - c0), resampling=Resampling.average, boundless=True, fill_value=0)
-            a = np.moveaxis(a, 0, -1)
-            m = a.sum(-1) > 0
-            out[r0:r1, c0:c1][m] = a[m]
-    return out
+def regrid(a, src_res, out_res):
+    """Nearest-neighbour resample of a grid-aligned raster between cell sizes (both in metres, same origin)."""
+    nj, ni = round(D * VOXEL_SIZE / out_res), round(W * VOXEL_SIZE / out_res)
+    j = np.minimum(((np.arange(nj) + 0.5) * out_res / src_res).astype(int), a.shape[0] - 1)
+    i = np.minimum(((np.arange(ni) + 0.5) * out_res / src_res).astype(int), a.shape[1] - 1)
+    return a[j[:, None], i[None, :]]
 
 
-def resample(src, src_res, out_res, order, band=1024, origin=None):
-    """Sample an axis-aligned (north-up, origin MINX/MAXY) raster on the rotated grid (in row bands: the
-    3950 x 3000 m AOI at 0.2 m would need ~14 GB of float64 coordinates in one go)."""
-    nj, ni = round(D / out_res), round(W / out_res)
-    out = np.empty((nj, ni) + src.shape[2:], src.dtype)
+def sample_north_up(path, out_res, band=1024):
+    """Bilinear samples of a north-up RGB GeoTIFF at the centres of the rotated grid's cells of out_res metres."""
+    with rasterio.open(path) as r:
+        img, inv = r.read(), ~r.transform
+    nj, ni = round(D * VOXEL_SIZE / out_res), round(W * VOXEL_SIZE / out_res)
+    out = np.empty((nj, ni, img.shape[0]), np.uint8)
+    k = out_res / VOXEL_SIZE  # grid cells per output cell
     for j0 in range(0, nj, band):
         jj, ii = np.mgrid[j0:min(j0 + band, nj), 0:ni].astype(np.float64)
-        x, y = to_world((ii + 0.5) * out_res, (jj + 0.5) * out_res)
-        ox, oy = origin or (MINX, MAXY)
-        col = (x - ox) / src_res - 0.5
-        row = (oy - y) / src_res - 0.5
-        if src.ndim == 2:
-            out[j0:j0 + band] = ndimage.map_coordinates(src, [row, col], order=order, mode="nearest")
-        else:
-            for k in range(src.shape[-1]):
-                out[j0:j0 + band, :, k] = ndimage.map_coordinates(src[..., k], [row, col], order=order, mode="nearest")
+        x, y = to_world((ii + 0.5) * k, (jj + 0.5) * k)
+        col, row = inv * (x, y)
+        for b in range(img.shape[0]):
+            out[j0:j0 + band, :, b] = np.clip(np.round(ndimage.map_coordinates(
+                img[b].astype(np.float32), [row - 0.5, col - 0.5], order=1, mode="nearest")), 0, 255)
     return out
 
 
-_m, _t = mosaic("dsm_*.asc", 0.5)
-dsm = resample(_m[0].astype(np.float32), 0.5, 0.5, order=0, origin=(_t.c, _t.f))  # nearest keeps spires
-_m, _t = mosaic("dtm_*.asc", 1.0)
-dtm = resample(_m[0].astype(np.float32), 1.0, 1.0, order=1, origin=(_t.c, _t.f))
-del _m
-for n, a in (("dsm", dsm), ("dtm", dtm)):
-    print(n, a.shape, float(a[a > -1000].min()), float(a.max()), int((a < -1000).sum()), "nodata")
-orto = resample(mosaic_rgb("orto_*.tif", 0.2), 0.2, 0.2, order=1)
-print("orto", orto.shape, orto.reshape(-1, 3).mean(0), int((orto.sum(-1) == 0).sum()), "empty px")
-np.savez_compressed("data/prep.npz", dsm=dsm, dtm=dtm, orto=orto)
-from PIL import Image
-Image.fromarray(orto[::4, ::4]).save("data/orto_preview.jpg", quality=85)
+def main():
+    z = np.load(CACHE / "work" / f"elevation_{ELEVATION['source']}.npz")
+    info = json.loads(str(z["info"]))
+    a = info["aoi"]
+    if (a["CX"], a["CY"], a["W"], a["D"], a["voxel"]) != (CX, CY, W, D, VOXEL_SIZE) or \
+            abs(a["theta_deg"] - np.degrees(THETA)) > 1e-9:
+        raise SystemExit("prep: elevation rasters were built for another AOI; re-run prep_lidar.py")
+    res = info["res"]
+    dsm = regrid(z["dsm"], res, DSM_RES).astype(np.float32)
+    dtm = regrid(z["dtm"], res, DTM_RES).astype(np.float32) if res <= DTM_RES else \
+        ndimage.zoom(z["dtm"], res / DTM_RES, order=1).astype(np.float32)
+    orto = sample_north_up(Path(RAW) / "ortho" / "ortho.tif", ORTO_RES)
+    assert dsm.shape == (2 * D, 2 * W) and dtm.shape == (D, W) and orto.shape == (5 * D, 5 * W, 3)
+    assert not np.isnan(dtm).any(), "the DTM must have no gaps"
+    OUT.parent.mkdir(exist_ok=True)
+    np.savez_compressed(OUT, dsm=dsm, dtm=dtm, orto=orto)
+    print(f"{OUT}: dsm {dsm.shape} ({np.isnan(dsm).mean() * 100:.2f} % empty), dtm {dtm.shape} "
+          f"{dtm.min():.1f}-{dtm.max():.1f} m, orto {orto.shape}; from {info['source']} at {res} m")
+
+
+if __name__ == "__main__":
+    main()
