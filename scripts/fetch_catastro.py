@@ -11,6 +11,11 @@ INSPIRE id.
 - BuildingPart: the footprint of each volume of a building with its number of floors above and below ground; the
   floors of a building come from its parts (building_id links them).
 
+A record the WFS cannot serve fails every query that touches it (four 31 m squares near Calle de Toledo do): the
+features of such tiles are read instead from Catastro's ATOM download for the municipality (ATOM_URL, 117 MB, the
+smallest file Catastro offers), downloaded once to {RAW}/catastro_atom only when a tile was skipped, and listed under
+"filled_from_atom".
+
 Geometry is EPSG:25830, (x, y) order. Field names from the INSPIRE schema are mapped to English keys here.
 
 usage: PYTHONPATH=scripts uv run python scripts/fetch_catastro.py
@@ -20,6 +25,7 @@ import math
 import sys
 import time
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 import requests
@@ -39,6 +45,8 @@ NS = {"gml": "http://www.opengis.net/gml/3.2",
       "bu-core2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-core2d/2.0",
       "bu-ext2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-ext2d/2.0"}
 GML_ID = "{http://www.opengis.net/gml/3.2}id"
+ATOM_URL = "https://www.catastro.hacienda.gob.es/INSPIRE/Buildings/28/28900-MADRID/A.ES.SDGC.BU.28900.zip"
+ATOM = Path(RAW) / "catastro_atom" / ATOM_URL.rsplit("/", 1)[1]
 
 
 def get_tile(type_name, bb, path, rounds=3):
@@ -127,13 +135,49 @@ def building_part(feat):
             "height_below_m": text(feat, "bu-ext2d:heightBelowGround", float)}
 
 
+def atom_features(type_name, boxes):
+    """The features of type_name in Catastro's ATOM file for the municipality that reach into any of boxes."""
+    if not ATOM.exists():
+        ATOM.parent.mkdir(parents=True, exist_ok=True)
+        print(f"  downloading {ATOM_URL}", file=sys.stderr)
+        with requests.get(ATOM_URL, headers=UA, timeout=600, stream=True) as r:
+            r.raise_for_status()
+            tmp = ATOM.with_suffix(".part")
+            with open(tmp, "wb") as fh:
+                for chunk in r.iter_content(1 << 20):
+                    fh.write(chunk)
+            tmp.rename(ATOM)
+    tag = type_name.split(":")[1]
+    member = {"Building": ".building.gml", "BuildingPart": ".buildingpart.gml"}[tag]
+    with zipfile.ZipFile(ATOM) as z:
+        name = next(n for n in z.namelist() if n.lower().endswith(member))
+        with z.open(name) as fh:
+            for _, el in ET.iterparse(fh):
+                if el.tag != f"{{{NS['bu-ext2d']}}}{tag}":
+                    continue
+                pts = [float(v) for p in el.iterfind(".//gml:posList", NS) for v in p.text.split()]
+                xs, ys = pts[0::2], pts[1::2]
+                if any(min(xs) < b[2] and max(xs) > b[0] and min(ys) < b[3] and max(ys) > b[1] for b in boxes):
+                    yield el
+                else:
+                    el.clear()
+
+
 def collect(type_name, props, tiles):
     tag = type_name.split(":")[1]
     feats = {}
     for k, bb in enumerate(tiles):
         for f in tile_features(type_name, bb, TILES / f"{tag}_{bb[0]:.0f}_{bb[1]:.0f}_{bb[2]:.0f}_{bb[3]:.0f}.gml"):
             feats.setdefault(f.get(GML_ID), {"type": "Feature", "properties": props(f), "geometry": geometry(f)})
-    return list(feats.values())
+    skipped = [b for t, b in SKIPPED if t == type_name]
+    filled = 0
+    for f in atom_features(type_name, skipped) if skipped else []:
+        if f.get(GML_ID) not in feats:
+            feats[f.get(GML_ID)] = {"type": "Feature", "properties": props(f), "geometry": geometry(f)}
+            filled += 1
+    if skipped:
+        print(f"  {filled} {type_name} features of the skipped tiles from the ATOM file", file=sys.stderr)
+    return list(feats.values()), filled
 
 
 def main():
@@ -147,10 +191,11 @@ def main():
              for i in range(i0, i1) for j in range(j0, j1)]
     for type_name, props, name in (("BU:Building", building, "buildings"),
                                    ("BU:BuildingPart", building_part, "building_parts")):
-        feats = collect(type_name, props, tiles)
+        feats, filled = collect(type_name, props, tiles)
         out = DIR / f"{name}.geojson"
         out.write_text(json.dumps({"type": "FeatureCollection", "crs": CRS, "features": feats,
-                                   "skipped": [b for t, b in SKIPPED if t == type_name]}))
+                                   "skipped": [b for t, b in SKIPPED if t == type_name],
+                                   "filled_from_atom": filled}))
         print(f"{len(feats)} {name} from {len(tiles)} tile(s) -> {out}")
 
 
