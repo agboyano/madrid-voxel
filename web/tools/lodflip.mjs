@@ -4,7 +4,7 @@
 // usage: node tools/lodflip.mjs <outdir> [query for the tested build, e.g. "err=1"] [views, e.g. "pkin,varso"]
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const [out = '/private/tmp/claude-501/lodflip', q = '', only = ''] = process.argv.slice(2);
+const [out = 'out/lodflip', q = '', only = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 // target (scene x, y, z) and the direction from it to the camera
 const VIEWS = {

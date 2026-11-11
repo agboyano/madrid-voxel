@@ -4,7 +4,7 @@
 // usage: node tools/framerec.mjs <outdir> [spots "home,1,2"] [wheel ms between notches, default 120] [notches 25]
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const [out = '/private/tmp/claude-501/framerec', spots = 'home', gap = '120', notches = '25'] = process.argv.slice(2);
+const [out = 'out/framerec', spots = 'home', gap = '120', notches = '25'] = process.argv.slice(2);
 const port = process.env.PORT || 5173;
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });

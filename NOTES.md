@@ -406,7 +406,7 @@ Actions: **remove** (delete or stub), **replace** (Madrid equivalent), **paramet
 | `index.html:17` | PKiN favicon | replace |
 | `index.html:18-42` | PostHog bootstrap; enabled only on host `p.migdal.pl` (`:22`); `eu.i.posthog.com` | remove (or keep inert and parametrise the host) |
 | `stats.ts:24-48`, `package.json:14` (`posthog-js`), `.github/workflows/pages.yml` (`VITE_POSTHOG_PROJECT_TOKEN`), `perf_stats.py` | analytics | remove (or the user's own project); log the decision |
-| `main.ts:84-85` | credits "by Piotr Migdał & Opus 5.5" (quesma blog link), source link to stared/warsaw-vibe-voxel, "based on GUGiK 2025" | replace: the user as author, "based on warsaw-vibe-voxel by Piotr Migdał (MIT)", data credits (IGN/CNIG CC BY 4.0, OSM ODbL, Ayuntamiento, Catastro). **The AI credit must go** (CLAUDE.md attribution rules) |
+| `main.ts:84-85` | credits: Piotr Migdał with a second, AI-model credit (quesma blog link), source link to stared/warsaw-vibe-voxel, "based on GUGiK 2025" | replace: the user as author, "based on warsaw-vibe-voxel by Piotr Migdał (MIT)", data credits (IGN/CNIG CC BY 4.0, OSM ODbL, Ayuntamiento, Catastro); no AI credit (project attribution rules). Done in Phase 0 and Phase 3 |
 | `web/package.json:2` | `"name": "warsaw-voxel"` | replace |
 | `pyproject.toml:2` | `name = "warsaw-voxel-data"` | replace; add the LiDAR dependencies (laspy or PDAL) |
 | `stats.ts:21,28` | sessionStorage key `wv-last` | keep |

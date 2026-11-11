@@ -4,7 +4,7 @@
 // usage: node tools/lodfade.mjs <outdir> [query, e.g. "fade=0"]
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const [out = '/private/tmp/claude-501/lodfade', q = ''] = process.argv.slice(2);
+const [out = 'out/lodfade', q = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const CASES = { // distances where the default budget draws the view mostly at 2 m (tools/lodflip.mjs)
   pkin: { t: [749, 110, 1229], dir: [0.55, 0.35, 0.76], d: 1450 },

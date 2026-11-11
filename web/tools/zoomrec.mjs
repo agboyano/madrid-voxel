@@ -4,7 +4,7 @@
 // usage: PORT=5173 node tools/zoomrec.mjs <outdir> [spots, e.g. "home,1,2,3"] [query]
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const [out = '/private/tmp/claude-501/zoomrec', spots = 'home', q = ''] = process.argv.slice(2);
+const [out = 'out/zoomrec', spots = 'home', q = ''] = process.argv.slice(2);
 const port = process.env.PORT || 5173;
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });

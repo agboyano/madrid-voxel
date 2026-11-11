@@ -2,7 +2,7 @@
 // usage: node tools/ghostshots.mjs <outdir> [styles "1,2,3"] [extra query]
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const [out = '/private/tmp/claude-501/ghost', styles = '1,2,3,4,5', extra = ''] = process.argv.slice(2);
+const [out = 'out/ghost', styles = '1,2,3,4,5', extra = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
 const POSES = { home: null, top: { t: [1100, 20, 1400], dir: [0.15, 0.9, 0.42], d: 4200 }, night: 'night' };

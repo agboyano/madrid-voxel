@@ -187,4 +187,4 @@ Both the Warsaw and Los Angeles viewers use 1 m as the finest level of the quadt
 
 **Recommended approach:** start from the original Warsaw project (viewer and tree handling) and, for the PNOA-LiDAR, take LA's point cloud pipeline (`prep_lidar.py`, area-limited downloads, band voxelisation). Since the PNOA cloud is already classified, LA's class inference is not needed. Both share the tile format, so combining them is viable.
 
-The detailed, phased plan for Claude Code is in `PLAN.md`, and the working rules in `CLAUDE.md`.
+The detailed, phased plan is in `PLAN.md`, and the working rules in `CLAUDE.md`.
