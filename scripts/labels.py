@@ -11,6 +11,8 @@ Curated labels from landmarks.py (LABELS, EXTRA_LABELS, overrides.json) come fir
 `far` is the camera distance (m) up to which a label shows.
 """
 import json
+import re
+import unicodedata
 
 import numpy as np
 from scipy import ndimage
@@ -35,9 +37,16 @@ PLACE_TAGS = [("place", ("square",)), ("historic", None), ("tourism", ("museum",
               ("leisure", ("park", "garden")), ("man_made", ("tower", "obelisk")),
               ("railway", ("station",)), ("office", ("government",)), ("building", None)]
 NOT_PLACES = ("boundary", "route", "highway", "brand", "shop", "admin_level", "waterway", "public_transport")
-# building=* values that say little about a landmark: the Wikidata type (instance of) names it better
+# kinds from OSM that say little about a landmark, or mislead: the Wikidata type (instance of) names it better. Besides
+# the vague building=* values, Cibeles and the Metropolis are tourism=attraction, the Royal Palace historic=castle, the
+# Almudena amenity=place_of_worship
 GENERIC = {"building", "commercial", "retail", "public", "house", "government", "apartments", "residential", "office",
-           "civic"}
+           "civic", "attraction", "castle", "place of worship"}
+# words left out when comparing an OSM name with a Wikidata label (labels._words)
+NAME_STOP = {"de", "del", "la", "las", "los", "el", "en", "al", "madrid"}
+# Wikidata types (instance of) that do not say what the place is: the next one does
+VAGUE_TYPES = {"building", "tourist destination", "tourist attraction", "Monument (Spain)", "organization",
+               "water depth", "structure", "architectural structure"}
 
 
 def cap(s):
@@ -48,6 +57,12 @@ def cap(s):
         return s
     s = s.removesuffix(", Madrid").removesuffix(".")
     return s[:1].upper() + s[1:]
+
+
+def _words(s):
+    """The words that tell names apart: accents folded, articles, prepositions and "Madrid" left out."""
+    s = "".join(ch for ch in unicodedata.normalize("NFD", s.lower()) if not unicodedata.combining(ch))
+    return {w for w in re.findall(r"[a-z0-9]+", s) if len(w) > 2 and w not in NAME_STOP}
 
 
 def kind_of(t):
@@ -95,9 +110,12 @@ def _anchor(geom, top_at, tall):
 def label(qid, f, t, geom, top_at, far):
     en, es = cap(ENGLISH_NAMES.get(qid) or f.get("en") or t.get("name:en")), cap(t.get("name") or f.get("es"))
     name = es or en
+    if qid not in ENGLISH_NAMES and t.get("name") and f.get("es") and not _words(t["name"]) & _words(f["es"]):
+        en = None  # the item names something else than the OSM name: the building's old name, or a body housed in it
     kind = kind_of(t)
-    if kind is None or (kind in GENERIC and f.get("types")):
-        kind = (f.get("types") or ["place"])[0]
+    wd_kind = next((k for k in f.get("types", []) if k not in VAGUE_TYPES), None)
+    if kind is None or kind in GENERIC:
+        kind = wd_kind or ("building" if "building" in t else kind or "place")
     c, r = _anchor(geom, top_at, "building" in t or kind in ("cathedral", "church", "palace", "tower"))
     if not (0 <= c < W and 0 <= r < D):
         return None
