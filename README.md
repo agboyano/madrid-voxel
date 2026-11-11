@@ -1,6 +1,6 @@
 # Madrid in voxels
 
-An interactive 3D map of central Madrid in 1 m voxels, running in the browser as a static site: from the Templo de Debod and Plaza de España to the Retiro, and from Glorieta de Bilbao to Atocha (3.75 × 2.75 km). Change the date, the hour and the weather, follow a pedestrian or a car, and open a landmark's card for its history.
+An interactive 3D map of central Madrid in 1 m voxels, running in the browser as a static site: from the Templo de Debod and Plaza de España past the Retiro to Calle del Doctor Esquerdo, and from Glorieta de Bilbao and Manuel Becerra to Atocha (4.4 × 2.85 km). Change the date, the hour and the weather, follow a pedestrian or a car, and open a landmark's card for its history.
 
 ![The Royal Palace and the Almudena on an October evening](docs/img/final-palace.png)
 
@@ -25,7 +25,7 @@ URL parameters:
 - `date=M-D`, `hour`, `weather` (`clear`, `cloudy`, `rain`, `snow`);
 - `ui=0` hides the interface; `tilt=0` disables the tilt-shift effect.
 
-The generated data is in the repository (`web/public/data`, 27 MB), so the viewer runs without building anything.
+The generated data is in the repository (`web/public/data`, 32 MB), so the viewer runs without building anything.
 
 ## Build the data
 
@@ -38,9 +38,9 @@ Every download goes to a cache outside the repository, `$MADRID_CACHE` (default 
 - `[aoi] area`: `full` (the whole map) or `sol` (500 m around Puerta del Sol, builds in under a minute);
 - `MADRID_AREA=<name>` in the environment overrides it.
 
-The **PNOA-LiDAR** point cloud cannot be downloaded automatically, because the CNIG download centre asks for a reCAPTCHA. `PYTHONPATH=scripts uv run python scripts/fetch_pnoa_lidar.py` lists the 1 km tiles the area needs, with their file names, and checks the files once they are in `$MADRID_CACHE/raw/pnoa_lidar/`. The full area needs 12 tiles.
+The **PNOA-LiDAR** point cloud cannot be downloaded automatically, because the CNIG download centre asks for a reCAPTCHA. `PYTHONPATH=scripts uv run python scripts/fetch_pnoa_lidar.py` lists the 1 km tiles the area needs, with their file names, and checks the files once they are in `$MADRID_CACHE/raw/pnoa_lidar/`. The full area needs 24 tiles.
 
-The full build peaks at about 13 GB of memory, in `voxelize.py`. `scripts/build_data.sh` prints each step's time and peak memory.
+The full build peaks at about 16 GB of memory, in `voxelize.py`. `scripts/build_data.sh` prints each step's time and peak memory.
 
 ## How it is made
 
@@ -66,10 +66,10 @@ The main rules:
 - **One LiDAR flight, in March:** the PNOA flight of 17–18 March 2024 was leaf-off, so deciduous crowns are sparse. Trees without a crown are drawn young from the inventory; private trees outside it take their crown from the LiDAR alone.
 - **Older orthophoto:** the most recent PNOA orthophoto (July 2023) is a year older than the LiDAR and is not a true orthophoto, so the roofs of tall buildings lean slightly off their footprints.
 - **1 m voxels:** pitched roofs become 1 m terraces, cornices and eaves make facades ragged, and street furniture taller than 1.5 m shows as grey blocks.
-- **Grid at 0°:** the grid follows the historic centre. The Ensanche of the Barrio de Salamanca is turned about −6° and its facades show a staircase. A rotated grid needs four more LiDAR tiles (`todo.md`).
+- **Grid at −6°:** the grid follows the Ensanche of the Barrio de Salamanca, which covers most of the map. Streets at other angles show a staircase along their facades: Gran Vía, the Paseo del Prado and the irregular streets of the historic centre.
 - **Landmarks are not curated:** the Royal Palace's parts take generic wall colours, and no landmark has hand-made details yet (`scripts/overrides.json` and `landmarks.py` hold the tools).
 - **Inherited behaviour:** the seasonal dates of several genera (Platanus, Styphnolobium, Aesculus, Celtis) fall back to the median of the others for lack of observations. Lawn colours, lit-window habits and the traffic model come from Warsaw's measurements.
-- **Data gaps:** one 31 m square of Catastro building parts near Calle de Toledo could not be downloaded (the service fails on it).
+- **Data gaps:** four 31 m squares of Catastro building parts near Calle de Toledo could not be downloaded (the service fails on it).
 
 ## Sources
 

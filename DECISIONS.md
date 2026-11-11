@@ -153,6 +153,7 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Reason:** at −6° the rectangle's corners reach X 438 km, which needs four more LiDAR tiles. They can only be downloaded by hand (reCAPTCHA), and the user asked to finish without stopping. Shifting the centre to fit the downloaded tiles drops the Templo de Debod and Glorieta de Bilbao. Most landmarks are in the centre, which 0° fits.
 - **Rejected:** −6° with a no-data wedge in the south-west corner; aligning with Gran Vía or Paseo del Prado, both worse than 0°.
 - **Revisit:** download `PNOA_2024_MAD_438-4473..4476_H30_NPC02.LAZ` and set `rotation = -6` (`todo.md`).
+- **Superseded** by "Full area extended east to Doctor Esquerdo, grid at −6°" below.
 
 ## 2026-11-11: Catastro tiles on a shared world grid
 
@@ -194,3 +195,25 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** at the user's request, map labels and info cards show the Spanish name first and the English name under it where it differs (the reverse of the Phase 4 rule in `CLAUDE.md`, which is updated). The Spanish name is the OSM `name` of the linked element, falling back to Wikidata's Spanish label; the English name is `ENGLISH_NAMES`, then Wikidata's English label, then OSM `name:en`.
 - **Reason:** the OSM name is the one on the street signs and in the search index ("Palacio de Cristal", "Plaza Mayor", "Monumento a Alfonso XII"); Wikidata's Spanish labels are often formal or historic names ("Palacio de Cristal del Retiro", "Plaza Mayor de Madrid", "Palacio de Quintana" for the Mando Aéreo General) or name the person a statue honours rather than the statue.
 - **Rejected:** Wikidata's Spanish label first (above); keeping the `local` field (the viewer now reads `en` for the second line, as Warsaw's did for its English names).
+
+## 2026-11-11: Full area extended east to Doctor Esquerdo, grid at −6°
+
+- **Decision:** at the user's request, the full area reaches Calle del Doctor Esquerdo with the Hospital Gregorio Marañón inside, and the grid is turned −6°. Centre 441 126.2, 4 474 323.7; 4 400 × 2 850 m (12.5 km², +22 %).
+- **How the edges were set:** in the −6° frame (u east, n north, from the old centre) the area spans u −1 950…2 450, n −1 400…1 450.
+  - **West:** keeps the Templo de Debod (u −1 834).
+  - **North:** reaches Glorieta de Bilbao (n 1 179) and Manuel Becerra, where Doctor Esquerdo starts (n 1 391).
+  - **South:** reaches Atocha (n −1 149).
+  - **East:** the Doctor Esquerdo axis runs at u 2 300–2 380 from the hospital northwards, and the hospital reaches u 2 287. The edge keeps the street and the first metres of its east side. South of O'Donnell the street bends west towards Pacífico; that part is inside too.
+- **Reason:** −6° aligns the Barrio de Salamanca's Ensanche, which the extension makes even larger (25 % of facade length aligned against 9.8 % at 0°, `rotation_report.py`). The user downloaded the five LiDAR tiles it needs (438-4473…4476 and 443-4474).
+- **Cost:** voxelize 553 s, peak 15.9 GB (was 447 s, 12.8 GB); `web/public/data` 32 MB (was 27 MB).
+- **Rejected:** the dtla-voxel band fill, still not needed at 15.9 GB on a 38 GB machine.
+
+## 2026-11-11: Build order: every viewer file before cost1m
+
+- **Decision:** `build_data.sh` runs zones, windows, places and phenology before `cost1m.py`, then zones again with the blocks priced. It also writes `docs/labels.md` (`labels_doc.py`).
+- **Reason:** `cost1m.py` loads the viewer, which reads `zones.bin` and the other grids. After a change of area these still had the old size, and the viewer failed (`Invalid typed array length`). Within the same area the old order worked by accident.
+
+## 2026-11-11: Hospitals can carry labels
+
+- **Decision:** `amenity=hospital` joins the place tags in `labels.py`, so a hospital whose Wikidata item has a heritage designation or a Wikipedia article gets a label like any other place.
+- **Reason:** the Hospital Gregorio Marañón, which the user asked to have on the map, is tagged `wikidata=Q30253672` (Wikipedia in 4 languages) but carried no label, because `amenity=hospital` was not a place kind.

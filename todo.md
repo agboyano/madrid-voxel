@@ -15,14 +15,7 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
   Then check that the site loads: the map, the labels, a card, and the views (`?view=palace`). Pages needs a public repository on a free account; the repository is 30 MB of data plus the screenshots.
 
-- **Review the labels.** `docs/labels.md` lists all 410: 10 required, 400 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4.
-- **Grid rotation −6°.** It aligns 25 % of the full area's facade length with the grid, against 9.8 % at 0°, mostly in the Barrio de Salamanca. Its corners need four more PNOA-LiDAR tiles, which only a person can download (reCAPTCHA):
-  - `PNOA_2024_MAD_438-4473_H30_NPC02.LAZ`
-  - `PNOA_2024_MAD_438-4474_H30_NPC02.LAZ`
-  - `PNOA_2024_MAD_438-4475_H30_NPC02.LAZ`
-  - `PNOA_2024_MAD_438-4476_H30_NPC02.LAZ`
-
-  Put them in `$MADRID_CACHE/raw/pnoa_lidar/`, set `rotation = -6` under `[areas.full]` in `pipeline.toml` and run `sh scripts/build_data.sh`. Only the edge Catastro tiles are new; OSM and the orthophoto are downloaded again. Compare with `docs/img/rot-*`.
+- **Review the labels.** `docs/labels.md` lists all 410: 10 required, 400 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4. Since the labels take the Spanish name from OSM and the English one from Wikidata, check pairs that name different things: an OSM building whose `wikidata` tag points to a body housed in it ("Ministerio de Sanidad, Servicios Sociales e Igualdad" over "Spanish Agency for Consumer Affairs, Food Security and Nutrition"). Fix the OSM tag, or drop the English name for that item.
 - **A licence for this project's own code.** The upstream code is MIT (`LICENSE-warsaw-vibe-voxel`, `LICENSE-dtla-voxel`); the Madrid changes have no licence file yet.
 
 ## Landmarks and look
@@ -45,8 +38,9 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
 ## Pipeline and viewer
 
+- **Overview view:** it frames about 2.5 km around the map's centre, so the eastern extension (Doctor Esquerdo) is out of the first view. Frame the whole map, or add a view of the east.
 - **Construction sites** were not reviewed one by one at full scale (OSM `landuse=construction`, buildings finished after the 2024 flight).
-- **Catastro:** one 31 m square of building parts near Calle de Toledo is skipped because the WFS fails on it (`skipped` in `building_parts.geojson`). Retry later or take it from the ATOM download.
+- **Catastro:** four 31 m squares of building parts near Calle de Toledo are skipped because the WFS fails on it (`skipped` in `building_parts.geojson`). Retry later or take it from the ATOM download.
 - **Vegetation masks and deck heights** are still computed in `voxelize.py` between 3D writes. Move them into `layers.py` to complete the 2D/3D split.
 - **`VOXEL_SIZE`:** the viewer does not read `meta.voxel` yet. The "1 m assumptions" section of `NOTES.md` lists what would have to change for another voxel size.
 - **Desktop performance on integrated GPUs:** post-processing is about half the frame time (5.4 fps for the whole map at full render size on an Intel UHD 620). A lighter post-processing level for weak GPUs would help.

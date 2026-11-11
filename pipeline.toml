@@ -13,12 +13,13 @@ size = [500, 500]
 rotation = 0
 
 [areas.full]
-# Templo de Debod / Plaza de Espana to the east edge of the Retiro, Glorieta de Bilbao to Atocha
-# (X 439 000 - 442 750, Y 4 472 950 - 4 475 700). Rotation 0: -6 deg aligns more facade length over the whole area
-# (25 % against 9.8 %, rotation_report.py) but its corners need four more LiDAR tiles (X 438); see DECISIONS.md, todo.md
-centre = [440875.0, 4474325.0]
-size = [3750, 2750]
-rotation = 0
+# Templo de Debod / Plaza de Espana to just past Calle del Doctor Esquerdo (Hospital Gregorio Maranon inside),
+# Manuel Becerra / Glorieta de Bilbao to Atocha. Grid turned -6 deg to the Ensanche: in the rotated frame (u east,
+# n north, metres from the old centre 440875, 4474325) it spans u -1950..2450, n -1400..1450; the Doctor Esquerdo
+# axis runs at u 2300-2380, so the east edge keeps the street and the first metres of its east side. See DECISIONS.md
+centre = [441126.2, 4474323.7]
+size = [4400, 2850]
+rotation = -6
 
 # Rotation comparison (Phase 4): 600 m test areas at 0 deg and at -6 deg, the rotation that aligns most facade
 # length over the full area (scripts/rotation_report.py). Salamanca: the Ensanche grid east of Recoletos.

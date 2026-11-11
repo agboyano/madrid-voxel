@@ -1344,6 +1344,26 @@ Headless Chromium on the development laptop's Intel UHD 620 (integrated), ANGLE 
 - **Construction sites:** not reviewed one by one (`todo.md`).
 - **Catastro:** one 31 m square of building parts the service cannot serve is skipped (`skipped` in the GeoJSON).
 
+### Extended area at −6° (after Phase 6)
+
+The full area now runs from the Templo de Debod to just past Calle del Doctor Esquerdo, with the grid at −6°: 4 400 × 2 850 cells, centre 441 126.2, 4 474 323.7 (`DECISIONS.md`). It needs 24 LiDAR tiles (X 438–443 km, Y 4472–4476 km).
+
+| Step | Time | Peak memory |
+| --- | --- | --- |
+| fetch_osm (9 Overpass tiles, first download) | 648 s | 0.9 GB |
+| fetch_catastro (new tiles only) | 2 472 s | 0.7 GB |
+| prep_lidar (24 tiles) | 119 s | 1.7 GB |
+| prep | 95 s | 4.8 GB |
+| voxelize | 553 s (1 162 s on a second run with the machine busy) | **15.9 GB** |
+| cost1m (805 level-1 tiles) | 55 s | browser |
+
+- **Inputs:** OSM 342 525 elements (81 MB); 49 065 inventory trees; Catastro 18 177 buildings and 129 898 parts.
+- **Output:** 17 003 building features (4 697 parts); 422 labels; 18.6 M triangles at 1 m (498 MB of GPU buffers).
+- **Sizes:** `web/public/data` is 32 MB; the cache is 7.1 GB.
+- **Downloads:**
+  - The IGN orthophoto WMS answered some 1 km tiles with "502 Proxy Error" for a while. `fetch_ortho.py` keeps the tiles it got, so re-running it finishes the mosaic.
+  - The Catastro WFS now fails on four 31 m squares of building parts near Calle de Toledo, not one; they are listed under `skipped`.
+
 ## Publication (Phase 6)
 
 Not published yet: creating the public GitHub repository was blocked by the permission settings of the working session and is left to the user (`todo.md` has the commands). Everything else for publication is done:
