@@ -1346,6 +1346,8 @@ Headless Chromium on the development laptop's Intel UHD 620 (integrated), ANGLE 
 
 ## Publication (Phase 6)
 
+Not published yet: creating the public GitHub repository was blocked by the permission settings of the working session and is left to the user (`todo.md` has the commands). Everything else for publication is done:
+
 - **Workflow:** `.github/workflows/pages.yml` builds the viewer with the pnpm lockfile and deploys `web/dist` to GitHub Pages on every push to `main` (Warsaw's workflow, the same as dtla-voxel's but with pnpm; the analytics variables are removed). The data is committed, so the workflow does not build it.
 - **Removed from the viewer:** the PostHog analytics library and Warsaw's sharing image.
 - **Attribution review before publishing:**

@@ -184,7 +184,7 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** remove PostHog (`posthog-js` and its lazy import) and Warsaw's sharing image from the viewer.
 - **Reason:** they belonged to the Warsaw deployment; the Madrid site collects nothing.
 
-## 2026-11-11: Publish as a public GitHub repository with Pages
+## 2026-11-11: Publication prepared, left to the user
 
-- **Decision:** create the public repository `agboyano/madrid-voxel` with the authenticated `gh` account, push `main`, and serve the viewer with GitHub Pages through `.github/workflows/pages.yml`.
-- **Reason:** Phase 6 asks for a published site, and the user asked to finish every phase without asking; Pages on a free account needs a public repository. Every commit is the user's, with no AI attribution (final review in `NOTES.md`).
+- **Decision:** the repository is ready to publish (workflow, README, attribution review), but it has not been pushed anywhere. Creating the public repository was blocked by the permission settings of the session that did the work, and publishing a public repository under the user's account is the user's call.
+- **How:** `todo.md` gives the commands (create `agboyano/madrid-voxel` or another name, enable Pages in "GitHub Actions" mode, push `main`). Pages on a free account needs a public repository.

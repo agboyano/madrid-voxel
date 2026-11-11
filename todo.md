@@ -4,6 +4,17 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
 ## Needs the user
 
+- **Publish the site** (Phase 6, "check that the published site loads correctly"). Everything is ready but nothing has been pushed. With the GitHub CLI logged in:
+
+  ```sh
+  gh repo create agboyano/madrid-voxel --public --source . --remote origin
+  gh api -X POST repos/agboyano/madrid-voxel/pages -f build_type=workflow   # Pages from GitHub Actions
+  git push -u origin main                                                    # runs .github/workflows/pages.yml
+  gh run watch                                                               # then open https://agboyano.github.io/madrid-voxel/
+  ```
+
+  Then check that the site loads: the map, the labels, a card, and the views (`?view=palace`). Pages needs a public repository on a free account; the repository is 30 MB of data plus the screenshots.
+
 - **Review the labels.** `docs/labels.md` lists all 410: 10 required, 400 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4.
 - **Grid rotation −6°.** It aligns 25 % of the full area's facade length with the grid, against 9.8 % at 0°, mostly in the Barrio de Salamanca. Its corners need four more PNOA-LiDAR tiles, which only a person can download (reCAPTCHA):
   - `PNOA_2024_MAD_438-4473_H30_NPC02.LAZ`
@@ -40,7 +51,7 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 - **`VOXEL_SIZE`:** the viewer does not read `meta.voxel` yet. The "1 m assumptions" section of `NOTES.md` lists what would have to change for another voxel size.
 - **Desktop performance on integrated GPUs:** post-processing is about half the frame time (5.4 fps for the whole map at full render size on an Intel UHD 620). A lighter post-processing level for weak GPUs would help.
 - **`web/tools/*.mjs`** (Node harnesses inherited from Warsaw) still hold Warsaw camera poses and macOS (Metal) flags. The Python `scripts/screenshot.py`, `profile.py` and `cost1m.py` replace the ones used here.
-- **Published site:** check it after each data change. The workflow deploys `web/dist` on every push to `main`.
+- **Published site:** once published, check it after each data change. The workflow deploys `web/dist` on every push to `main`.
 
 ## Future (PLAN.md Phase 7)
 
