@@ -46,6 +46,9 @@ def get_tile(type_name, bb, path, rounds=3):
     document's start replaced by an "Object moved" error page: not XML, so it counts as a failure."""
     if path.exists():
         return path.read_bytes()
+    failed = path.with_suffix(".failed")  # the service failed on this tile before: go straight to its quarters
+    if failed.exists():
+        return None
     params = {"service": "WFS", "version": "2.0.0", "request": "GetFeature", "typeNames": type_name,
               "srsName": "EPSG::25830", "bbox": ",".join(f"{v:.1f}" for v in bb) + ",EPSG::25830"}
     for attempt in range(rounds):
@@ -58,6 +61,7 @@ def get_tile(type_name, bb, path, rounds=3):
         except requests.RequestException as e:
             print(f"  retry {type_name}: {e}", file=sys.stderr)
         time.sleep(5 * (attempt + 1))
+    failed.touch()
     return None
 
 
