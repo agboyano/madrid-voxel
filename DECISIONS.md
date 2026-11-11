@@ -326,3 +326,10 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - looking around with the phone's gyroscope: it needs a permission prompt on iOS and makes people dizzy;
   - new bird's-eye gestures.
 
+
+## 2026-11-11: MIT licence for the Madrid code
+
+- **Decision:** the code written for the Madrid port is under the MIT licence (`LICENSE`), the same as both upstream projects, whose licences stay in `LICENSE-warsaw-vibe-voxel` and `LICENSE-dtla-voxel`.
+- **Why:** the repository is about to be public; without a licence the code could be read but not reused. MIT matches the code it builds on, so the whole viewer and pipeline share one set of terms.
+- **Scope:** code only. The generated data in `web/public/data` derives from OpenStreetMap (ODbL), IGN/CNIG and the Ayuntamiento de Madrid (CC BY 4.0), Catastro and Wikidata (CC0), and keeps their terms (`README.md`, "Sources").
+- **Rejected:** a copyleft licence (GPL), which would put stricter terms on this code than on the code it is adapted from.

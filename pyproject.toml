@@ -1,6 +1,7 @@
 [project]
 name = "warsaw-voxel-data"
 version = "0.1.0"
+license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
     "affine>=3.0.1",

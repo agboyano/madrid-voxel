@@ -16,7 +16,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   Then check that the site loads: the map, the labels, a card, and the views (`?view=palace`). Pages needs a public repository on a free account; the repository is 32 MB of data plus the screenshots.
 
 - **Review the labels.** `docs/labels.md` lists all 422: 10 required, 412 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4. Since the labels take the Spanish name from OSM and the English one from Wikidata, pairs that name different things lose the English line (no word in common between the OSM name and Wikidata's Spanish label: 26 at the last build, such as "IED Madrid" over "Palace of Altamira"). Where the OSM `wikidata` tag is simply wrong (the Ministerio de Sanidad building points to a body housed in it), fix the tag in OSM.
-- **A licence for this project's own code.** The upstream code is MIT (`LICENSE-warsaw-vibe-voxel`, `LICENSE-dtla-voxel`); the Madrid changes have no licence file yet.
 
 ## Landmarks and look
 

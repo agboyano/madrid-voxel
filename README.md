@@ -110,6 +110,7 @@ Software:
 
 ## Credits and licences
 
+- **This project:** the Madrid port's own code is under the MIT licence, in [LICENSE](LICENSE). It covers the code only; the generated data keeps the licences of its sources (below).
 - **Original project:** [warsaw-vibe-voxel](https://github.com/stared/warsaw-vibe-voxel) by Piotr Migdał. The viewer, the tile format and most of the fusion rules come from it. MIT licence, kept in [LICENSE-warsaw-vibe-voxel](LICENSE-warsaw-vibe-voxel).
 - **Los Angeles port:** [dtla-voxel](https://github.com/sigman78/dtla-voxel) by sigman78. The point-cloud rasterisation, the area helpers, the downloads by area, the crossings and the structure of the 2D layers are adapted from it. MIT licence, kept in [LICENSE-dtla-voxel](LICENSE-dtla-voxel).
 - **Generated data** in `web/public/data` derives from the sources above: OpenStreetMap (ODbL), IGN/CNIG (CC BY 4.0), the Ayuntamiento de Madrid (CC BY 4.0), Catastro and Wikidata (CC0).
