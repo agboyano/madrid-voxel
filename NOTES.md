@@ -1277,3 +1277,78 @@ There is no single best rotation:
 - The historic centre (Sol, Austrias, Letras, Jerónimos) fits 0° better (up to 79 % per 750 m block).
 
 Screenshots of 600 m test areas at both rotations: `docs/img/rot-*`.
+
+## Full area and performance (Phase 5)
+
+### Build
+
+`sh scripts/build_data.sh` for the full area (3750 × 2750 cells, 202 levels over base 578 m), each step timed by `measure.py`. Downloads and LiDAR tiles were already cached, so the Catastro time (7.3 min) is from the tile grid; a first build adds about 1 h of Catastro WFS and a few minutes of Overpass and WMS.
+
+| Step | Time | Peak memory |
+| --- | --- | --- |
+| prep_lidar (92.5 M points) | 71 s | 1.5 GB |
+| prep (rasters + ortho on the grid) | 79 s | 3.8 GB |
+| voxelize | 447 s | **12.8 GB** |
+| zones / windows / places / phenology / terrain | 16 / 6 / 4 / 3 / 1 s | ≤ 1.4 GB |
+| cost1m (meshes 660 tiles in the browser) | ~1 min | browser |
+
+The whole volume fits in memory (12.8 GB of the 38 GB machine), so the 128-row band fill from dtla-voxel was not adopted.
+
+### Sizes
+
+- `web/public/data`: **27 MB**.
+  - Breakdown: tiles 13 MB (660 level-1 nodes, 1f foliage, 12 level-8 nodes), `trees.json` 6.4 MB, `traffic.json` 4.1 MB, zones, places, foliage and terrain about 3 MB.
+  - Production build (`web/dist`): 29 MB.
+- Cache `$MADRID_CACHE`: **4.1 GB**.
+  - LiDAR tiles: 1.6 GB (19 tiles).
+  - Full area: 1.2 GB (orthophoto, rasters, OSM, Catastro).
+  - Shared Catastro tiles, test areas, inventory CSV.
+- Full area content:
+  - 14 523 building features (4 111 parts); 8 459 take Catastro floors and 108 Catastro buildings are added.
+  - 51 463 trees: 43 065 from the inventory, 2 911 from OSM and 5 487 LiDAR crowns with no known tree. Of these, 44 551 are drawn under a LiDAR crown and 6 591 young.
+  - 2 202 street lamps; crossings 403 from ways, 407 from nodes and 114 ambiguous.
+  - 5 529 bridge deck cells (349 from PNOA class 17), 131 underpass passages, 1 301 church window cells.
+  - 410 labels, 9 982 search places, 321 palette entries.
+
+### Rendering (`scripts/profile.py`, `docs/profile.json`)
+
+Headless Chromium on the development laptop's Intel UHD 620 (integrated), ANGLE GL. Desktop at render size 1 (the whole city at 1 m: 15.9 M triangles, 424 MB of GPU buffers, 247 MB of column data per `cost1m.py`):
+
+| View | fps | triangles | no shadows | no post-processing | JS heap |
+| --- | --- | --- | --- | --- | --- |
+| overview (whole map) | 5.4 | 21.2 M | 6.6 | 8.3 | 0.5 GB |
+| palace | 10.1 | 5.7 M | 11.8 | 20.3 | 1.1 GB |
+| sol | 14.4 | 2.2 M | 16.0 | 33.8 | 1.3 GB |
+
+- Post-processing (N8AO, bloom, tilt-shift, tone) is the largest single cost on this GPU, about half the frame time. Shadows cost 10–20 %.
+- On a weak GPU the viewer's adaptive render size lowers the 1 m budget by itself; the figures above are with it pinned at 1.
+
+**Phone** (Playwright iPhone 13 emulation, the viewer's own 0.75 M-triangle budget):
+
+| View | fps | triangles | no shadows | no post-processing | JS heap |
+| --- | --- | --- | --- | --- | --- |
+| overview | 25.4 | 2.9 M | 26.5 | 38.1 | 194 MB |
+| palace | 25.6 | 1.5 M | 31.3 | 52.9 | 165 MB |
+| sol | 30.5 | 1.1 M | 31.6 | 59.9 | 194 MB |
+
+- 88–110 level-1 tiles are loaded, plus 12 level-8 clay tiles.
+- Before `cost1m.py` existed, every city block cost 0 triangles in `zones.json`, so the budget never bit: the emulated phone loaded all 1 320 tiles with 0.8–1.3 GB of heap. Warsaw generated that table with `web/tools/cost1m.mjs`; `scripts/cost1m.py` is its port and runs in `build_data.sh`.
+- The 2 and 4 m tile levels (Phase 5 option) are not needed: phones stay within budget with clay beyond, and desktops load the whole map.
+
+### Defects reviewed at scale
+
+- **Map edges:** two crashes on features cut by the edge, both fixed. Church windows were probed past the grid, and a stairwell just off the map broke the underpasses.
+- **Lane offsets:** a lane line folded on a tight bend (Barrio de Salamanca) stopped the build; now dashes are laid on each piece.
+- **Bridges and flyovers:** the Viaducto de Segovia deck stands over the Calle de Segovia valley with lane markings and traffic (`docs/img/phase5-viaduct.png`); class 17 added 349 deck cells next to OSM bridge ways.
+- **Tunnels and underpasses:** 131 passages and 113 stairwells carved (Warsaw's `underpass.py`).
+- **Construction sites:** not reviewed one by one (`todo.md`).
+- **Catastro:** one 31 m square of building parts the service cannot serve is skipped (`skipped` in the GeoJSON).
+
+## Publication (Phase 6)
+
+- **Workflow:** `.github/workflows/pages.yml` builds the viewer with the pnpm lockfile and deploys `web/dist` to GitHub Pages on every push to `main` (Warsaw's workflow, the same as dtla-voxel's but with pnpm; the analytics variables are removed). The data is committed, so the workflow does not build it.
+- **Removed from the viewer:** the PostHog analytics library and Warsaw's sharing image.
+- **Attribution review before publishing:**
+  - Every commit is the user's (`Agboyano <agboyano@protonmail.com>`), with no trailers.
+  - The repository has no AI credits. The remaining mentions are the `CLAUDE.md` rules file, referred to by name.
+  - The inherited `web/tools` scripts' temp paths were renamed.

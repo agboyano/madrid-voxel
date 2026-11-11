@@ -162,3 +162,29 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 ## 2026-11-11: The user asked to finish every phase without checkpoints
 
 - **Decision:** from Phase 4 on, decisions normally taken at checkpoints are taken here and recorded in this file; what remains goes to `todo.md`.
+
+## 2026-11-11: Extended label set by rule, listed for review
+
+- **Decision:** label places whose Wikidata item has a heritage designation or a Wikipedia article, excluding boundaries, routes, streets, shops and items that are people, events or organisations. Distance by Wikipedia editions (≥ 15 → 2 500 m, ≥ 4 or heritage → 1 300 m, else 600 m). The full list (410 labels) is in `docs/labels.md`; items can be dropped by id in `EXTENDED_EXCLUDE`.
+- **Reason:** the user asked to finish without checkpoints, so the review the plan put at Checkpoint 4 moves to `todo.md`.
+
+## 2026-11-11: No band fill, no 2 and 4 m tile levels
+
+- **Decision:** keep Warsaw's whole-volume `voxelize.py` and the 1 m + 8 m tile levels.
+- **Reason:** the full area peaks at 12.8 GB, which fits. Phones keep within their budget once `cost1m.py` prices the blocks (about 100 tiles, ~200 MB heap); desktops load the whole map.
+- **Rejected:** dtla-voxel's band fill (a large rewrite for memory not needed); dtla-voxel's 2/4 m levels and screen-space selection (a large viewer change for no measured need).
+
+## 2026-11-11: Price the city blocks with cost1m.py
+
+- **Decision:** port Warsaw's `web/tools/cost1m.mjs` to `scripts/cost1m.py` and run it in the build.
+- **Reason:** without per-tile triangle counts, `zones.json` gave every block a cost of 0 and the viewer's triangle budget never applied; an emulated phone loaded all 1 320 tiles.
+
+## 2026-11-11: Remove the analytics library
+
+- **Decision:** remove PostHog (`posthog-js` and its lazy import) and Warsaw's sharing image from the viewer.
+- **Reason:** they belonged to the Warsaw deployment; the Madrid site collects nothing.
+
+## 2026-11-11: Publish as a public GitHub repository with Pages
+
+- **Decision:** create the public repository `agboyano/madrid-voxel` with the authenticated `gh` account, push `main`, and serve the viewer with GitHub Pages through `.github/workflows/pages.yml`.
+- **Reason:** Phase 6 asks for a published site, and the user asked to finish every phase without asking; Pages on a free account needs a public repository. Every commit is the user's, with no AI attribution (final review in `NOTES.md`).
