@@ -15,6 +15,7 @@ import gzip
 import json
 import math
 import os
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -556,17 +557,94 @@ def lamp_height(r, c):
     return round(LAMP_WALK / VOXEL_SIZE)
 
 
-lamps = []
+# the lamp's shape, in voxels (the viewer lights every "lamp" voxel at night and pools light under each meta.lamps
+# entry): Madrid's dark green cast-iron "fernandino" -- a base, the shaft, the lantern and a cap over it -- by default;
+# the column with two arms on avenues (and where OSM counts two lights), its lanterns along the kerb; a modern bent
+# mast with its lantern over the road; a lantern on the facade where OSM says wall_mounted. At 1 m a lantern is about
+# twice its real size and the base cannot be wider than the shaft
+_to_road_d, (_to_road_r, _to_road_c) = ndimage.distance_transform_edt(~_driven, return_indices=True)
+lamps, lamp_kinds = [], Counter()
+
+
+def _open(z, r, c):
+    """Air or leaves: a lantern or an arm may take the cell; a wall or a roof may not."""
+    return 0 <= c < W and 0 <= r < D and 0 <= z < H and (vol[z, r, c] == 0 or pal.entries[vol[z, r, c]][3] == M_LEAF)
+
+
+def to_road(r, c, reach=8):
+    """Unit step (dr, dc) along a grid axis from a kerb cell towards the nearest carriageway within reach, or None."""
+    if _to_road_d[r, c] * VOXEL_SIZE > reach:
+        return None
+    dr, dc = int(_to_road_r[r, c]) - r, int(_to_road_c[r, c]) - c
+    return (int(np.sign(dr)), 0) if abs(dr) >= abs(dc) else (0, int(np.sign(dc)))
+
+
+def lantern(z, r, c):
+    if not _open(z, r, c):
+        return False
+    vol[z, r, c] = C["lamp"]
+    if _open(z + 1, r, c):
+        vol[z + 1, r, c] = C["lampiron"]  # the cap
+    lamps.append((c, r, int(z)))
+    return True
+
+
+def draw_lamp(c, r, z0, hgt, kind):
+    """A post standing on (c, r) at ground z0 with its lantern hgt voxels up; returns the kind drawn."""
+    top = z0 + hgt - 1
+    if vol[z0, r, c] == 0:
+        vol[z0, r, c] = C["lampbase"]
+    for z in range(z0 + 1, top):  # through a crown too: leaves hold nothing up, and the lantern would be dropped
+        if _open(z, r, c):
+            vol[z, r, c] = C["lampiron"]
+    step = to_road(r, c)
+    if kind == "bent_mast" and step and lantern(top, r + step[0], c + step[1]):
+        vol[top, r, c] = C["lampiron"]
+        return kind
+    if kind == "two_arm":
+        along = (0, 1) if step is None or step[0] else (1, 0)  # perpendicular to the road: the arms run along the kerb
+        lit = [lantern(top, r + s * along[0], c + s * along[1]) for s in (-1, 1)]
+        if any(lit):
+            vol[top, r, c] = C["lampiron"]
+            return kind
+    lantern(top, r, c)
+    return "fernandino"
+
+
+def on_wall(x, y, reach=2):
+    """The open cell nearest (x, y) within reach that touches a building cell face to face: (r, c, (wr, wc)) or None."""
+    best = None
+    for r in range(int(y) - reach, int(y) + reach + 1):
+        for c in range(int(x) - reach, int(x) + reach + 1):
+            if not (1 <= r < D - 1 and 1 <= c < W - 1) or bmask[r, c]:
+                continue
+            d = np.hypot(c + 0.5 - x, r + 0.5 - y)
+            if d > reach + 0.5:
+                continue
+            for wr, wc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
+                if bmask[wr, wc] and (best is None or d < best[0]):
+                    best = (d, r, c, (wr, wc))
+    return best and best[1:]
+
+
 for oid, t, p in osm.nodes_with("highway", ("street_lamp",)):
+    hgt = parse_len(t.get("height"))
+    if t.get("support") == "wall_mounted":
+        w_ = on_wall(p.x, p.y)
+        if w_:
+            r, c, (wr, wc) = w_
+            z_lamp = int(g[r, c]) + int(hgt or round(LAMP_STREET / VOXEL_SIZE)) - 1
+            if vol[z_lamp, wr, wc] != 0 and lantern(z_lamp, r, c):  # a wall voxel to hang on, or it would float off
+                lamp_kinds["wall"] += 1
+                continue
     c, r = kerb(int(p.x), int(p.y)) or (-1, -1)
     if not (0 <= c < W and 0 <= r < D) or bmask[r, c]:
         continue
-    hgt = int(parse_len(t.get("height")) or lamp_height(r, c))
-    z0 = g[r, c]
-    vol[z0:z0 + hgt - 1, r, c] = np.where(vol[z0:z0 + hgt - 1, r, c] == 0, C["pole"], vol[z0:z0 + hgt - 1, r, c])
-    vol[z0 + hgt - 1, r, c] = C["lamp"]
-    lamps.append((c, r, int(z0 + hgt - 1)))
-note("street lamps:", len(lamps))
+    avenue = _road_half[r, c] * VOXEL_SIZE >= LAMP_AVENUE_W / 2
+    kind = ("bent_mast" if t.get("lamp_mount") == "bent_mast" else
+            "two_arm" if avenue or int(parse_len(t.get("light:count")) or 1) >= 2 else "fernandino")
+    lamp_kinds[draw_lamp(c, r, int(g[r, c]), int(hgt or lamp_height(r, c)), kind)] += 1
+note("street lamps:", len(lamps), "lanterns;", dict(lamp_kinds))
 lamp_xy = np.array([(c, r) for c, r, _ in lamps], float) if lamps else np.zeros((0, 2))  # for lamps inferred later
 for oid, typ, t, geom in osm.areas_with("amenity", ("shelter",)):
     if t.get("shelter_type") not in (None, "public_transport", "basic_hut") or bmask[cells_of(geom)].any():
@@ -790,9 +868,7 @@ for line, w in bridge_roads:
             if len(lamp_xy) and np.min(np.hypot(lamp_xy[:, 0] - c, lamp_xy[:, 1] - r)) < 12:
                 continue
             z0 = int(g[r, c] + round(float(deck_h[r, c])))
-            vol[z0:z0 + 8, r, c] = np.where(vol[z0:z0 + 8, r, c] == 0, C["pole"], vol[z0:z0 + 8, r, c])
-            vol[z0 + 8, r, c] = C["lamp"]
-            lamps.append((c, r, int(z0 + 8)))
+            lamp_kinds[draw_lamp(c, r, z0, 9, "fernandino")] += 1
             lamp_xy = np.vstack([lamp_xy, [c, r]])
             n_bl += 1
 note("inferred lamps on bridge decks (OSM has almost none):", n_bl)
@@ -947,7 +1023,7 @@ deck_near = np.where(_dd <= 2, deck_h[_ir, _ic], 0).astype(np.float32)
 # off the deck mask, on a bridge way (a viaduct whose arches are OSM buildings, a deck end): the top of what the
 # voxels hold there -- lamps, poles and leaves aside -- within the LiDAR's reach
 _skip = np.zeros(len(pal.entries) + 64, bool)
-_skip[[i for i, e in enumerate(pal.entries) if e[3] in (M_LEAF, M_LAMP, M_CAR)] + [C["trunk"], C["pole"], C["fence"]]] = True
+_skip[[i for i, e in enumerate(pal.entries) if e[3] in (M_LEAF, M_LAMP, M_CAR)] + [C["trunk"], C["pole"], C["lampiron"], C["lampbase"], C["fence"]]] = True
 _rb, _cb = np.nonzero((deck_col > 0) & (_dd > 2))
 _lim = g[_rb, _cb] + np.clip(np.round(nd_mean[_rb, _cb]), 0, 40).astype(int) + 3
 _top = g[_rb, _cb].copy()
