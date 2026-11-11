@@ -451,7 +451,7 @@ json.dump(dict(sources={"city": "Ayuntamiento de Madrid tree inventory, datos.ma
                            drawn="lidar | procedural | none"), trees=_tr),
           open(Path(OUT) / "trees.json", "w"), ensure_ascii=False, separators=(",", ":"))
 
-# ---------------------------------------------------------------- fountains (visual_ref.md, Commons photos Aug 2026)
+# ---------------------------------------------------------------- fountains (docs/warsaw/visual_ref.md, Commons photos Aug 2026)
 # Flat walk-on fountain on the filled-in Marszałkowska tunnel ramp: dark speckled granite cut into irregular
 # polygons, darker shard inlays, flush with the paving, slot drain round the edge, jets from steel rings ~2 m apart.
 GRAN = [pal("#6a6e71"), pal("#62666a"), pal("#72767a")]

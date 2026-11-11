@@ -388,7 +388,7 @@ def _name(f):
 
 def small_tree(vol, g, r, c, h, leaves, trunk, height=None):
     """A young street tree as planted 2025-26 (Plac Centralny, Złota): photos show a clear trunk to ~4 m and a
-    narrow, airy crown on top (visual_ref.md, Złota 2026 photos)."""
+    narrow, airy crown on top (docs/warsaw/visual_ref.md, Złota 2026 photos)."""
     H = int(height or 7 + h % 3)
     z0 = int(g[r, c])
     tr = max(3, int(H * 0.42))
