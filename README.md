@@ -1,157 +1,95 @@
-# Warszawa Śródmieście in voxels
+# Madrid in voxels
 
-A 3950 × 3150 m diorama of central Warsaw at 1 m voxels, anchored on the PKiN spire and rotated 21.5° to the Palace axes (so walls and the street grid are not staircased), in the style of MagicaVoxel renders (ephtracy). It covers:
-- the Palace of Culture and Science (PKiN), Złota 44, Złote Tarasy and the newly greened Złota
-- Warszawa Centralna station and the Rondo ONZ towers
-- Powiśle and the Vistula: Centrum Nauki Kopernik, Most Świętokrzyski and Most Poniatowskiego, the boulevards
-- Praga's bank with PGE Narodowy
-- north to Ogród Saski and Teatr Wielki, south past Trasa Łazienkowska (Politechnika, Plac Konstytucji, Sejm, Most Łazienkowski)
+An interactive 3D map of central Madrid in 1 m voxels, running in the browser as a static site: from the Templo de Debod and Plaza de España to the Retiro, and from Glorieta de Bilbao to Atocha (3.75 × 2.75 km). Change the date, the hour and the weather, follow a pedestrian or a car, and open a landmark's card for its history.
 
-Golden hour, midday and night are presets on a time-of-day slider.
+![The Royal Palace and the Almudena on an October evening](docs/img/final-palace.png)
 
-```sh
-cd web && pnpm install && pnpm dev     # http://localhost:5173  (?view=pkin&hour=22.6&tilt=0&ui=0)
-```
+| | |
+| --- | --- |
+| ![Overview](docs/img/final-overview.png) | ![Gran Vía and the Metrópolis](docs/img/final-granvia.png) |
+| ![Cibeles and the Puerta de Alcalá](docs/img/final-cibeles.png) | ![The Prado](docs/img/final-prado.png) |
 
-## Streaming (web/src/stream.ts)
+It is a port of [warsaw-vibe-voxel](https://github.com/stared/warsaw-vibe-voxel) by Piotr Migdał, with pieces adapted from [dtla-voxel](https://github.com/sigman78/dtla-voxel) by sigman78.
 
-The city is in tiles (`web/public/data/tiles/{1,1f,8}/x_y.bin`): 128 × 128 cells of 1 m (buildings and ground;
-foliage in `1f`) or 8 m. One engine (`web/src/city.ts`) draws as much of the city at 1 m as a budget allows: triangles
-of 1 m buildings, city blocks nearest to the focus first (`scripts/zones.py`). On most computers the budget covers the
-whole map; where it does not (phones), the 8 m level stands in as clay, and a block turns real once every tile under it
-is in. Tiles are meshed in workers. The city's shadow map is redrawn only when the city or the light changes; traffic
-and people cast into a second one, every frame. The traffic simulation runs within ~900 m of the camera.
-
-Older measurements, of a level-of-detail quadtree since removed (`tools/mem.mjs`, `tools/bench.mjs`, `tools/jank.mjs`,
-`tools/longtasks.mjs`; headless Chrome on an M-series Mac, same six views):
-
-| | 1.5 km, all in memory | 4 × 3 km, streamed |
-|---|---|---|
-| total process memory | 1.84–2.28 GB | 1.87–2.07 GB |
-| JS heap | ~280 MB | 90–230 MB |
-| triangles on screen | 5.0 M | 3.1–6.2 M |
-| CPU at 60 fps | 52% of a core | 52% of a core |
-| frame time while flying between views, p99 | 16.8 ms | 16.8 ms |
-| first view fully loaded | 3.8 s | 2.7 s |
-
-Blind A/B on 16 views of the old area: judges couldn't tell the two apart (7 vs 9, p = 0.8).
-
-## How the data is fused (scripts/)
-
-| Source | Used for |
-|---|---|
-| **GUGiK NMPT 2025** (LiDAR surface model, 0.5 m) | Building heights and roof shapes, tree crowns, parked vehicles |
-| **GUGiK NMT 2025** (terrain model, 1 m) | Ground relief, including the rail cut by Varso |
-| **GUGiK orthophoto 2025** (5 cm) | Roof colours, green roofs, foliage tones, vehicle colours, grass OSM doesn't map |
-| **OpenStreetMap** (fetched the day of the build) | Footprints and 3D parts, facade and roof colours and materials, road and sidewalk surfaces, bike paths, zebras, lane counts, tram tracks, 3 000+ trees, street lamps, shelters, fountains |
-| **research.md** | Facts about what changed after the 2025 flight, with sources |
-
-Cross-checks that run at build time, logged to `data/debug/report.json`:
-- **LiDAR vs OSM height, for each building part.**
-  - OSM wins only for thin spires the LiDAR under-samples: Varso goes to 310 m, Q22's crown to 195 m.
-  - OSM also wins where the LiDAR sees nothing tall, meaning the building went up after the flight.
-  - Elsewhere LiDAR wins. It caught a wrong OSM part on Złota 44 and Ilmet's 103 m tag, which counts the antenna (the roof is ~83 m).
-- **Misregistered footprints.** Where the LiDAR tower is taller than the OSM part under it, the facade comes from the nearest OSM part tall enough to explain it. This fixed the Marriott.
-- **Vegetation.** A cell counts as a tree only if it is LiDAR-high, ortho-green or near an OSM tree, and not a building's wall edge.
-- **Trees planted after the flight.** OSM trees with no 2025 LiDAR crown become young voxel trees. This covers Plac Centralny (opened Jun 2025) and the Złota elms (opened Aug 2026).
-- **Current state, Oct 2026, from OSM:**
-  - The TR Warszawa site is an excavation.
-  - MSN (opened Oct 2024) is white concrete.
-  - Ilmet is still standing.
-  - Roma and Lilium towers are not built, so they are left out.
-
-Curated details are in `scripts/landmarks.py`:
-- the PKiN Millennium Clock, on the plain shaft at ~170 m
-- the Złote Tarasy glass canopy
-- the Marriott's dark glass
-
-Labels (`scripts/labels.py`, `uv run python scripts/labels.py` refreshes them in `meta.json` from the cached build):
-- The curated landmarks in `scripts/landmarks.py`, including the groups in the Jazdów Finnish houses.
-- About 150 more places picked by hand from the Wikidata items located on the map (`scripts/notable.py`), ordered by how much people read about them: Polish and English Wikipedia page views over a year. Events, organisations, streets, lost buildings and rooms inside a labelled building are left out.
-- How far away a label shows comes from those page views: the Palace from anywhere, a church from ~2 km, a monument from a few hundred metres. Closer in, a label adds its English name or kind, then its facts and website.
-
-## Rebuild the data
+## Run the viewer
 
 ```sh
-sh scripts/build_data.sh      # ~11 GB of GUGiK downloads on first run (cached in data/raw), then ~6 min, ~26 GB RAM peak
+cd web
+npx -y pnpm@12.11.2 install --frozen-lockfile
+npx -y pnpm@12.11.2 exec vite          # http://localhost:5173/?view=palace&date=10-20&hour=17.5
 ```
 
-OSM comes from the daily Geofabrik extract for Mazowieckie, cut to the AOI by `scripts/osm_pbf.py` into the same JSON
-as Overpass `out geom(bbox)` (the 4 × 3 km query is too heavy for the public Overpass servers; `OVERPASS=1` uses them).
-GUGiK sheet ids come from the orthophoto index WFS (`PZGIK/ORTO/WFS/Skorowidze`).
+URL parameters:
+- `view`: one of `overview`, `sol`, `palace`, `plazamayor`, `granvia`, `cibeles`, `prado`, `top`, `street`;
+- `cam=px,py,pz,tx,ty,tz`: a camera position and target in voxel coordinates;
+- `date=M-D`, `hour`, `weather` (`clear`, `cloudy`, `rain`, `snow`);
+- `ui=0` hides the interface; `tilt=0` disables the tilt-shift effect.
 
-## Known limits
-- Windows are procedural, generated in the shader from floor height and material. They are not real window positions.
-- OSM maps 44 of the 81 elms reported on Złota, and only those 44 are drawn.
-- OSM maps almost no lamps on the Vistula bridges; they get one every 32 m on each kerb (inferred, like Złota's).
-- Most Świętokrzyski's mast comes from the LiDAR; its 48 stays are drawn from the published layout (semi-fan, 12 per
-  side per plane), not measured.
-- The map ends a block east of PGE Narodowy (Targowa, Ząbkowska are outside).
-- The 51 parked cars are frozen from the moment of the 2025 LiDAR flight. The trams are animated on the real OSM track geometry; their positions are not real.
+The generated data is in the repository (`web/public/data`, 27 MB), so the viewer runs without building anything.
 
-## Curating a building (scripts/overrides.json)
+## Build the data
 
-Hand-curated detail goes in **one data file, keyed by OSM id**, never as one-off code. Each entry can set:
-- facade zones along the footprint's long axis
-- wall and roof colour and material
-- a crown or sign band
-- a label
-- **source URLs**
+```sh
+uv sync
+sh scripts/build_data.sh        # ~20 min for the full area the first time, from cached downloads after that
+```
 
-The pipeline applies every entry the same way, and also derives from it:
-- a label
-- a camera preset, chosen by a line-of-sight search through the voxels
+Every download goes to a cache outside the repository, `$MADRID_CACHE` (default `~/data/madrid-voxel-cache`), and is never fetched twice. The area to build is set in `pipeline.toml`:
+- `[aoi] area`: `full` (the whole map) or `sol` (500 m around Puerta del Sol, builds in under a minute);
+- `MADRID_AREA=<name>` in the environment overrides it.
 
-To add or fix a building:
-1. Find it in OSM. Prefer fixing `building:colour`, `height` and `building:part` in OSM itself, so everyone benefits.
-2. For what OSM can't express (facade rhythm, signage, two-character facades), add an `overrides.json` entry, with photo sources.
-3. Run `sh scripts/build_data.sh`. Then compare `pnpm shot` renders against the reference photos.
+The **PNOA-LiDAR** point cloud cannot be downloaded automatically, because the CNIG download centre asks for a reCAPTCHA. `PYTHONPATH=scripts uv run python scripts/fetch_pnoa_lidar.py` lists the 1 km tiles the area needs, with their file names, and checks the files once they are in `$MADRID_CACHE/raw/pnoa_lidar/`. The full area needs 12 tiles.
 
-Example: Astoria (Brokla 2, formerly Przeskok 2; Quesma's office). Details are in `research_astoria.md`.
-- The west half is near-black glass with bronze mullions and floor bands.
-- The east half is off-white pilasters.
-- A gold-lettered crown band runs round the round tip.
+The full build peaks at about 13 GB of memory, in `voxelize.py`. `scripts/build_data.sh` prints each step's time and peak memory.
+
+## How it is made
+
+| Step | Script | What it does |
+| --- | --- | --- |
+| Downloads | `fetch_*.py` | OSM (Overpass), Catastro buildings (INSPIRE WFS), the municipal tree inventory, the PNOA orthophoto (WMS), Wikidata facts, all cut to the area |
+| Point cloud | `prep_lidar.py` | rasterises the classified PNOA-LiDAR cloud straight onto the map's grid: surface, ground, class, counts (the common elevation format: another flight only needs a new adapter) |
+| Rasters | `prep.py` | the surface, terrain and orthophoto on the grid |
+| Fusion | `layers.py` | ground, streets, buildings and roofs as 2D layers |
+| Voxels | `voxelize.py` | the 3D city: buildings with their roofs and windows, trees, street furniture, bridge decks, underpasses; then the tiles |
+| Viewer data | `terrain.py`, `zones.py`, `windows.py`, `places.py`, `phenology.py`, `climate.py` | first-moment terrain, city blocks, lit windows, the search index, the seasonal cycle of each tree, the weather of each day |
+
+The main rules:
+- **Buildings:** OSM footprints with heights from the LiDAR. Catastro gives the floor count where OSM has none, and adds the buildings OSM lacks. Where the LiDAR sees nothing tall, the OSM or Catastro height wins (a building finished after the flight).
+- **Trees:** the Ayuntamiento's inventory, about 43 000 trees with species and height. A tree whose crown the leaf-off LiDAR flight did not catch is drawn young, at its inventory height. Each tree turns with the season of its genus.
+- **Roofs:** clay tile, slate, zinc or flat terrace, chosen from the orthophoto; walls in Madrid's render and brick, with Madrid de los Austrias in its own colours.
+- **Labels:** found through the `wikidata` tag of OSM features, never by name. They show the English name and the Spanish one where it differs. The cards carry the year built, architect, height, style, heritage designation and links, all written at build time.
+
+`NOTES.md` has the technical notes, `DECISIONS.md` the decisions and their reasons, `PLAN.md` the plan the work followed and `todo.md` what is left.
+
+## Known limitations
+
+- **One LiDAR flight, in March:** the PNOA flight of 17–18 March 2024 was leaf-off, so deciduous crowns are sparse. Trees without a crown are drawn young from the inventory; private trees outside it take their crown from the LiDAR alone.
+- **Older orthophoto:** the most recent PNOA orthophoto (July 2023) is a year older than the LiDAR and is not a true orthophoto, so the roofs of tall buildings lean slightly off their footprints.
+- **1 m voxels:** pitched roofs become 1 m terraces, cornices and eaves make facades ragged, and street furniture taller than 1.5 m shows as grey blocks.
+- **Grid at 0°:** the grid follows the historic centre. The Ensanche of the Barrio de Salamanca is turned about −6° and its facades show a staircase. A rotated grid needs four more LiDAR tiles (`todo.md`).
+- **Landmarks are not curated:** the Royal Palace's parts take generic wall colours, and no landmark has hand-made details yet (`scripts/overrides.json` and `landmarks.py` hold the tools).
+- **Inherited behaviour:** the seasonal dates of several genera (Platanus, Styphnolobium, Aesculus, Celtis) fall back to the median of the others for lack of observations. Lawn colours, lit-window habits and the traffic model come from Warsaw's measurements.
+- **Data gaps:** one 31 m square of Catastro building parts near Calle de Toledo could not be downloaded (the service fails on it).
 
 ## Sources
 
-Data the model is built from:
-- **[GUGiK](https://www.geoportal.gov.pl/)** (Główny Urząd Geodezji i Kartografii) via [opendata.geoportal.gov.pl](https://opendata.geoportal.gov.pl/):
-  - NMPT 2025, the LiDAR surface model (0.5 m)
-  - NMT 2025, the terrain model (1 m)
-  - the 2025 orthophoto (5 cm)
-
-  These are open data, free to reuse under Art. 40a of the Polish Geodetic and Cartographic Law.
-- **[OpenStreetMap](https://www.openstreetmap.org/)**: © OpenStreetMap contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/). It is read from the [Geofabrik](https://download.geofabrik.de/europe/poland/mazowieckie.html) daily extract for Mazowieckie.
-
-- **Trees** (`scripts/fetch_trees.py`, `scripts/trees.py`; the register is written to `web/public/data/trees.json`):
-  - **Warsaw's green-areas database.** The city's *Baza Obiektów Zieleni*, as shown in the [mapa.um.warszawa.pl](https://mapa.um.warszawa.pl/) "Zieleń" map and served by its MapViewer data server. It gives each tree's inventory number, Polish and Latin species, trunk circumference, managing unit and data date, for 35 k trees in the area. It also includes the *Mapa Koron Drzew*, a remote-sensing map of tree crowns.
-  - **The city's open-data tree inventory**, from [api.um.warszawa.pl](https://api.um.warszawa.pl/), surveyed 2010–13. It adds height, crown diameter and condition.
-  - **OpenStreetMap** `natural=tree` nodes. They are used where the city database has no tree within 2 m.
-- **Seasons and weather** (`scripts/phenology.py`, `scripts/climate.py`):
-  - **[Deutscher Wetterdienst](https://opendata.dwd.de/climate_environment/CDC/)** phenological observations (source: Deutscher Wetterdienst, [Datenlizenz Deutschland – Namensnennung 2.0](https://www.govdata.de/dl-de/by-2-0)): when each species leafs out, colours and drops its leaves.
-  - **[iNaturalist](https://www.inaturalist.org/)** "Leaves" annotations, weekly counts, for the species the DWD does not record.
-  - **[Wikimedia Commons](https://commons.wikimedia.org/)** photos of each species' canopy in autumn and summer, for the autumn colours; the photos are listed in `scripts/foliage_photos.json`.
-  - **[Open-Meteo](https://open-meteo.com/)** ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)): the historical archive (ERA5) for when snow can fall.
-- **Lit windows at night** (`scripts/window_photos.py`, `scripts/window_stats.py`, `scripts/windows.py`): 324 dated night photos of Warsaw from [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Night_in_Warsaw) (EXIF time, sun below −4°), 268 facades counted window by window (`scripts/window_counts.json`). Per building type (from OSM), the median share of lit windows by clock time and weekday or weekend, how much buildings of a type differ, whether they light whole floors, and the colour of the light.
-- **Labels** (`scripts/notable.py`, `scripts/wikidata.py`, `scripts/labels.py`):
-  - **[Wikidata](https://www.wikidata.org/)** ([CC0](https://creativecommons.org/publicdomain/zero/1.0/)): the places on the map, their Polish and English names and official websites.
-  - **[Wikimedia pageviews](https://wikimedia.org/api/rest_v1/)** for Polish and English Wikipedia, Oct 2025 – Sep 2026, to rank them.
-  - The groups in the Jazdów Finnish houses from the [Wolny Jazdów](https://jazdow.pl) map (Feb 2026) and the estate's 80th-anniversary programme (Aug 2025); websites checked by hand.
-
-References used to check and curate details (these are not redistributed):
-- **[Wikimedia Commons](https://commons.wikimedia.org/)** photos of each landmark. They are compared side by side with renders: facades, colours, bridge structure.
-- **[Wikipedia](https://pl.wikipedia.org/)** (pl and en) for dimensions: heights, bridge spans and pier counts, opening dates.
-- Architecture and construction press, and city announcements, for changes since the 2025 flight. Sources include [eurobuildcee.com](https://eurobuildcee.com/), [inzynierbudownictwa.pl](https://www.inzynierbudownictwa.pl/), [muratorplus.pl](https://architektura.muratorplus.pl/) and [um.warszawa.pl](https://um.warszawa.pl/). Each fact is cited with its link in [research.md](research.md) and [visual_ref.md](visual_ref.md).
+Data the map is built from:
+- **PNOA-LiDAR, 3rd coverage (NPC02)** and **PNOA orthophoto**: © [Instituto Geográfico Nacional](https://www.ign.es/), from the [Centro de Descargas del CNIG](https://centrodedescargas.cnig.es/) and the IGN's WMS, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **[OpenStreetMap](https://www.openstreetmap.org/)**: © OpenStreetMap contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/), via the Overpass API.
+- **Catastro**: buildings from the INSPIRE service of the Dirección General del Catastro ([sede.catastro.gob.es](https://www.sedecatastro.gob.es/)). Source: Dirección General del Catastro.
+- **Tree inventory**: "Arbolado en parques y zonas verdes de Madrid (detalle)", Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **[Wikidata](https://www.wikidata.org/)**: landmark names and facts, [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
+- **[Open-Meteo](https://open-meteo.com/)**: the ERA5 historical weather archive, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), for how likely each kind of weather is on each day.
+- **[iNaturalist](https://www.inaturalist.org/)**: leaf annotations of observations in Spain, Portugal and Italy, aggregated by week, for when each genus leafs out and colours.
+- **[Wikimedia Commons](https://commons.wikimedia.org/)**: photos measured for autumn and lawn colours and lit windows (`scripts/foliage_photos.json`, `scripts/grass_photos.json`, `scripts/window_counts.json`, inherited from warsaw-vibe-voxel).
 
 Software:
 - **Viewer:** [three.js](https://threejs.org/), [postprocessing](https://github.com/pmndrs/postprocessing), [N8AO](https://github.com/N8python/n8ao) and [Vite](https://vite.dev/).
-- **Data pipeline:** [NumPy](https://numpy.org/), [SciPy](https://scipy.org/), [Shapely](https://shapely.readthedocs.io/), [rasterio](https://rasterio.readthedocs.io/), [pyproj](https://pyproj4.github.io/pyproj/) and [Pillow](https://python-pillow.org/).
-- The look follows the MagicaVoxel renders by [ephtracy](https://ephtracy.github.io/).
+- **Pipeline:** [NumPy](https://numpy.org/), [SciPy](https://scipy.org/), [Shapely](https://shapely.readthedocs.io/), [rasterio](https://rasterio.readthedocs.io/), [pyproj](https://pyproj4.github.io/pyproj/), [laspy](https://laspy.readthedocs.io/) and [Pillow](https://python-pillow.org/).
+- **Screenshots and profiling:** [Playwright](https://playwright.dev/).
 
-## Usage stats
+## Credits and licences
 
-Anonymous, cookieless performance and usage events to PostHog (EU); see web/src/stats.ts and the script in web/index.html. To enable, set the repository's Actions variable `POSTHOG_PROJECT_TOKEN` to a PostHog project key; builds without it (forks, local) send nothing.
-
-## License
-
-The code is under the [MIT license](LICENSE), © 2026 Piotr Migdał. The generated data in `web/public/data` derives from OpenStreetMap, so it is under the ODbL (© OpenStreetMap contributors), and from GUGiK open data.
+- **Original project:** [warsaw-vibe-voxel](https://github.com/stared/warsaw-vibe-voxel) by Piotr Migdał. The viewer, the tile format and most of the fusion rules come from it. MIT licence, kept in [LICENSE-warsaw-vibe-voxel](LICENSE-warsaw-vibe-voxel).
+- **Los Angeles port:** [dtla-voxel](https://github.com/sigman78/dtla-voxel) by sigman78. The point-cloud rasterisation, the area helpers, the downloads by area, the crossings and the structure of the 2D layers are adapted from it. MIT licence, kept in [LICENSE-dtla-voxel](LICENSE-dtla-voxel).
+- **Generated data** in `web/public/data` derives from the sources above: OpenStreetMap (ODbL), IGN/CNIG (CC BY 4.0), the Ayuntamiento de Madrid (CC BY 4.0), Catastro and Wikidata (CC0).
