@@ -414,7 +414,21 @@ if trunks:
     NEEDLES = np.array([pal(c_, M_LEAF) for c_ in ("#3f5f48", "#456a4f", "#4d7356", "#37553f", "#52785a")], np.uint16)
     leafidx[vr_[cm_], vc_[cm_]] = NEEDLES[(vr_[cm_] * 7 + vc_[cm_] * 3) % len(NEEDLES)]
     note("conifer crowns (database species):", int(con.sum()), "cells", int(cm_.sum()))
-rr, cc = np.nonzero(veg)
+# clearance under the crowns: street trees in Madrid are pruned to keep the leaves above walkers and traffic, so over
+# carriageways, cycle lanes, parking and rails the leaves start at CLEAR_ROAD, over pavements, squares, tree pits and
+# the gravel and earth of boulevards and park paths (the Salón del Prado, the Retiro) at CLEAR_WALK; only over lawns,
+# beds and scrub, where nobody walks, the 2 m floor stands. A crown's rim left thinner than a voxel there loses its
+# leaves rather than hang as a slab at head height (veg itself is kept: the parked-car test reads it)
+CLEAR_ROAD, CLEAR_WALK = 4.5, 3.0  # metres
+_road_under = _hard & (gcol != C["water"])
+_planted = np.isin(gcol, [C[k] for k in ("grass", "grass2", "garden", "flower", "flower2", "scrub")]) & ~is_road
+_clear = np.where(_road_under, round(CLEAR_ROAD / VOXEL_SIZE),
+                  np.where(_planted, 0, round(CLEAR_WALK / VOXEL_SIZE))).astype(np.int32)
+crown_bot = np.maximum(crown_bot, _clear)
+leaf_at = veg & (crown_top - crown_bot >= 1)
+note("canopy cells raised to clear walkers and traffic:", int((veg & (_clear > 0)).sum()),
+     "rim cells left bare:", int((veg & ~leaf_at).sum()))
+rr, cc = np.nonzero(leaf_at)
 for zz in range(int(g.min()) + 1, int((g + crown_top).max()) + 1):
     m = (zz >= g[rr, cc] + crown_bot[rr, cc]) & (zz < g[rr, cc] + crown_top[rr, cc])
     sel = (rr[m], cc[m])
@@ -422,7 +436,7 @@ for zz in range(int(g.min()) + 1, int((g + crown_top).max()) + 1):
     vol[zz][sel] = np.where(cur == 0, leafidx[sel], cur)
 note("canopy cells:", int(veg.sum()), "crowns:", len(trunks))
 for r_, c_, thick in trunks:  # from the ground one voxel into the crown's lowest point, over the trunk
-    hb = int(crown_bot[r_, c_]) + 1
+    hb = min(int(crown_bot[r_, c_]) + 1, int(crown_top[r_, c_]))  # a bare rim cell: no higher than the crown
     for dr, dc in ((0, 0), (0, 1), (1, 0), (1, 1)) if thick else ((0, 0),):
         rr_, cc_ = r_ + dr, c_ + dc
         if 0 <= rr_ < D and 0 <= cc_ < W and not bmask[rr_, cc_]:
