@@ -25,7 +25,9 @@ export interface VoxelUniforms {
   uFolMap: U<THREE.Texture>;
   uFolDate: U<THREE.Vector4[]>;
   uFolCol: U<THREE.Color[]>;
+  uFolBase: U<THREE.Color[]>;
   uGrass: U<THREE.Color[]>;
+  uGrassDry: U<THREE.Color[]>;
   uLeaf: U<THREE.Color>;
   uWinMap: U<THREE.Texture>;
   uWinMed: U<number[]>;
@@ -60,7 +62,9 @@ export function makeUniforms(meta: Meta): VoxelUniforms {
     uFolMap: { value: tiny(THREE.RGFormat, new Uint8Array(2)) },
     uFolDate: { value: Array.from({ length: FOLIAGE_CLASSES }, () => new THREE.Vector4(-1, 0, 0, 0)) },
     uFolCol: { value: Array.from({ length: FOLIAGE_CLASSES }, () => new THREE.Color(0.3, 0.2, 0.05)) },
+    uFolBase: { value: Array.from({ length: FOLIAGE_CLASSES }, () => new THREE.Color(1, 1, 1)) },
     uGrass: { value: Array.from({ length: 12 }, () => new THREE.Color(1, 1, 1)) },
+    uGrassDry: { value: Array.from({ length: 12 }, () => new THREE.Color(1, 1, 1)) },
     uLeaf: { value: new THREE.Color(1, 1, 1) },
     uWinMap: { value: tiny(THREE.RedFormat, new Uint8Array(1)) },
     uWinMed: { value: new Array(8).fill(0.12) },
@@ -110,10 +114,10 @@ function makeLampTexture(meta: Meta) {
 
 // A leaf voxel through the year (foliage.ts): x = in leaf (0 bare .. 1), y = turned (0 green .. 1 autumn colour), z = class.
 const FOLIAGE = `
-  uniform sampler2D uFolMap; uniform vec4 uFolDate[${FOLIAGE_CLASSES}]; uniform vec3 uFolCol[${FOLIAGE_CLASSES}]; uniform float uDay; uniform float uFolOn; uniform vec3 uGrass[12]; uniform vec3 uLeaf;
+  uniform sampler2D uFolMap; uniform vec4 uFolDate[${FOLIAGE_CLASSES}]; uniform vec3 uFolCol[${FOLIAGE_CLASSES}]; uniform vec3 uFolBase[${FOLIAGE_CLASSES}]; uniform float uDay; uniform float uFolOn; uniform vec3 uGrass[12]; uniform vec3 uGrassDry[12]; uniform vec3 uLeaf;
   vec3 foliageAt(vec3 cell) {
     vec2 f = texelFetch(uFolMap, ivec2(cell.xz * 0.5), 0).rg;
-    int cls = int(f.r * 255.0 + 0.5);
+    int cls = int(f.r * 255.0 + 0.5) & 127; // the high bit marks a dry lawn (grassTint)
     if (cls == 0) cls = 13;
     vec4 d = uFolDate[cls];
     if (d.x < 0.0) return vec3(1.0, 0.0, float(cls));
@@ -123,14 +127,15 @@ const FOLIAGE = `
     float leaf = t < 200.0 ? smoothstep(d.x, d.x + 14.0, t) : 1.0 - smoothstep(d.z - 8.0, d.z + 8.0, t);
     return vec3(leaf, smoothstep(d.y - 10.0, d.y + 10.0, t), float(cls));
   }
-  vec3 grassTint() {
+  vec3 grassTint(vec3 cell) { // irrigated lawns, or unwatered meadows that turn to straw (foliage.bin high bit)
     float m = mod(uDay / 30.42 - 0.5, 12.0);
     int a = int(m);
-    return mix(uGrass[a], uGrass[(a + 1) % 12], fract(m));
+    bool dry = int(texelFetch(uFolMap, ivec2(cell.xz * 0.5), 0).r * 255.0 + 0.5) >= 128;
+    return dry ? mix(uGrassDry[a], uGrassDry[(a + 1) % 12], fract(m)) : mix(uGrass[a], uGrass[(a + 1) % 12], fract(m));
   }
   float litter(vec3 cell) {
     vec2 f = texelFetch(uFolMap, ivec2(cell.xz * 0.5), 0).rg;
-    int cls = int(f.r * 255.0 + 0.5);
+    int cls = int(f.r * 255.0 + 0.5) & 127; // the high bit marks a dry lawn (grassTint)
     if (cls == 0 || uFolDate[cls].x < 0.0) return 0.0;
     vec3 fo = foliageAt(cell);
     return (1.0 - fo.x) * fo.y * (1.0 - smoothstep(uFolDate[cls].z + 15.0, uFolDate[cls].z + 50.0, uDay));
@@ -285,6 +290,7 @@ const SURFACE = `
     col = base * uLeaf * (0.8 + 0.35 * h); gRough = 0.95;
     if (uFolOn > 0.5) {
       vec3 fo = foliageAt(cell);
+      col *= uFolBase[int(fo.z)]; // a class's own summer colour on the greens (the purple plum), white for the rest
       if (hash13(cell * 1.7 + 3.1) > fo.x) {
         #ifndef CLAY
         if (leafGone(cell, fo)) discard;
@@ -295,7 +301,7 @@ const SURFACE = `
       }
     }
   } else if (m == ${MAT.GRASS}) {
-    col = base * mix(vec3(1.0), grassTint(), smoothstep(0.02, 0.08, base.g - max(base.r, base.b))) * (0.88 + 0.2 * h); gRough = 1.0;
+    col = base * mix(vec3(1.0), grassTint(cell), smoothstep(0.02, 0.08, base.g - max(base.r, base.b))) * (0.88 + 0.2 * h); gRough = 1.0;
   } else if (m == ${MAT.WATER}) {
     float r = sin(cell.x * 0.9 + uTime * 1.3) * sin(cell.z * 1.1 - uTime) * 0.5 + 0.5;
     col = mix(vec3(0.012, 0.085, 0.15), vec3(0.03, 0.2, 0.26), r * r) * (0.94 + 0.12 * h); gRough = 0.04; gMetal = 0.3;
@@ -348,7 +354,7 @@ const SURFACE = `
   if (uFolOn > 0.5 && vN.y > 0.5 && lvl < 0.5 && m != ${MAT.WATER} && m != ${MAT.LEAF} && m != ${MAT.MARK}) {
     float lit = litter(cell) * (m == ${MAT.GRASS} || m == ${MAT.SOIL} ? 0.9 : 0.35);
     if (hash13(cell * 3.1 + 0.7) < lit) {
-      int cls = int(texelFetch(uFolMap, ivec2(cell.xz * 0.5), 0).r * 255.0 + 0.5);
+      int cls = int(texelFetch(uFolMap, ivec2(cell.xz * 0.5), 0).r * 255.0 + 0.5) & 127;
       col = mix(uFolCol[cls], vec3(0.32, 0.22, 0.12), 0.45 * hash13(cell * 1.3)) * (0.7 + 0.3 * h);
       gRough = 1.0; gMetal = 0.0;
     }

@@ -20,6 +20,7 @@ run zones           # blocks, unpriced: the viewer needs every file on the new g
 run windows
 run window_stats
 run places
+run lawns_s2        # irrigated and dry lawns by month, Sentinel-2 (cached per scene)
 run phenology       # seasonal cycle and foliage.bin, from trees.json
 run cost1m          # triangles per tile (meshed in the viewer), for zones.py's block budget
 run zones           # again, with the blocks priced
