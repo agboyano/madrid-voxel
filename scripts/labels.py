@@ -29,7 +29,7 @@ NOT_PLACE_TYPES = {"human", "mass shooting", "murder", "massacre", "terrorist at
 # what an OSM element is, for the label's kind and for whether it is a place at all
 PLACE_TAGS = [("place", ("square",)), ("historic", None), ("tourism", ("museum", "attraction", "gallery", "artwork", "viewpoint")),
               ("amenity", ("place_of_worship", "theatre", "townhall", "library", "university", "arts_centre", "cinema",
-                           "fountain", "courthouse", "post_office", "marketplace", "college", "school")),
+                           "fountain", "courthouse", "post_office", "marketplace", "college", "school", "hospital")),
               ("building", ("cathedral", "church", "chapel", "palace", "government", "public", "civic",
                             "train_station", "museum", "monastery", "convent")),
               ("leisure", ("park", "garden")), ("man_made", ("tower", "obelisk")),
@@ -42,10 +42,11 @@ GENERIC = {"building", "commercial", "retail", "public", "house", "government", 
 
 def cap(s):
     """Wikidata labels of common nouns start in lower case ("plaza de la Provincia"); a map label does not. English
-    labels often end in ", Madrid" to tell them from namesakes elsewhere; on a map of Madrid that is noise."""
+    labels often end in ", Madrid" to tell them from namesakes elsewhere; on a map of Madrid that is noise. A stray full
+    stop at the end of an OSM name goes too ("Hospital General Universitario Gregorio Marañón.")."""
     if not s:
         return s
-    s = s.removesuffix(", Madrid")
+    s = s.removesuffix(", Madrid").removesuffix(".")
     return s[:1].upper() + s[1:]
 
 
