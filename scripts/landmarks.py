@@ -580,6 +580,9 @@ def edge_windows(vol, g, geom, win, rows, bay, w=2, margin=2.5, min_len=6, depth
             tc = L / 2 - span / 2 + i * bay
             for t in np.arange(tc - w / 2 + 0.25, tc + w / 2, 0.5):
                 bx, by = x0 + ux * t, y0 + uy * t
+                # (a wall cut by the map's edge: no window within 4 cells of it, where the probe would leave the grid)
+                if not all(4 <= v < lim - 4 for v, lim in ((by, vol.shape[1]), (bx, vol.shape[2]))):
+                    continue
                 r_, c_ = int(by + ny), int(bx + nx)
                 gz = int(g[r_, c_])
                 for zr, hh in rows:

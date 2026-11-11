@@ -113,3 +113,52 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 
 - **Decision:** test the class 17 decks when the AOI grows in Phase 5; remove the Warsaw remnants from the viewer now (floodlight schedule, Vistula flood, zouk floor, Polish train liveries).
 - **Reason:** the test area has no bridge, and the download caches are not keyed by AOI, so moving the AOI to a bridge would reuse the wrong cached data. Approved by the user at Checkpoint 3.
+
+## 2026-11-11: Full area now, 3.75 × 2.75 km
+
+- **Decision:** move to the full area in Phase 4: X 439 000–442 750, Y 4 472 950–4 475 700 (Templo de Debod to the Retiro's east edge, Glorieta de Bilbao to Atocha), rotation decided at Checkpoint 4.
+- **Reason:** nine of the ten required landmarks lie outside the 500 m test area. Chosen by the user; limits confirmed.
+- **Rejected:** linking landmarks without drawing them; an intermediate 1.5 km area.
+
+## 2026-11-11: Areas and caches per AOI
+
+- **Decision:** build areas in `pipeline.toml`; everything cut to an area cached in its own folder (key: centre, size, rotation).
+- **Reason:** the downloads and rasters were cached under fixed names, so a new AOI would have reused another's data.
+
+## 2026-11-11: Madrid roof materials from the ortho, grey roofs as terraces
+
+- **Decision:** roofs take one of four Madrid materials (tile, slate, zinc, terrace) from OSM or the ortho; grey roofs are flat terraces, zinc only on mansards.
+- **Reason:** Warsaw's desaturated ortho median drew a cold grey over Madrid's mixed and flat roofs; about 40 % of roofs round Sol read grey in the ortho, and in central Madrid those are azoteas.
+- **Rejected:** grey as zinc (the first try turned half the roofs blue-grey).
+
+## 2026-11-11: Required landmarks by Wikidata id; Cibeles is the fountain
+
+- **Decision:** `REQUIRED` in `fetch_wikidata.py` lists the ten by Wikidata id; each is linked through its OSM element's `wikidata` tag. Cibeles is the Fuente de Cibeles (Q2736564). `ENGLISH_NAMES` fixes English labels that are not the name used in English (Plaza Mayor).
+- **Reason:** the ids were read off the tagged OSM elements in the area; no override table was needed.
+
+## 2026-11-11: Phenology from iNaturalist in Spain, Portugal and Italy
+
+- **Decision:** leaf-out and colouring dates from iNaturalist leaf annotations in Spain, Portugal and Italy; leaf fall = colouring + 17 days; spread between trees from Warsaw's DWD series.
+- **Reason:** the German DWD network does not fit Madrid's climate; Spain alone has too few annotations per genus.
+- **Rejected:** DWD dates (Central Europe); Spain only (most genera fall back to the median).
+
+## 2026-11-11: Grid rotation 0° for the full area
+
+- **Decision:** keep the full area at 0°.
+- **Measured** (`rotation_report.py`, share of Catastro facade length within 3° of the grid):
+  - over the full area, 0° → 9.8 %, −6° → 25.0 %, Gran Vía (68°) → 5.7 %, Paseo del Prado (5°) → 5.2 %;
+  - at Sol, 0° → 17.6 %, −6° → 11.9 %;
+  - the Barrio de Salamanca's Ensanche is turned −6° (72–90 % of its facades aligned at −6°), while the historic centre (Sol, Austrias, Letras, Jerónimos) fits 0°.
+- **Screenshots** of 600 m test areas at both rotations (`docs/img/rot-*`): the difference is small at Sol and visible but modest in Salamanca.
+- **Reason:** at −6° the rectangle's corners reach X 438 km, which needs four more LiDAR tiles. They can only be downloaded by hand (reCAPTCHA), and the user asked to finish without stopping. Shifting the centre to fit the downloaded tiles drops the Templo de Debod and Glorieta de Bilbao. Most landmarks are in the centre, which 0° fits.
+- **Rejected:** −6° with a no-data wedge in the south-west corner; aligning with Gran Vía or Paseo del Prado, both worse than 0°.
+- **Revisit:** download `PNOA_2024_MAD_438-4473..4476_H30_NPC02.LAZ` and set `rotation = -6` (`todo.md`).
+
+## 2026-11-11: Catastro tiles on a shared world grid
+
+- **Decision:** Catastro WFS tiles are 500 m squares on a fixed world grid (origin 438 950, 4 472 900), cached by coordinates in `raw/catastro_tiles` and shared by all areas.
+- **Reason:** the WFS is slow (~45 s per tile); a new or rotated area now downloads only the tiles it adds.
+
+## 2026-11-11: The user asked to finish every phase without checkpoints
+
+- **Decision:** from Phase 4 on, decisions normally taken at checkpoints are taken here and recorded in this file; what remains goes to `todo.md`.

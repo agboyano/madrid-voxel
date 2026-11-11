@@ -102,6 +102,8 @@ def build(vol, g, pal, C, osm, note):
         else:
             hi, lo = b, a
         rr, cc = _cells(ln.buffer(3.0), D, W)
+        if len(rr) == 0:  # a stairwell just off the map
+            continue
         ring = g[rr, cc]
         street = int(np.percentile(ring, 80))
         zf = level[bot]

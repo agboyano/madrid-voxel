@@ -2,7 +2,9 @@
 
 Source: Dirección General del Catastro, INSPIRE Buildings WFS (https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx),
 municipality of Madrid (INE 28079). The WFS answers bounding-box queries, so only the AOI plus MARGIN is read, in
-tiles of at most TILE metres; each tile's GML is cached. Features crossing tiles are merged by their INSPIRE id.
+tiles of TILE metres on a fixed world grid (GRID_ORIGIN), cached by coordinates in {RAW}/catastro_tiles and shared
+by every area, so a new or rotated AOI only downloads the tiles it adds. Features crossing tiles are merged by their
+INSPIRE id.
 
 - Building: the footprint of a cadastral building, with year of construction, current use, condition and counts
   of dwellings and units. Its own floor count is unpopulated in Madrid.
@@ -18,10 +20,11 @@ import math
 import sys
 import time
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import requests
 
-from aoi import AREA, CRS, world_bounds
+from aoi import AREA, CRS, RAW, world_bounds
 
 WFS = "https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx"
 UA = {"User-Agent": "madrid-voxel/0.1"}
@@ -30,6 +33,8 @@ TILE = 500  # metres per query, well under the service's area limit
 MIN_TILE = 60  # metres: the smallest tile a failing one is split into
 SKIPPED = []  # [type, bbox] of the tiles the service failed on at MIN_TILE
 DIR = AREA / "catastro"
+TILES = Path(RAW) / "catastro_tiles"
+GRID_ORIGIN = (438950.0, 4472900.0)  # EPSG:25830; tiles start at multiples of TILE from here
 NS = {"gml": "http://www.opengis.net/gml/3.2",
       "bu-core2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-core2d/2.0",
       "bu-ext2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-ext2d/2.0"}
@@ -122,17 +127,20 @@ def collect(type_name, props, tiles):
     tag = type_name.split(":")[1]
     feats = {}
     for k, bb in enumerate(tiles):
-        for f in tile_features(type_name, bb, DIR / f"{tag}_{k}.gml"):
+        for f in tile_features(type_name, bb, TILES / f"{tag}_{bb[0]:.0f}_{bb[1]:.0f}_{bb[2]:.0f}_{bb[3]:.0f}.gml"):
             feats.setdefault(f.get(GML_ID), {"type": "Feature", "properties": props(f), "geometry": geometry(f)})
     return list(feats.values())
 
 
 def main():
     DIR.mkdir(parents=True, exist_ok=True)
+    TILES.mkdir(parents=True, exist_ok=True)
     x0, y0, x1, y1 = world_bounds(MARGIN)
-    nx, ny = math.ceil((x1 - x0) / TILE), math.ceil((y1 - y0) / TILE)
-    tiles = [(x0 + i * TILE, y0 + j * TILE, min(x0 + (i + 1) * TILE, x1), min(y0 + (j + 1) * TILE, y1))
-             for i in range(nx) for j in range(ny)]
+    gx, gy = GRID_ORIGIN
+    i0, i1 = math.floor((x0 - gx) / TILE), math.ceil((x1 - gx) / TILE)
+    j0, j1 = math.floor((y0 - gy) / TILE), math.ceil((y1 - gy) / TILE)
+    tiles = [(gx + i * TILE, gy + j * TILE, gx + (i + 1) * TILE, gy + (j + 1) * TILE)
+             for i in range(i0, i1) for j in range(j0, j1)]
     for type_name, props, name in (("BU:Building", building, "buildings"),
                                    ("BU:BuildingPart", building_part, "building_parts")):
         feats = collect(type_name, props, tiles)

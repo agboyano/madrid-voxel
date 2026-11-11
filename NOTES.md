@@ -1187,3 +1187,93 @@ Documents: `README.md`, `IDEAS.md`, `visual_ref.md` and `research_*.md` are Wars
 - Tree crowns of young (procedural) trees are boxy; only 4 conifers in the inventory get conifer crowns.
 - No labels yet (Phase 4); the search lists 666 OSM places.
 - No bridges to test the class 17 decks.
+
+## Madrid identity (Phase 4)
+
+### Areas and caches
+
+`pipeline.toml` defines the build areas (`[areas.<name>]`: centre, size, rotation); `[aoi] area` picks one, `MADRID_AREA=<name>` overrides it. Everything cut to an area lives in `$MADRID_CACHE/areas/<cx>_<cy>_<w>x<h>_r<deg>/`:
+
+- downloads: `osm.json` and `osm_parts/`, `catastro/`, `ortho/`, `trees.json`, `wikidata.json`;
+- rasters: `elevation_<source>.npz`, `prep.npz`, `ground.npz`.
+
+What does not depend on the area stays in `raw/`: the LiDAR tiles, the whole tree inventory, climate, phenology and the Wikidata entity cache. `web/public/data` holds whatever area was built last.
+
+The full area (`full`): X 439 000–442 750, Y 4 472 950–4 475 700 (3.75 × 2.75 km), from the Templo de Debod to the east edge of the Retiro and from Glorieta de Bilbao to Atocha. Confirmed by the user. It needs 12 LiDAR tiles (`fetch_pnoa_lidar.py` no longer adds a margin `prep_lidar.py` never reads).
+
+Full-area inputs:
+- OSM: 259 018 elements, 60 MB.
+- Inventory trees: 43 913.
+- Catastro: 10 349 buildings.
+- Orthophoto: 15 400 × 11 400 px, July 2023.
+- LiDAR: 92.5 M points, rasterised in 72 s with 1.6 GB peak memory. Empty surface cells 2.5 %; observed ground 48 % (parks).
+
+**Catastro WFS failures:** dense tiles sometimes come back with the start of the GML replaced by an "Object moved" error page. Such a tile is split in four down to 60 m; a tile that still fails is skipped and listed under `skipped` in the GeoJSON (one 31 m square of building parts near Calle de Toledo in the full area). The LiDAR heights stand there; only Catastro's floor counts are missing.
+
+### Palette (`palette.py`)
+
+- **Roofs:** Arab clay tile (`ROOF_TILE`), slate, zinc and flat terrace.
+  - The material comes from the OSM `roof:material`; otherwise, where OSM gives no colour, from the ortho median over the roof: red-orange → tile, dark → slate, grey → terrace; zinc only on `roof:shape=mansard` or gambrel.
+  - Around Sol, 407 Catastro roofs have a median ortho colour of (174, 146, 128). About 40 % read grey: flat azoteas, which an earlier rule wrongly drew as zinc.
+- **Walls:** without an OSM colour, light render (8 shades) or exposed brick (3 shades), about one in four brick; granite for places of worship. `building:material=brick/stone` picks brick or granite.
+- **Madrid de los Austrias** (`landmarks.HISTORIC_CORE`, traced roughly): almagre red, ochre, cream and brick walls, tiled roofs, the historic-core roof fitting from Warsaw's rules.
+
+### Landmarks and labels
+
+- `fetch_wikidata.py` links landmarks to Wikidata only through the `wikidata` tag of OSM elements. Over the full area, 1 292 tagged elements map to 1 118 items, fetched in batches of 50 with `wbgetentities`; entities are cached by id in `raw/wikidata/entities.json`.
+- **Required set:** all ten are tagged in OSM, so `OVERRIDES` is empty.
+
+  | Landmark | Wikidata | OSM element |
+  | --- | --- | --- |
+  | Royal Palace | Q171517 | relation 30399 |
+  | Almudena Cathedral | Q849711 | relation 75658 |
+  | Plaza Mayor | Q1123493 | relation 16657232 |
+  | Puerta del Sol | Q427163 | relation 7424032 |
+  | Metrópolis | Q465250 | relation 4655046 |
+  | Cibeles Fountain | Q2736564 | relation 6345116 |
+  | Puerta de Alcalá | Q1140634 | way 174805987 |
+  | Prado Museum | Q160112 | relation 7726080 |
+  | El Retiro Park | Q1131807 | relation 13616929 |
+  | Palacio de Cristal | Q2420025 | way 23596451 |
+
+  "Cibeles" is the fountain; the Palacio de Cibeles (Q1849031) is a separate item. `ENGLISH_NAMES` corrects Wikidata English labels that are not the name used in English ("Main Square" → "Plaza Mayor").
+- **Labels** (`labels.py`): English name, Spanish name where it differs; kind from the OSM tags, or the Wikidata type when the building tag is generic.
+  - Required landmarks show from anywhere (`far` 9000).
+  - The extended set takes places (not boundaries, routes, streets, shops or chains) whose item has a heritage designation or a Wikipedia article. Distance by Wikipedia editions: ≥ 15 → 2500 m, ≥ 4 or heritage → 1300 m, else 600 m. `EXTENDED_EXCLUDE` drops items by id.
+- **Info cards** (`web/src/card.ts`): on selecting a label, its names and kind plus the facts present (built, architect, height, style, heritage designation) and links to the website and Wikipedia. All static, from `meta.json`; the viewer makes no request to Wikidata.
+
+### Seasonal cycle (`phenology.py`)
+
+- **Classes:** the 13 commonest deciduous genera in the city inventory, by share of trees:
+
+  | Genus | Share | Genus | Share |
+  | --- | --- | --- | --- |
+  | Platanus | 13.1 % | Prunus | 4.0 % |
+  | Ulmus | 7.9 % | Robinia + Gleditsia | 5.5 % |
+  | Celtis | 6.4 % | Populus | 2.7 % |
+  | Acer | 6.2 % | Melia | 2.9 % |
+  | Styphnolobium | 6.0 % | Fraxinus | 2.6 % |
+  | Aesculus | 2.7 % | Pyrus | 1.9 % |
+  | Tilia | 1.4 % | | |
+
+  Plus "other deciduous" and "evergreen". Evergreens include the broadleaves Madrid plants a lot: Ligustrum (3.6 %), Quercus ilex, Olea, Magnolia. Within the full area the commonest are Styphnolobium 16.7 %, Aesculus 14.6 %, Platanus 12.3 % and Ligustrum 9.9 %.
+- **Dates:** iNaturalist leaf annotations in Spain, Portugal and Italy (place ids 6774, 7122, 6973). Spain alone had too few. Leaf fall is colouring + 17 days, and the per-tree spread comes from Warsaw's DWD series.
+  - Genera with too few annotations take the median of the classes: Platanus, Styphnolobium, Aesculus, Celtis, Melia and Tilia for leaf-out and colouring.
+  - City medians: leaf-out 8 April, colouring 31 October, leaf fall 17 November.
+  - Prunus colouring on 13 December is suspicious (cherry laurel, an evergreen, is in the genus).
+- **Autumn colours:** from Warsaw's Commons photo measurements where the genus matches (Acer, Tilia, Fraxinus, Robinia, Populus, Aesculus); the rest take their median. Lawns still use Warsaw's monthly lawn colours.
+
+### Grid rotation (`rotation_report.py`)
+
+Share of Catastro facade length within 3° of the grid axes, i.e. drawn as straight voxel walls:
+
+| Area | 0° | −6° (84°) | Gran Vía (68°) | Paseo del Prado (5°) | Alcalá (20°) |
+| --- | --- | --- | --- | --- | --- |
+| full (921 km of facades) | 9.8 % | **25.0 %** | 5.7 % | 5.2 % | 4.4 % |
+| Sol, 500 m | **17.6 %** | 11.9 % (85°) | 7.6 % (80°) | — | 2.5 % |
+
+There is no single best rotation:
+- The Barrio de Salamanca's Ensanche grid east of Recoletos is turned about −6° (72–90 % of its facades aligned at −6°, 2–4 % at 0°) and dominates the full area by length.
+- The historic centre (Sol, Austrias, Letras, Jerónimos) fits 0° better (up to 79 % per 750 m block).
+
+Screenshots of 600 m test areas at both rotations: `docs/img/rot-*`.
