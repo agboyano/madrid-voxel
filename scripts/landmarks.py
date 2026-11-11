@@ -16,7 +16,7 @@ from scipy import ndimage
 
 import monuments
 import roofgardens
-from aoi import AREA, D as _D, W as _W, to_grid
+from aoi import AREA, D as _D, VOXEL_SIZE, W as _W, to_grid
 
 M_WALL, M_GLASS, M_CONCRETE, M_CLOCK = 1, 2, 13, 14
 
@@ -509,9 +509,12 @@ def landmark_views(labels, g):
         y = float(g[int(z), int(x)]) + 10
         px, pz = float(np.clip(x + dx, 0, W_)), float(np.clip(z + dz, 0, H_))
         views[key] = dict(label=name, target=[x, y, z], pos=[px, y + dy, pz])
-    if len(views) >= 3:  # the whole map, from the south, steep
+    if len(views) >= 3:  # the whole map, from the south, steep: far enough that its width (plus 10 %) fills a 16:10
+        # screen across the viewer's 28 deg vertical field of view (web/src/main.ts), 43.4 deg horizontally
+        dist = max(3100.0, 0.55 * W_ * VOXEL_SIZE / math.tan(math.radians(21.7))) / VOXEL_SIZE
+        up, back = dist * 2600 / 3106, dist * 1700 / 3106  # the slope of the old fixed pose (2600 up, 1700 back)
         views["overview"] = dict(label="Whole map", target=[W_ / 2, float(np.median(g)) + 10, H_ * 0.45],
-                                 pos=[W_ / 2, 2600.0, H_ * 0.45 + 1700])
+                                 pos=[W_ / 2, float(np.median(g)) + up, H_ * 0.45 + back])
     return views
 
 
