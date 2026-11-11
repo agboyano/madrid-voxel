@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy the viewer to GitHub Pages
 
 on:
   push:
@@ -32,9 +32,6 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-        env:
-          VITE_POSTHOG_PROJECT_TOKEN: ${{ vars.POSTHOG_PROJECT_TOKEN }}
-          VITE_BUILD: ${{ github.sha }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist
