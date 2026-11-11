@@ -111,8 +111,29 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; /* p
 #hud svg .btn { fill: var(--o); stroke: none; }
 #hud .on svg { stroke: #fff; } #hud .on svg .btn { fill: #fff; }
 #hud figcaption { font-size: 10.5px; }
+#hud .pad { display: flex; gap: 10px; } #hud .pad .cap { padding: 7px 6px 0; font-size: 11px; white-space: nowrap; }
+#hud.gamepad .row { display: none; }
 @media (max-width: 600px) { #hud { left: 8px; bottom: 8px; } }
 .noui #hud { display: none; }
+/* touch controls: a stick bottom left (on foot, following), buttons bottom right; only what the mode can use */
+#touch { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+#touch .stick { position: absolute; left: 20px; bottom: 100px; width: 112px; height: 112px; border-radius: 50%; display: none; pointer-events: auto; touch-action: none;
+  border: 1.5px solid rgba(255,255,255,.55); background: rgba(16,17,20,.22); box-shadow: 0 0 3px rgba(0,0,0,.45); }
+#touch .stick i { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%;
+  background: rgba(255,255,255,.55); box-shadow: 0 0 3px rgba(0,0,0,.5); }
+#touch .stick.on { border-color: #fff; } #touch .stick.on i { background: rgba(255,255,255,.85); }
+#touch .btns { position: absolute; right: 16px; bottom: 96px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+#touch button { display: none; pointer-events: auto; touch-action: none; min-width: 96px; min-height: 48px; padding: 0 16px; border-radius: 24px;
+  border: 1.5px solid rgba(255,255,255,.6); background: rgba(16,17,20,.55); color: #fff; font: 600 14px Inter, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+#touch button:active { background: rgba(255,255,255,.3); }
+#touch[data-mode=walk] .stick, #touch[data-mode=ride] .stick { display: block; }
+#touch[data-mode=orbit] [data-a=walk], #touch[data-mode=walk] [data-a=jump], #touch.person [data-a=jump],
+#touch[data-mode=walk] [data-a=up], #touch[data-mode=ride] [data-a=up] { display: block; }
+@media (pointer: coarse) { .walking #card { bottom: 226px; } }
+#touch-hint { position: fixed; left: 50%; bottom: 226px; z-index: 5; transform: translateX(-50%); max-width: calc(100vw - 32px); padding: 7px 14px; border-radius: 16px;
+  background: rgba(16,17,20,.7); color: #fff; font: 13px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }
+#touch-hint.on { opacity: 1; }
+.noui #touch, .noui #touch-hint, .loading #touch { display: none; }
 /* top right, in the legend's style: frames per second, and the one knob, how much of the city is drawn in detail */
 #perf { position: fixed; right: 14px; top: 14px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
   font: 11px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.85); text-shadow: 0 1px 2px rgba(0,0,0,.7); }

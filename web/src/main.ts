@@ -11,6 +11,7 @@ import { Hud } from './hud';
 import { Labels } from './labels';
 import { always, blank, gpu, remember, startStats, track, trackLater } from './stats';
 import { Nav, type Mode, type Ride } from './nav/nav';
+import { TouchControls } from './nav/touch';
 import { Perf } from './perf';
 import { makePost } from './post';
 import type { SearchItem } from './search';
@@ -76,6 +77,9 @@ perf.show(level);
 let setWindows: ((hour: number, day: number) => void) | null = null;
 
 nav.cancelFly = () => { fly = null; };
+nav.onHour = (step) => { const h = (Math.round(daylight.hour + step) % 24 + 24) % 24; setHour(h); share(); trackLater('hour', { hour: h }); };
+nav.input.onPad = (on) => { hud?.setPad(on); track('gamepad', { on }); };
+const touch = coarsePointer() ? new TouchControls(nav) : null;
 new ResizeObserver(() => { barRect = null; }).observe(bar.el);
 el('div', '', `<div>by Agboyano, based on <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">warsaw-vibe-voxel</a> by Piotr Migdał</div>
   <div>PNOA-LiDAR and PNOA © IGN/CNIG, Catastro, Ayuntamiento de Madrid and <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></div>`).id = 'credits';
@@ -127,6 +131,7 @@ function onResize() {
 function onMode(m: Mode, ride: Ride | null) {
   document.body.classList.toggle('walking', m !== 'orbit');
   hud?.set(m, ride);
+  touch?.set(m, ride);
   track('mode', { mode: m, kind: ride?.kind ?? null });
 }
 
@@ -282,6 +287,7 @@ async function boot() {
   labels = new Labels(meta.labels, onLabel);
   labels.gate = city.gate;
   hud = new Hud(renderer.domElement, nav.mode);
+  if (nav.input.pad) hud.setPad(true);
   bar.search.setItems(searchItems(meta));
   fetchJson<{ places: Place[] }>('data/places.json').then(({ places }) => bar.search.setItems([...searchItems(meta),
     ...places.map(([name, kind, x, y, size, alt]) => ({ name, alt, kind, go: () => goPlace(x, y, size, { name, kind }) }))]));
@@ -333,7 +339,7 @@ renderer.setAnimationLoop((now) => {
   perf.frame(now, document.hidden, renderer.info.render.triangles);
   report(now);
   barRect ??= bar.rect;
-  labels?.update(camera, world, barRect, [...(hud?.rects ?? []), ...perf.rects]);
+  labels?.update(camera, world, barRect, [...(hud?.rects ?? []), ...(touch?.rects ?? []), ...perf.rects]);
 });
 
 window.__three = { camera, controls, nav, bar, scene, renderer, flyTo, setHour, setDay, setWeather, map, daylight, post, budget, level: () => level, city: () => city };
