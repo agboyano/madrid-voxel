@@ -17,7 +17,7 @@ import rasterio.features
 from affine import Affine
 from scipy import ndimage
 
-from aoi import D, W
+from aoi import AREA, D, W
 from osm import OSM
 
 OUT = Path("web/public/data")
@@ -100,7 +100,7 @@ def stats(lab, n):
 
 meta = {"blocks": stats(blk, nb), "buildings": stats(bld.astype(np.int32), len(blds))}
 # triangles per block at 1 m (prototype estimate): each 128 m tile's triangles (tools/cost1m.mjs) shared by columns
-cost = Path("data/cost1m.json")
+cost = AREA / "cost1m.json"  # scripts/cost1m.py
 if cost.exists():
     tt = np.zeros((math.ceil(D / 128), math.ceil(W / 128)))
     for r in json.load(open(cost))["rows"]:
