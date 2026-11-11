@@ -2,6 +2,8 @@
 
 An interactive 3D map of central Madrid in 1 m voxels, running in the browser as a static site: from the Templo de Debod and Plaza de España past the Retiro to Calle del Doctor Esquerdo, and from Glorieta de Bilbao and Manuel Becerra to Atocha (4.4 × 2.85 km). Change the date, the hour and the weather, follow a pedestrian or a car, and open a landmark's card for its history.
 
+**Live: [agboyano.github.io/madrid-voxel](https://agboyano.github.io/madrid-voxel/)**
+
 ![The Royal Palace and the Almudena on an October evening](docs/img/final-palace.png)
 
 | | |

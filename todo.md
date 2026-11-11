@@ -4,17 +4,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
 ## Needs the user
 
-- **Publish the site** (Phase 6, "check that the published site loads correctly"). Everything is ready but nothing has been pushed. With the GitHub CLI logged in:
-
-  ```sh
-  gh repo create agboyano/madrid-voxel --public --source . --remote origin
-  gh api -X POST repos/agboyano/madrid-voxel/pages -f build_type=workflow   # Pages from GitHub Actions
-  git push -u origin main                                                    # runs .github/workflows/pages.yml
-  gh run watch                                                               # then open https://agboyano.github.io/madrid-voxel/
-  ```
-
-  Then check that the site loads: the map, the labels, a card, and the views (`?view=palace`). Pages needs a public repository on a free account; the repository is 32 MB of data plus the screenshots.
-
 - **Review the labels.** `docs/labels.md` lists all 422: 10 required, 412 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4. Since the labels take the Spanish name from OSM and the English one from Wikidata, pairs that name different things lose the English line (no word in common between the OSM name and Wikidata's Spanish label: 26 at the last build, such as "IED Madrid" over "Palace of Altamira"). Where the OSM `wikidata` tag is simply wrong (the Ministerio de Sanidad building points to a body housed in it), fix the tag in OSM.
 
 ## Landmarks and look
