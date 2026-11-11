@@ -217,3 +217,32 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 
 - **Decision:** `amenity=hospital` joins the place tags in `labels.py`, so a hospital whose Wikidata item has a heritage designation or a Wikipedia article gets a label like any other place.
 - **Reason:** the Hospital Gregorio Marañón, which the user asked to have on the map, is tagged `wikidata=Q30253672` (Wikipedia in 4 languages) but carried no label, because `amenity=hospital` was not a place kind.
+
+## 2026-11-11: Clearance under tree crowns
+
+- **Decision:** leaves start at least 4.5 m above carriageways, cycle lanes, parking and rails, and 3 m above every other surface people walk on: pavements, squares, tree pits, and the gravel and earth of boulevards and park paths. Over lawns, beds and scrub the old 2 m floor stays. A crown's rim left thinner than one voxel over a walked or driven surface loses its leaves. Constants `CLEAR_ROAD` and `CLEAR_WALK` in `voxelize.py`.
+- **Reason:** the user saw foliage hanging at passers-by's heads. The crown underside was a dome from 38 % of the tree's height over the trunk up to one voxel under the LiDAR top at the rim, with a 2 m floor, so rims came down to 2 m over pavements and roads. Street trees in Madrid are pruned to clear walkers and traffic.
+- **Measured** over all level-1 foliage tiles (lowest leaf voxel per column above the ground):
+  - leaf columns with leaves under 3 m fell from 34.3 % to 17.9 %;
+  - nearly all that remain (347 634) are over grass; 1 401 are over other surfaces, about 0.1 %.
+  - Floating leaf voxels removed after the fill fell from 45 988 to 37 034.
+- **Rejected:** a single 3 m floor everywhere, which would strip the low crowns of park trees over lawns; leaving gravel and earth at 2 m, since the Salón del Prado and the Retiro's paths are gravel.
+
+## 2026-11-11: Overview frames the whole map
+
+- **Decision:** the overview camera's distance follows the map width (its width plus 10 % across the viewer's 43° horizontal field of view at 16:10), keeping the old pose's slope.
+- **Reason:** the fixed pose framed about 2.5 km, so the eastern extension was out of the first view.
+
+## 2026-11-11: Label kinds from Wikidata when OSM's mislead; English only when it names the same thing
+
+- **Decision:**
+  - `attraction`, `castle` and `place of worship` join the OSM kinds that defer to the Wikidata type, skipping vague types ("building", "tourist destination", "Monument (Spain)", "organization").
+  - The English line is dropped when the OSM name and Wikidata's Spanish label share no word (articles, prepositions and "Madrid" aside), unless `ENGLISH_NAMES` sets it.
+- **Reason:**
+  - Cibeles and the Metrópolis read "attraction", the Royal Palace "castle"; now "fountain", "building" and "royal palace".
+  - Many OSM buildings carry the name of their current occupant while their Wikidata item names the historic building or a body housed in it ("Ministerio de Sanidad…" over "Spanish Agency for Consumer Affairs…"); 26 pairs at the last build. The Wikidata names stay searchable (`alt`).
+
+## 2026-11-11: Madrid street lamp heights
+
+- **Decision:** where OSM gives no height, a lamp is 8 m beside a carriageway at least 12 m wide, 5 m beside other roads, and 4 m in squares and pedestrian streets (Warsaw's 10 m and 6 m before).
+- **Reason:** Madrid's avenues have columns of about 8 m, its ordinary streets lower posts and wall brackets, and its squares and pedestrian streets the low "fernandino" lantern posts. The 10 m columns stood over the walkers.

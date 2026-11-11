@@ -1344,6 +1344,13 @@ Headless Chromium on the development laptop's Intel UHD 620 (integrated), ANGLE 
 - **Construction sites:** not reviewed one by one (`todo.md`).
 - **Catastro:** one 31 m square of building parts the service cannot serve is skipped (`skipped` in the GeoJSON).
 
+### Crowns, lamps and labels after the extension
+
+- **Crown clearance** (`voxelize.py`, after the per-trunk dome): `crown_bot` is raised to 4.5 m over `_hard` ground (water aside) and to 3 m over every surface but lawns, beds and scrub. Rim cells left thinner than a voxel are not filled (`leaf_at`), and `veg` itself is unchanged because the parked-car test reads it. A trunk under a bare rim cell stops at the crown's top. 977 609 canopy cells raised, 40 605 rim cells left bare.
+- **Measuring foliage height:** decode `tiles/1f` (counts, ground, runs) and take the lowest leaf run per column against the column's ground. `docs/img/crowns-*-{before,after}.png` are pedestrian views (eye 1.7 m, target 20 m ahead).
+- **Street-level screenshots:** the viewer's tilt limit (`TILT` = 0.48π in `web/src/nav/nav.ts`) lifts a camera that looks less than 3.6° down. A target 120 m away 1 m lower puts the eye at about 9 m, so street-level cameras need a target about 20 m ahead.
+- **Lamps:** heights by the road beside the post (`lamp_height` in `voxelize.py`); 2 287 lamps.
+
 ### Extended area at −6° (after Phase 6)
 
 The full area now runs from the Templo de Debod to just past Calle del Doctor Esquerdo, with the grid at −6°: 4 400 × 2 850 cells, centre 441 126.2, 4 474 323.7 (`DECISIONS.md`). It needs 24 LiDAR tiles (X 438–443 km, Y 4472–4476 km).
