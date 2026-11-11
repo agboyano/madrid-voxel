@@ -246,3 +246,12 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 
 - **Decision:** where OSM gives no height, a lamp is 8 m beside a carriageway at least 12 m wide, 5 m beside other roads, and 4 m in squares and pedestrian streets (Warsaw's 10 m and 6 m before).
 - **Reason:** Madrid's avenues have columns of about 8 m, its ordinary streets lower posts and wall brackets, and its squares and pedestrian streets the low "fernandino" lantern posts. The 10 m columns stood over the walkers.
+
+## 2026-11-11: Crowns raised further: 6 / 4.5 / 3 m
+
+- **Decision:** at the user's request after seeing Calle de Serrano, the clearances go up: 6 m over carriageways, cycle lanes, parking and rails (`CLEAR_ROAD`), 4.5 m over pavements, squares and paths (`CLEAR_WALK`), and 3 m over lawns, beds and scrub (`CLEAR_PLANTED`, new; it was the 2 m floor).
+- **Reason:** with 3 m the leaves still looked close above the walkers. Serrano's plane trees branch at about 4–5 m, and buses need about 4.5 m over the road.
+- **Measured:**
+  - leaf columns with leaves under 3 m fell to 1.5 % (34.3 % originally); the 1.4 % under 2 m are hedges and roof gardens, not crowns;
+  - 136 713 rim cells of short crowns are left without leaves, and leaf columns went from 1.95 M to 1.86 M;
+  - floating leaf voxels removed fell to 29 938.
