@@ -1349,7 +1349,20 @@ Headless Chromium on the development laptop's Intel UHD 620 (integrated), ANGLE 
 - **Crown clearance** (`voxelize.py`, after the per-trunk dome): `crown_bot` is raised to 6 m over `_hard` ground (water aside), 3 m over lawns, beds and scrub, and 4.5 m over every other surface. Rim cells left thinner than a voxel are not filled (`leaf_at`), and `veg` itself is unchanged because the parked-car test reads it. A trunk under a bare rim cell stops at the crown's top. 136 713 rim cells left bare.
 - **Measuring foliage height:** decode `tiles/1f` (counts, ground, runs) and take the lowest leaf run per column against the column's ground. `docs/img/crowns-*-{before,after}.png` are pedestrian views (eye 1.7 m, target 20 m ahead).
 - **Street-level screenshots:** the viewer's tilt limit (`TILT` = 0.48π in `web/src/nav/nav.ts`) lifts a camera that looks less than 3.6° down. A target 120 m away 1 m lower puts the eye at about 9 m, so street-level cameras need a target about 20 m ahead.
-- **Lamps:** heights by the road beside the post (`lamp_height` in `voxelize.py`); 2 287 lamps.
+- **Lamps:** heights by the road beside the post (`lamp_height` in `voxelize.py`). Their shapes are in "Street lamps in voxels" below.
+
+### Street lamps in voxels
+
+- **Shapes** (`draw_lamp`, `lantern` and `on_wall` in `voxelize.py`), from the OSM tags of the 2 774 lamp nodes. A build places 2 439 lamps with 2 566 lanterns; the rest fall outside the grid or on a building. Each kind is chosen by the first rule that applies:
+  - `support=wall_mounted` makes a **wall** lantern: on the open cell nearest the node, within 2 m, that touches a building cell, at 5 m (423 lamps).
+  - `lamp_mount=bent_mast` makes a **bent mast**: the lantern one cell towards the nearest carriageway, within 8 m (170).
+  - The avenue rule of `lamp_height`, or `light:count` ≥ 2, makes a **two-arm** column: lanterns one cell to either side, along the kerb (149).
+  - Otherwise a **fernandino** (1 697).
+- **Parts:** a one-voxel base (`lampbase`), a dark green shaft (`lampiron`), the `lamp` voxel and a `lampiron` cap over each lantern. Both new colours use the metal material and are too dark to trigger its glow.
+- **Light at night:** the viewer lights every `lamp` voxel and puts a light pool under every `meta.lamps` entry, which holds one entry per lantern. The viewer did not change.
+- **Wall lanterns:** a wall lantern is placed only where the voxel against the wall is solid at its height, or it would be dropped as floating debris. Otherwise the lamp falls back to a post at the kerb.
+- **Leaves:** the shaft replaces leaves as well as air. A crown left in the shaft let the lantern float, and the floating check, for which leaves hold nothing up, removed it: 105 lanterns before this rule. 26 of the 2 567 lanterns are still missing from the tiles, removed or overwritten by later steps of the build (not traced one by one).
+- **Checking:** decode `tiles/1` around `meta.lamps` and look for the `lamp` run at each z, with a `lampiron` run above it.
 
 ### Extended area at −6° (after Phase 6)
 
@@ -1369,7 +1382,7 @@ The full area now runs from the Templo de Debod to just past Calle del Doctor Es
 - **Sizes:** `web/public/data` is 32 MB; the cache is 7.1 GB.
 - **Downloads:**
   - The IGN orthophoto WMS answered some 1 km tiles with "502 Proxy Error" for a while. `fetch_ortho.py` keeps the tiles it got, so re-running it finishes the mosaic.
-  - The Catastro WFS now fails on four 31 m squares of building parts near Calle de Toledo, not one; they are listed under `skipped`.
+  - The Catastro WFS now fails on four 31 m squares of building parts near Calle de Toledo, not one; they are listed under `skipped`. `fetch_catastro.py` then reads those squares from Catastro's ATOM file for the municipality: 117 MB, downloaded once to `raw/catastro_atom/`. That adds 21 building parts, counted under `filled_from_atom`.
 
 ## Seasons
 

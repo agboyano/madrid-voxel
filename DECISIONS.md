@@ -293,3 +293,24 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - whole parks without the spring-green test: their paths and sand made a "dry" class that was never green;
   - lawn polygons alone: 98 pixels, and one dry;
   - the reflectance as colour directly: grey-green lawns.
+
+## 2026-11-11: Fernandino street lamps, in voxels
+
+- **Decision:** draw Madrid's street lamps as voxel shapes, with no viewer change: the user did not want the viewer changed only for the lamps.
+  - **Fernandino:** a base, a dark green cast-iron shaft, the lantern and a cap. This is the default, at 4 m in squares and pedestrian streets and 5 m in other streets.
+  - **Two arms:** a column with one lantern on each side, along the kerb, on avenues or where OSM has `light:count` ≥ 2.
+  - **Bent mast:** the lantern over the road, for OSM `lamp_mount=bent_mast`.
+  - **Wall:** a lantern on the facade with no post, for OSM `support=wall_mounted` (431 nodes, which used to become posts at the kerb).
+- **Why:** the shader already lights every `lamp` voxel at night and pools light under each `meta.lamps` entry, so the shapes light up as they are. The OSM tags say which lamps hang on walls and which masts bend.
+- **Limits:**
+  - at 1 m a lantern is about twice its real size;
+  - the base cannot be wider than the shaft (3 × 3 m would be too big);
+  - lanterns inside a crown stay hidden.
+- **Rejected:** an instanced mesh in the viewer (base, shaft, glass lantern and crown, like the pedestrians). It would be finer, but it would change the viewer only for the lamps.
+
+## 2026-11-11: Catastro ATOM file for the squares the WFS cannot serve
+
+- **Decision:** when the WFS fails on a tile even at 31 m, read that tile's features from Catastro's ATOM file for the municipality. The file is `A.ES.SDGC.BU.28900.zip`, 117 MB, downloaded once to the cache. Four squares near Calle de Toledo get their 21 building parts and floors this way.
+- **Why:** those records make every WFS query that touches them fail, on every retry. The ATOM file is the same Catastro data, and the only other way to get them.
+- **Against rule 4 (downloads limited to the AOI):** the ATOM file covers the whole municipality, but it is the smallest unit Catastro offers. It is downloaded only when a tile was skipped, and only the skipped squares are read from it.
+

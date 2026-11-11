@@ -25,9 +25,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   - the Metrópolis (slate dome, gilded statue);
   - the Puerta de Alcalá and the Cibeles fountain (sculptures, as monuments);
   - the Palacio de Cristal (glass) and the Almudena.
-- **"Fernandino" street lamps** (postponed by the user). The heights are Madrid's now (8 / 5 / 4 m by street), but every lamp is still a plain 1 × 1 column with one lit voxel. At 1 m a voxel cannot draw a slender cast-iron post with its lantern. Two ways:
-  - **Viewer model (preferred):** drop the lamp voxels and draw an instanced mesh at each of `meta.lamps`, like the pedestrians and cars (`web/src/sim/meshes.ts`): a base, a dark green iron shaft, a glass lantern lit at night, and a crown. The fernandino with one lantern goes in squares and pedestrian streets, the column with two arms on avenues. Keep `meta.lamps` for the light pools (`voxelMaterial.ts`).
-  - **Voxels only:** dark base, shaft, lit lantern and a cap, with a 1-voxel arm on avenues. Simpler, but still blocks.
 - **Madrid de los Austrias:** `landmarks.HISTORIC_CORE` was traced roughly. Trace it on the orthophoto or take an official barrio boundary.
 - **Orthophoto:** the PNOA orthophoto is from July 2023 and not a true orthophoto. Evaluate the Ayuntamiento's Geoportal orthophoto (newer, possibly true ortho) in `fetch_ortho.py`.
 
@@ -53,7 +50,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 ## Pipeline and viewer
 
 - **Construction sites** were not reviewed one by one at full scale (OSM `landuse=construction`, buildings finished after the 2024 flight).
-- **Catastro:** four 31 m squares of building parts near Calle de Toledo are skipped because the WFS fails on them (`skipped` in `building_parts.geojson`). Retried on 2026-11-11 with the same result, so the records themselves seem to break the service: take them from the ATOM download.
 - **Vegetation masks and deck heights** are still computed in `voxelize.py` between 3D writes. Move them into `layers.py` to complete the 2D/3D split.
 - **`VOXEL_SIZE`:** the viewer does not read `meta.voxel` yet. The "1 m assumptions" section of `NOTES.md` lists what would have to change for another voxel size.
 - **Desktop performance on integrated GPUs:** post-processing is about half the frame time (5.4 fps for the whole map at full render size on an Intel UHD 620). A lighter post-processing level for weak GPUs would help.
