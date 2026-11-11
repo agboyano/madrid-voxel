@@ -1371,6 +1371,25 @@ The full area now runs from the Templo de Debod to just past Calle del Doctor Es
   - The IGN orthophoto WMS answered some 1 km tiles with "502 Proxy Error" for a while. `fetch_ortho.py` keeps the tiles it got, so re-running it finishes the mosaic.
   - The Catastro WFS now fails on four 31 m squares of building parts near Calle de Toledo, not one; they are listed under `skipped`.
 
+## Seasons
+
+- **iNaturalist:**
+  - The histogram endpoint takes several `place_id`s and `without_taxon_id`; the leaf term is 36 (37 breaking buds, 38 green, 39 coloured, 40 no live leaves).
+  - Even across the Mediterranean-climate regions, leaf annotations are scarce: Platanus 69 bud / 227 coloured, *Aesculus hippocastanum* 6 / 9, Celtis 2 / 21, *Melia* 6 / 12, *Styphnolobium japonicum* 0 / 1. California supplies most of the Platanus ones (*P. racemosa*).
+  - Taxon lookup by name (`/v1/taxa?q=`) needs the exact name; *Prunus dulcis* is *Prunus amygdalus* there.
+- **Pollen check:** the Ayuntamiento's central-Madrid pollen report (November 2025, 2023–2024 data) gives the plane-tree pollen peaks on 29 March 2023 and 21 March 2024, in a season of a few weeks in March and April.
+- **Commons photos** (`scripts/foliage_measure.py`):
+  - **Categories:** the species categories hold few autumn canopies. Most autumn photos of *Ulmus pumila* and *Celtis australis* are still green in October and November, or show close-ups.
+  - **Request size:** `imageinfo` with 50 titles overflows a GET URL (HTTP 414), so the script POSTs.
+  - **Caches:** thumbnails and contact sheets are in `$MADRID_CACHE/raw/foliage_photos/`.
+- **Sentinel-2** (`scripts/lawns_s2.py`):
+  - **Access:** the Planetary Computer STAC and its SAS token (`/api/sas/v1/token/sentinel-2-l2a`) need no account.
+  - **Tile:** the AOI is in MGRS tile 30TVK, and each acquisition can appear twice (reprocessed in 2024), so scenes are kept one per date.
+  - **Reflectance:** from processing baseline 04.00 on, reflectance is (DN − 1000) / 10 000.
+  - **Cache:** AOI windows per scene in `$MADRID_CACHE/raw/sentinel2/` (202 scenes, 2022–2024).
+- **`foliage.bin`:** the class byte's high bit marks a dry meadow. Classes stay below 128, and the shader masks the bit (`& 127`) wherever it reads a class. `FOLIAGE_CLASSES` is 24; class 16 is the purple plum, whose `base` tint multiplies the leaf greens (`uFolBase`).
+- **Screenshots:** `docs/img/seasons-serrano-*` (20 March, 25 April, 15 July, 10 November), `seasons-plums-7-15` and `seasons-meadow-{4-20,7-25}` (the dry slopes by the Templo de Debod).
+
 ## Publication (Phase 6)
 
 Not published yet: creating the public GitHub repository was blocked by the permission settings of the working session and is left to the user (`todo.md` has the commands). Everything else for publication is done:

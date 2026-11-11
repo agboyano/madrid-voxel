@@ -1,14 +1,14 @@
 {
  "city": {
-  "leaf": 98,
-  "colour": 304,
-  "fall": 321
+  "leaf": 95,
+  "colour": 317,
+  "fall": 334
  },
  "sources": [
-  "iNaturalist: Leaves annotations, Spain, Portugal and Italy",
+  "iNaturalist: Leaves annotations, Mediterranean-climate regions",
   "spread between trees and leaf-fall gap: Warsaw's DWD series (warsaw-vibe-voxel)",
   "autumn colours: Wikimedia Commons photos, scripts/foliage_photos.json",
-  "lawns by month: Wikimedia Commons photos, scripts/grass_photos.json"
+  "lawns by month: Copernicus Sentinel-2 L2A via the Microsoft Planetary Computer, scripts/lawns_s2.py"
  ],
  "classes": {
   "1": {
@@ -17,24 +17,24 @@
     "Platanus"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 92.05797101449275,
     "sd": 8.0,
-    "n": 0,
-    "source": "median of the classes"
+    "n": 69,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 322.09302325581393,
     "sd": 12.0,
-    "n": 0,
-    "source": "median of the classes"
+    "n": 227,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 339.09302325581393,
     "sd": 11.0,
     "n": 0,
-    "source": "median of the classes"
+    "source": "colouring + 17 d"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#d3b159"
   },
   "2": {
    "species": "Styphnolobium",
@@ -43,24 +43,24 @@
     "Sophora"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 316.5111111111111,
     "sd": 12.0,
     "n": 0,
     "source": "median of the classes"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
     "source": "median of the classes"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#ffe06e"
   },
   "3": {
    "species": "Aesculus",
@@ -68,19 +68,19 @@
     "Aesculus"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 316.5111111111111,
     "sd": 12.0,
     "n": 0,
     "source": "median of the classes"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
     "source": "median of the classes"
@@ -93,24 +93,24 @@
     "Ulmus"
    ],
    "leaf": {
-    "day": 100.17391304347827,
+    "day": 106.87878787878788,
     "sd": 8.0,
-    "n": 23,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 33,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 313.1666666666667,
+    "day": 321.184,
     "sd": 12.0,
-    "n": 46,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 56,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 330.1666666666667,
+    "day": 338.184,
     "sd": 11.0,
     "n": 0,
     "source": "colouring + 17 d"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#cfb770"
   },
   "5": {
    "species": "Celtis",
@@ -118,24 +118,24 @@
     "Celtis"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 322.6,
     "sd": 12.0,
-    "n": 0,
-    "source": "median of the classes"
+    "n": 21,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 339.6,
     "sd": 11.0,
     "n": 0,
-    "source": "median of the classes"
+    "source": "colouring + 17 d"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#e8d073"
   },
   "6": {
    "species": "Acer",
@@ -143,19 +143,19 @@
     "Acer"
    ],
    "leaf": {
-    "day": 107.93939393939394,
+    "day": 97.20547945205479,
     "sd": 8.0,
-    "n": 33,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 146,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 284.0,
+    "day": 289.3666666666667,
     "sd": 12.0,
-    "n": 340,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 716,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 301.0,
+    "day": 306.3666666666667,
     "sd": 11.0,
     "n": 0,
     "source": "colouring + 17 d"
@@ -169,24 +169,24 @@
     "Malus"
    ],
    "leaf": {
-    "day": 85.73846153846154,
+    "day": 89.71739130434783,
     "sd": 8.0,
-    "n": 195,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 322,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 347.0,
+    "day": 316.5111111111111,
     "sd": 12.0,
-    "n": 78,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 0,
+    "source": "median of the classes"
    },
    "fall": {
-    "day": 364.0,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
-    "source": "colouring + 17 d"
+    "source": "median of the classes"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#d4be63"
   },
   "8": {
    "species": "Robinia",
@@ -195,19 +195,19 @@
     "Gleditsia"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 310.4310344827586,
+    "day": 312.0,
     "sd": 12.0,
-    "n": 21,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 22,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 327.4310344827586,
+    "day": 329.0,
     "sd": 11.0,
     "n": 0,
     "source": "colouring + 17 d"
@@ -221,19 +221,19 @@
     "Salix"
    ],
    "leaf": {
-    "day": 90.625,
+    "day": 114.93055555555556,
     "sd": 8.0,
-    "n": 24,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 72,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 298.98790322580646,
+    "day": 301.80365296803654,
     "sd": 12.0,
-    "n": 111,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 459,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 315.98790322580646,
+    "day": 318.80365296803654,
     "sd": 11.0,
     "n": 0,
     "source": "colouring + 17 d"
@@ -246,24 +246,24 @@
     "Melia"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 316.5111111111111,
     "sd": 12.0,
     "n": 0,
     "source": "median of the classes"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
     "source": "median of the classes"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#d7be5d"
   },
   "11": {
    "species": "Fraxinus",
@@ -271,19 +271,19 @@
     "Fraxinus"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 96.5909090909091,
     "sd": 8.0,
-    "n": 41,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 66,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 298.0,
+    "day": 324.8732876712329,
     "sd": 12.0,
-    "n": 47,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 111,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 315.0,
+    "day": 341.8732876712329,
     "sd": 11.0,
     "n": 0,
     "source": "colouring + 17 d"
@@ -296,24 +296,24 @@
     "Pyrus"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 94.3,
     "sd": 8.0,
-    "n": 0,
-    "source": "median of the classes"
+    "n": 30,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 316.5111111111111,
     "sd": 12.0,
-    "n": 34,
-    "source": "iNaturalist (Spain, Portugal, Italy)"
+    "n": 54,
+    "source": "iNaturalist (Mediterranean-climate regions)"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
     "source": "colouring + 17 d"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#d4be63"
   },
   "15": {
    "species": "Tilia",
@@ -321,47 +321,77 @@
     "Tilia"
    ],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 303.5263157894737,
+    "sd": 12.0,
+    "n": 20,
+    "source": "iNaturalist (Mediterranean-climate regions)"
+   },
+   "fall": {
+    "day": 320.5263157894737,
+    "sd": 11.0,
+    "n": 0,
+    "source": "colouring + 17 d"
+   },
+   "autumn": "#ddb357"
+  },
+  "16": {
+   "species": "Prunus cerasifera",
+   "genera": [
+    "Prunus cerasifera"
+   ],
+   "leaf": {
+    "day": 70.05128205128206,
+    "sd": 8.0,
+    "n": 39,
+    "source": "iNaturalist (Mediterranean-climate regions)"
+   },
+   "colour": {
+    "day": 316.5111111111111,
     "sd": 12.0,
     "n": 0,
     "source": "median of the classes"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
     "source": "median of the classes"
    },
-   "autumn": "#ddb357"
+   "autumn": "#b1786f",
+   "base": [
+    1.621,
+    0.596,
+    1.525
+   ]
   },
   "13": {
    "species": "median of the classes",
    "genera": [],
    "leaf": {
-    "day": 97.5609756097561,
+    "day": 95.44545454545454,
     "sd": 8.0,
     "n": 0,
     "source": "median of the classes"
    },
    "colour": {
-    "day": 303.8333333333333,
+    "day": 316.5111111111111,
     "sd": 12.0,
     "n": 0,
     "source": "median of the classes"
    },
    "fall": {
-    "day": 320.8333333333333,
+    "day": 333.5111111111111,
     "sd": 11.0,
     "n": 0,
     "source": "median of the classes"
    },
-   "autumn": "#d4bc60"
+   "autumn": "#d4be63"
   },
   "14": {
    "species": "evergreens",
@@ -402,64 +432,126 @@
  },
  "grass": [
   [
-   1.33,
-   0.582,
-   1.291
+   0.949,
+   0.546,
+   0.816
   ],
   [
-   1.607,
-   0.706,
-   1.476
+   1.267,
+   0.682,
+   1.027
   ],
   [
-   1.578,
-   0.792,
-   1.529
+   1.357,
+   0.798,
+   1.165
   ],
   [
-   1.22,
-   0.766,
-   1.046
+   1.31,
+   0.876,
+   1.19
   ],
   [
-   1.137,
-   0.741,
-   0.822
+   1.304,
+   0.861,
+   1.112
   ],
   [
-   1.48,
-   0.906,
-   1.332
+   1.405,
+   0.928,
+   1.359
   ],
   [
-   1.496,
-   0.981,
-   1.586
+   1.501,
+   0.942,
+   1.466
   ],
   [
-   1.319,
-   0.883,
-   1.315
+   1.39,
+   0.901,
+   1.408
   ],
   [
-   1.333,
-   0.839,
-   1.277
+   1.11,
+   0.75,
+   1.066
   ],
   [
-   1.223,
-   0.747,
-   1.238
+   1.123,
+   0.705,
+   1.0
   ],
   [
-   1.072,
-   0.597,
-   1.254
+   0.897,
+   0.548,
+   0.704
   ],
   [
-   1.092,
-   0.52,
-   1.28
+   0.861,
+   0.486,
+   0.687
+  ]
+ ],
+ "grass_dry": [
+  [
+   1.116,
+   0.685,
+   0.978
+  ],
+  [
+   1.502,
+   0.762,
+   1.143
+  ],
+  [
+   1.187,
+   0.718,
+   0.99
+  ],
+  [
+   1.502,
+   0.862,
+   1.279
+  ],
+  [
+   1.779,
+   0.887,
+   1.304
+  ],
+  [
+   2.205,
+   1.019,
+   1.726
+  ],
+  [
+   2.736,
+   1.225,
+   2.112
+  ],
+  [
+   2.764,
+   1.21,
+   2.105
+  ],
+  [
+   2.196,
+   0.986,
+   1.678
+  ],
+  [
+   2.42,
+   1.065,
+   1.801
+  ],
+  [
+   0.964,
+   0.714,
+   0.915
+  ],
+  [
+   0.962,
+   0.635,
+   0.886
   ]
  ],
  "leaf": [

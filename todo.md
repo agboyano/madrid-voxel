@@ -31,9 +31,22 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
 ## Seasons, weather and life
 
-- **Phenology:** Platanus, Styphnolobium, Aesculus, Celtis, Melia and Tilia had too few iNaturalist annotations in Spain, Portugal and Italy and fall back to the median. Find a better source (PEP725, Spanish phenological networks) or widen the region for those genera. Prunus colouring on 13 December is suspicious (cherry laurel, an evergreen, is in the genus).
-- **Autumn colours** exist only where Warsaw measured the genus. Platanus, Styphnolobium, Ulmus and Celtis use the median; measure them on Commons photos (`scripts/foliage_photos.json`).
-- **Lawns, lit windows and traffic** still use Warsaw's measurements: monthly lawn colours, night photos of Warsaw facades, signal timings and bike weights. Measure Madrid's (Commons photos, Madrid's bike counts).
+- **Leaf dates still on the median** (needs the user: an account). Even with every Mediterranean-climate region, iNaturalist has too few leaf annotations for:
+  - Styphnolobium (8 620 trees);
+  - the horse chestnut (6 444) and the chinaberry (491);
+  - the leaf-out of Celtis and Tilia.
+
+  The way to measure them in Madrid itself is Copernicus **HR-VPP**: start and end of season per 10 m pixel, 2017 onwards. It needs a free account:
+  1. Register at https://www.wekeo.eu/ (or the Copernicus Land Monitoring Service).
+  2. In the WEkEO data viewer, find the HR-VPP "Vegetation Phenology and Productivity parameters" (VPP) dataset.
+  3. Select Sentinel-2 tile **30TVK**, years 2017–2024, season 1, the layers **SOSD**, **EOSD** and **QFLAG**.
+  4. Download the GeoTIFFs to `$MADRID_CACHE/raw/hrvpp/`, without renaming them.
+
+  Then `phenology.py` can take, per genus, the pixel medians over single-genus street alignments of the inventory (the method in `docs/seasons-and-life-sources.md`, §1).
+- **PEP725 / AEMET** phenological series are given on request: https://pep725.eu/dataset/ (non-commercial use; cite Templ et al. 2018) and AEMET's climatological data bank. Useful for Aesculus and Tilia.
+- **Autumn colours with small samples:** Melia (5 photos), Ulmus (6, of *Ulmus minor*: Commons had no autumn canopies of *U. pumila*), Celtis (7, mixing *C. australis* and *C. occidentalis*). The horse chestnut keeps Warsaw's measurement (Central Europe). More photos would steady them: iNaturalist research-grade photos from the Madrid region, October to December.
+- **Flowering:** almonds and the purple plum blossom white and pink in February and March; the viewer has no flowering phase.
+- **Lit windows and traffic** still use Warsaw's measurements: night photos of Warsaw facades, signal timings and bike weights. Measure Madrid's (`docs/seasons-and-life-sources.md` §5–6).
 
 ## Pipeline and viewer
 

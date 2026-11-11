@@ -68,7 +68,7 @@ The main rules:
 - **1 m voxels:** pitched roofs become 1 m terraces, cornices and eaves make facades ragged, and street furniture taller than 1.5 m shows as grey blocks.
 - **Grid at −6°:** the grid follows the Ensanche of the Barrio de Salamanca, which covers most of the map. Streets at other angles show a staircase along their facades: Gran Vía, the Paseo del Prado and the irregular streets of the historic centre.
 - **Landmarks are not curated:** the Royal Palace's parts take generic wall colours, and no landmark has hand-made details yet (`scripts/overrides.json` and `landmarks.py` hold the tools).
-- **Inherited behaviour:** the seasonal dates of several genera (Platanus, Styphnolobium, Aesculus, Celtis) fall back to the median of the others for lack of observations. Lawn colours, lit-window habits and the traffic model come from Warsaw's measurements.
+- **Seasons with gaps:** Styphnolobium, the horse chestnut and the chinaberry, and the leaf-out of hackberries and limes, take the median dates of the other trees: iNaturalist has too few observations of them in Mediterranean climates (`todo.md` has the satellite source that would measure them in Madrid). Lit-window habits and the traffic model come from Warsaw's measurements.
 - **Data gaps:** four 31 m squares of Catastro building parts near Calle de Toledo could not be downloaded (the service fails on it).
 
 ## Sources
@@ -80,8 +80,10 @@ Data the map is built from:
 - **Tree inventory**: "Arbolado en parques y zonas verdes de Madrid (detalle)", Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **[Wikidata](https://www.wikidata.org/)**: landmark names and facts, [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
 - **[Open-Meteo](https://open-meteo.com/)**: the ERA5 historical weather archive, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), for how likely each kind of weather is on each day.
-- **[iNaturalist](https://www.inaturalist.org/)**: leaf annotations of observations in Spain, Portugal and Italy, aggregated by week, for when each genus leafs out and colours.
-- **[Wikimedia Commons](https://commons.wikimedia.org/)**: photos measured for autumn and lawn colours and lit windows (`scripts/foliage_photos.json`, `scripts/grass_photos.json`, `scripts/window_counts.json`, inherited from warsaw-vibe-voxel).
+- **[iNaturalist](https://www.inaturalist.org/)**: leaf annotations of observations in regions with Madrid's climate (Spain, Portugal, Italy, Greece, southern France, Cyprus, Turkey, Israel, Lebanon, the Maghreb, California), aggregated by week, for when each genus leafs out and colours.
+- **[Copernicus Sentinel-2](https://sentinel.esa.int/web/sentinel/missions/sentinel-2)** L2A, 2022–2024, through the [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/): contains modified Copernicus Sentinel data, for the colour of irrigated lawns and dry meadows through the year.
+- **Pollen**: the Ayuntamiento de Madrid's report on airborne pollen in central Madrid (2023–2024), as a check on the plane trees' leaf-out.
+- **[Wikimedia Commons](https://commons.wikimedia.org/)**: photos measured for autumn and lawn colours and lit windows (`scripts/foliage_photos.json`, `scripts/grass_photos.json`, `scripts/window_counts.json`; Warsaw's from warsaw-vibe-voxel, and Madrid's own for plane trees, Styphnolobium, elms, hackberries, chinaberries and the purple-leaved plum).
 
 Software:
 - **Viewer:** [three.js](https://threejs.org/), [postprocessing](https://github.com/pmndrs/postprocessing), [N8AO](https://github.com/N8python/n8ao) and [Vite](https://vite.dev/).

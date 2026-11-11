@@ -255,3 +255,41 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - leaf columns with leaves under 3 m fell to 1.5 % (34.3 % originally); the 1.4 % under 2 m are hedges and roof gardens, not crowns;
   - 136 713 rim cells of short crowns are left without leaves, and leaf columns went from 1.95 M to 1.86 M;
   - floating leaf voxels removed fell to 29 938.
+
+## 2026-11-11: Leaf dates from Mediterranean-climate regions; Prunus split
+
+- **Decision:**
+  - **Regions:** iNaturalist's leaf annotations come from regions with Madrid's climate (Köppen Csa/BSk, Northern Hemisphere): Spain, Portugal, Italy, Greece, Provence-Alpes-Côte d'Azur, Corsica, Cyprus, Turkey, Israel, Lebanon, Morocco, Tunisia, Algeria and California (place ids in `phenology.INAT_PLACES`).
+  - **Horse chestnut:** queried as *Aesculus hippocastanum*, not the genus.
+  - **Prunus split:**
+    - the purple-leaved *Prunus cerasifera* is a class of its own, with a measured base tint (purple all season), its own leaf-out, and no use of the "coloured leaves" annotations, which its purple leaves trigger all summer;
+    - the other Prunus are queried without it;
+    - the cherry laurels (*P. laurocerasus*, *P. lusitanica*) are evergreen.
+  - **Checks:** every class must leaf out, colour and drop in that order, and colour by day 340.
+- **Result:**
+  - **Measured:** plane trees leaf out on 2 April and colour on 18 November (69 and 227 observations, mostly California and the Mediterranean); the purple plum leafs out on 11 March; the other Prunus on 31 March.
+  - **Dropped date:** the Prunus colouring on 13 December disappears.
+  - **Still on the median:** Styphnolobium, the horse chestnut and Melia (all phases), and the leaf-out of Celtis and Tilia.
+- **Checked:** the plane trees' pollen peaks in central Madrid were 29 March 2023 and 21 March 2024 (Ayuntamiento pollen report). The flowers come with the leaves, so a 2 April leaf-out is 4–11 days later, which is consistent.
+- **Rejected:**
+  - a 34–44° N latitude band, worldwide: it has more data but leafs out in late April to mid-May, biased by continental North America and China;
+  - the genus Aesculus: in California it is the buckeye, which leafs out in February and drops its leaves in the summer drought (it gave colouring on 5 September).
+
+## 2026-11-11: Madrid's own autumn colours
+
+- **Decision:** measure the autumn colour of Platanus × hispanica (12 photos), Styphnolobium japonicum (16), Ulmus (6, *U. minor*), Celtis (7, *C. australis* and *C. occidentalis*) and Melia azedarach (5), and the summer colour of the purple-leaved plum (13). Commons photos were checked one by one on contact sheets, with Warsaw's pixel method (`scripts/foliage_measure.py`).
+- **Result:** at the renderer's brightness, plane trees turn ochre (`#d3b159`), Styphnolobium bright yellow (`#ffe06e`), elms `#cfb770`, hackberries `#e8d073` and chinaberries `#d7be5d`. The purple plum's tint on the greens is ×(1.62, 0.60, 1.53).
+- **Rejected:** *Ulmus pumila* and *Celtis australis* alone: Commons has almost no autumn canopies of them.
+
+## 2026-11-11: Lawns from Sentinel-2: irrigated and dry
+
+- **Decision:** lawn colours by month come from Copernicus Sentinel-2 L2A (2022–2024, 202 scenes with under 20 % cloud) over the lawns of the AOI (`scripts/lawns_s2.py`).
+  - **Lawn pixels:** a 10 m pixel counts when at least 80 % of it is an OSM lawn, meadow, park or garden without a LiDAR tree or a building, and it is green in spring (NDVI ≥ 0.5).
+  - **Dry:** July–August NDVI under 0.45 marks a dry meadow.
+  - **Data:** 497 irrigated pixels and 94 dry ones (2 353 two-metre cells, mostly the slopes by the Templo de Debod). The dry ones are the high bit of `foliage.bin`'s class byte, and the viewer has a second monthly series for them.
+- **Calibration:** surface reflectance is bluer and duller than a photo. So the satellite gives only the changes (per month, and dry against irrigated, per channel, relative to irrigated lawns in summer), applied to the summer lawn colour of the Commons photos. A class with under 50 pixels follows the irrigated one.
+- **Result:** irrigated lawns are olive green all year, darker in winter; dry meadows are green from November to April and straw-coloured (`#d3c580`) in July and August.
+- **Rejected:**
+  - whole parks without the spring-green test: their paths and sand made a "dry" class that was never green;
+  - lawn polygons alone: 98 pixels, and one dry;
+  - the reflectance as colour directly: grey-green lawns.
