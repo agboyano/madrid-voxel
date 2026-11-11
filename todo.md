@@ -13,9 +13,9 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   gh run watch                                                               # then open https://agboyano.github.io/madrid-voxel/
   ```
 
-  Then check that the site loads: the map, the labels, a card, and the views (`?view=palace`). Pages needs a public repository on a free account; the repository is 30 MB of data plus the screenshots.
+  Then check that the site loads: the map, the labels, a card, and the views (`?view=palace`). Pages needs a public repository on a free account; the repository is 32 MB of data plus the screenshots.
 
-- **Review the labels.** `docs/labels.md` lists all 410: 10 required, 400 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4. Since the labels take the Spanish name from OSM and the English one from Wikidata, check pairs that name different things: an OSM building whose `wikidata` tag points to a body housed in it ("Ministerio de Sanidad, Servicios Sociales e Igualdad" over "Spanish Agency for Consumer Affairs, Food Security and Nutrition"). Fix the OSM tag, or drop the English name for that item.
+- **Review the labels.** `docs/labels.md` lists all 422: 10 required, 412 extended by rule. Drop unwanted ones by adding their Wikidata id to `EXTENDED_EXCLUDE` in `scripts/labels.py`, and log it. This review was planned for Checkpoint 4. Since the labels take the Spanish name from OSM and the English one from Wikidata, check pairs that name different things: an OSM building whose `wikidata` tag points to a body housed in it ("Ministerio de Sanidad, Servicios Sociales e Igualdad" over "Spanish Agency for Consumer Affairs, Food Security and Nutrition"). Fix the OSM tag, or drop the English name for that item.
 - **A licence for this project's own code.** The upstream code is MIT (`LICENSE-warsaw-vibe-voxel`, `LICENSE-dtla-voxel`); the Madrid changes have no licence file yet.
 
 ## Landmarks and look
@@ -25,6 +25,7 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   - the Metrópolis (slate dome, gilded statue);
   - the Puerta de Alcalá and the Cibeles fountain (sculptures, as monuments);
   - the Palacio de Cristal (glass) and the Almudena.
+- **Tree crowns too low.** Foliage reaches down to 2 m, and at a crown's rim to 1 m under its LiDAR top, so leaves hang at pedestrians' heads over pavements and roads (`voxelize.py`: the 2 m floor of `crown_bot` and the per-trunk dome, whose underside rises to `crown_top - 1` at the rim). Fix: a clearance by the ground under the crown, higher over roads than over pavements, and no thin fringe of leaves at head height.
 - **Label kinds:** some read oddly. Cibeles and the Metrópolis come out as "attraction" (OSM `tourism=attraction`), the Royal Palace as "castle" (`historic=castle`). Prefer the Wikidata type when the OSM kind is generic.
 - **Street lamps** are Warsaw's 1 × 1 columns 10 m high, heavy at street level. Madrid's lamps are lower and ornate (the "fernandino" model in the historic centre).
 - **Madrid de los Austrias:** `landmarks.HISTORIC_CORE` was traced roughly. Trace it on the orthophoto or take an official barrio boundary.
