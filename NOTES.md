@@ -1237,7 +1237,7 @@ Full-area inputs:
   | Palacio de Cristal | Q2420025 | way 23596451 |
 
   "Cibeles" is the fountain; the Palacio de Cibeles (Q1849031) is a separate item. `ENGLISH_NAMES` corrects Wikidata English labels that are not the name used in English ("Main Square" → "Plaza Mayor").
-- **Labels** (`labels.py`): English name, Spanish name where it differs; kind from the OSM tags, or the Wikidata type when the building tag is generic.
+- **Labels** (`labels.py`): Spanish name (the OSM `name`; Wikidata's Spanish label when OSM has none), English name under it where it differs (`en`, the second line of the pin and the card); kind from the OSM tags, or the Wikidata type when the building tag is generic.
   - Required landmarks show from anywhere (`far` 9000).
   - The extended set takes places (not boundaries, routes, streets, shops or chains) whose item has a heritage designation or a Wikipedia article. Distance by Wikipedia editions: ≥ 15 → 2500 m, ≥ 4 or heritage → 1300 m, else 600 m. `EXTENDED_EXCLUDE` drops items by id.
 - **Info cards** (`web/src/card.ts`): on selecting a label, its names and kind plus the facts present (built, architect, height, style, heritage designation) and links to the website and Wikipedia. All static, from `meta.json`; the viewer makes no request to Wikidata.

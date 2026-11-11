@@ -57,7 +57,7 @@ The main rules:
 - **Buildings:** OSM footprints with heights from the LiDAR. Catastro gives the floor count where OSM has none, and adds the buildings OSM lacks. Where the LiDAR sees nothing tall, the OSM or Catastro height wins (a building finished after the flight).
 - **Trees:** the Ayuntamiento's inventory, about 43 000 trees with species and height. A tree whose crown the leaf-off LiDAR flight did not catch is drawn young, at its inventory height. Each tree turns with the season of its genus.
 - **Roofs:** clay tile, slate, zinc or flat terrace, chosen from the orthophoto; walls in Madrid's render and brick, with Madrid de los Austrias in its own colours.
-- **Labels:** found through the `wikidata` tag of OSM features, never by name. They show the English name and the Spanish one where it differs. The cards carry the year built, architect, height, style, heritage designation and links, all written at build time.
+- **Labels:** found through the `wikidata` tag of OSM features, never by name. They show the Spanish name, as on the street signs, with the English one under it where it differs. The cards carry the year built, architect, height, style, heritage designation and links, all written at build time.
 
 `NOTES.md` has the technical notes, `DECISIONS.md` the decisions and their reasons, `PLAN.md` the plan the work followed and `todo.md` what is left.
 

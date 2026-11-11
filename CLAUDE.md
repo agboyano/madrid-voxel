@@ -15,7 +15,7 @@ An interactive 3D map of central Madrid in 1 m voxels, running in the browser as
 
 - Spanish proper names stay as they are: places (Puerta del Sol, Paseo del Prado, Gran Vía), institutions and datasets (Catastro, Geoportal, Centro de Descargas del CNIG, PNOA).
 - Field names from Spanish data sources (for example, columns of the tree inventory) are mapped to English identifiers when loaded; keep the mapping in one place and document it in `NOTES.md`.
-- Map labels show the English name, plus the Spanish name where it differs, as Warsaw does with Polish and English names (from Wikidata).
+- Map labels show the Spanish name, plus the English name under it where it differs, as Warsaw does with Polish and English names (Spanish from the OSM `name`, English from Wikidata).
 - The user may talk to you in Spanish; answer them in their language, but keep everything written to the repository in English.
 
 ## Authorship and attribution

@@ -188,3 +188,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 
 - **Decision:** the repository is ready to publish (workflow, README, attribution review), but it has not been pushed anywhere. Creating the public repository was blocked by the permission settings of the session that did the work, and publishing a public repository under the user's account is the user's call.
 - **How:** `todo.md` gives the commands (create `agboyano/madrid-voxel` or another name, enable Pages in "GitHub Actions" mode, push `main`). Pages on a free account needs a public repository.
+
+## 2026-11-11: Labels in Spanish, English under them
+
+- **Decision:** at the user's request, map labels and info cards show the Spanish name first and the English name under it where it differs (the reverse of the Phase 4 rule in `CLAUDE.md`, which is updated). The Spanish name is the OSM `name` of the linked element, falling back to Wikidata's Spanish label; the English name is `ENGLISH_NAMES`, then Wikidata's English label, then OSM `name:en`.
+- **Reason:** the OSM name is the one on the street signs and in the search index ("Palacio de Cristal", "Plaza Mayor", "Monumento a Alfonso XII"); Wikidata's Spanish labels are often formal or historic names ("Palacio de Cristal del Retiro", "Plaza Mayor de Madrid", "Palacio de Quintana" for the Mando Aéreo General) or name the person a statue honours rather than the statue.
+- **Rejected:** Wikidata's Spanish label first (above); keeping the `local` field (the viewer now reads `en` for the second line, as Warsaw's did for its English names).

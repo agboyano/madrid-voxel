@@ -23,7 +23,7 @@ interface Pin {
 }
 export interface Placed extends Facts { x: number; y: number; z: number }
 
-const details = (f: Facts) => [(f.en || f.local) && f.kind, f.height && `${f.height} m`, f.year, f.rebuilt && `rebuilt ${f.rebuilt}`, f.by, f.building && 'under construction'].filter(Boolean);
+const details = (f: Facts) => [f.en && f.kind, f.height && `${f.height} m`, f.year, f.rebuilt && `rebuilt ${f.rebuilt}`, f.by, f.building && 'under construction'].filter(Boolean);
 const levelAt = (d: number, far: number) => d < Math.max(250, Math.min(far * 0.3, 900)) ? 2 : 0;
 
 const STEM = 20, TOP = 8, MAX = 12, SETTLE = 150;
@@ -53,7 +53,7 @@ export class Labels {
 
   private add(cls: string, f: Facts, p: THREE.Vector3, base: THREE.Vector3, R: number): Pin {
     const facts = details(f).map((d) => `<span>${d}</span>`).join('');
-    const e = el('div', cls, `<i class="dot"></i><i class="stem"></i><div class="txt"><b>${f.name}</b><span>${f.local ?? f.en ?? f.kind}</span>${facts ? `<p>${facts}</p>` : ''}</div>`, this.host);
+    const e = el('div', cls, `<i class="dot"></i><i class="stem"></i><div class="txt"><b>${f.name}</b><span>${f.en ?? f.kind}</span>${facts ? `<p>${facts}</p>` : ''}</div>`, this.host);
     return { el: e, txt: $('.txt', e), p, base, R, occluded: false, w: 0, h: 0, far: f.far ?? 1300, level: -1, dims: [], shift: 0, on: false, side: 'r', since: -1 };
   }
 

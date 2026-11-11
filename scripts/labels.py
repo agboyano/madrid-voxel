@@ -1,7 +1,8 @@
 """Every label on the map and how far away it shows, from the OSM features linked to Wikidata (fetch_wikidata.py).
 
-Labels show the English name, with the Spanish one where it differs, and the facts for the info card (year, architects,
-height, style, heritage designation, website, Wikipedia). Which features get a label:
+Labels show the Spanish name (the OSM name, as on the street signs; Wikidata's Spanish label when OSM has none), with
+the English one under it where it differs, and the facts for the info card (year, architects, height, style, heritage
+designation, website, Wikipedia). Which features get a label:
   required  REQUIRED in fetch_wikidata.py (PLAN.md Phase 4): always, seen from anywhere on the map (far 9000)
   extended  places, not boundaries, routes, streets or chains: buildings, monuments, squares, parks, places of
             worship, museums and theatres whose item has a heritage designation or a Wikipedia article; the closer the
@@ -91,8 +92,8 @@ def _anchor(geom, top_at, tall):
 
 
 def label(qid, f, t, geom, top_at, far):
-    en, es = cap(ENGLISH_NAMES.get(qid) or f.get("en") or t.get("name:en")), cap(f.get("es") or t.get("name"))
-    name = en or es
+    en, es = cap(ENGLISH_NAMES.get(qid) or f.get("en") or t.get("name:en")), cap(t.get("name") or f.get("es"))
+    name = es or en
     kind = kind_of(t)
     if kind is None or (kind in GENERIC and f.get("types")):
         kind = (f.get("types") or ["place"])[0]
@@ -102,11 +103,11 @@ def label(qid, f, t, geom, top_at, far):
     wiki = (f"https://en.wikipedia.org/wiki/{f['enwiki'].replace(' ', '_')}" if f.get("enwiki") else
             f"https://es.wikipedia.org/wiki/{f['eswiki'].replace(' ', '_')}" if f.get("eswiki") else None)
     arch = f.get("architects", [])
-    out = dict(name=name, local=es if es and es != name else None, kind=kind, year=f.get("year"),
+    out = dict(name=name, en=en if en and en != name else None, kind=kind, year=f.get("year"),
                by=", ".join(arch[:2]) + (" et al." if len(arch) > 2 else "") if arch else None,
                height=f.get("height"), style=cap((f.get("styles") or [None])[0]),
                heritage=cap((f.get("heritage") or [None])[0]), site=f.get("website"), wiki=wiki, qid=qid,
-               alt=" ".join(filter(None, {en, es, t.get("name"), t.get("alt_name")} - {name})) or None,
+               alt=" ".join(filter(None, {en, es, f.get("es"), t.get("alt_name")} - {name})) or None,
                far=far, x=c, y=r, z=top_at(r, c))
     return {k: v for k, v in out.items() if v is not None}
 

@@ -23,7 +23,7 @@ export class Card {
     const links = [f.site && `<a href="${esc(f.site)}" target="_blank" rel="noopener">Website</a>`,
       f.wiki && `<a href="${esc(f.wiki)}" target="_blank" rel="noopener">Wikipedia</a>`].filter(Boolean).join('');
     this.el.innerHTML = `<button class="close" aria-label="Close">×</button><b>${esc(f.name)}</b>`
-      + (f.local ? `<i>${esc(f.local)}</i>` : '') + `<span>${esc(f.kind)}</span>`
+      + (f.en ? `<i>${esc(f.en)}</i>` : '') + `<span>${esc(f.kind)}</span>`
       + (facts ? `<dl>${facts}</dl>` : '') + (links ? `<p>${links}</p>` : '');
     this.el.hidden = false;
   }

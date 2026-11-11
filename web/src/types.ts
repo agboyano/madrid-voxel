@@ -18,7 +18,6 @@ export interface Facts {
   building?: boolean;
   site?: string;
   far?: number;
-  local?: string;
   style?: string;
   heritage?: string;
   wiki?: string;
