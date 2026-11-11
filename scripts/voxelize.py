@@ -539,12 +539,28 @@ def kerb(c, r):
     return (int(_kc[r, c]), int(_kr[r, c])) if _kd[r, c] <= 4 else None
 
 
+# lamp heights where OSM gives none, by the street beside the post: Madrid's avenues have columns of about 8 m, its
+# ordinary streets lower ones (and wall brackets), squares and pedestrian streets the 4 m "fernandino" lantern posts;
+# Warsaw's 10 m / 6 m stood over the walkers. A road at least LAMP_AVENUE_W wide within 6 m makes an avenue
+LAMP_AVENUE, LAMP_STREET, LAMP_WALK, LAMP_AVENUE_W = 8.0, 5.0, 4.0, 12.0  # metres
+_road_half = ndimage.maximum_filter(ndimage.distance_transform_edt(is_road), size=2 * round(6 / VOXEL_SIZE) + 1)
+
+
+def lamp_height(r, c):
+    if _road_half[r, c] * VOXEL_SIZE >= LAMP_AVENUE_W / 2:
+        return round(LAMP_AVENUE / VOXEL_SIZE)
+    near = round(6 / VOXEL_SIZE)
+    if is_road[max(r - near, 0):r + near + 1, max(c - near, 0):c + near + 1].any():
+        return round(LAMP_STREET / VOXEL_SIZE)
+    return round(LAMP_WALK / VOXEL_SIZE)
+
+
 lamps = []
 for oid, t, p in osm.nodes_with("highway", ("street_lamp",)):
     c, r = kerb(int(p.x), int(p.y)) or (-1, -1)
     if not (0 <= c < W and 0 <= r < D) or bmask[r, c]:
         continue
-    hgt = int(parse_len(t.get("height")) or (10 if is_road[max(r - 6, 0):r + 7, max(c - 6, 0):c + 7].any() else 6))
+    hgt = int(parse_len(t.get("height")) or lamp_height(r, c))
     z0 = g[r, c]
     vol[z0:z0 + hgt - 1, r, c] = np.where(vol[z0:z0 + hgt - 1, r, c] == 0, C["pole"], vol[z0:z0 + hgt - 1, r, c])
     vol[z0 + hgt - 1, r, c] = C["lamp"]
