@@ -867,5 +867,154 @@
    "https://commons.wikimedia.org/wiki/File:Wojs%C5%82awice,_arboretum,_Ol%C5%A1e_lepkav%C3%A1.jpg",
    "https://commons.wikimedia.org/wiki/File:Ostrow_Grabowski_kz01.jpg"
   ]
- }
+ },
+ "platanus": {
+  "taxon": "Platanus × hispanica",
+  "commons_autumn": [
+   "https://commons.wikimedia.org/wiki/File:20121001Platane_Saar1.jpg",
+   "https://commons.wikimedia.org/wiki/File:20121015Saar_Saarbruecken10.jpg",
+   "https://commons.wikimedia.org/wiki/File:20141101Platanus_%C3%97_hispanica1.jpg",
+   "https://commons.wikimedia.org/wiki/File:20141101Platanus_%C3%97_hispanica2.jpg",
+   "https://commons.wikimedia.org/wiki/File:20141102Platanus_x_hispanica1.jpg",
+   "https://commons.wikimedia.org/wiki/File:20141107Platanus_%C3%97_hispanica1.jpg",
+   "https://commons.wikimedia.org/wiki/File:20141107Platanus_%C3%97_hispanica2.jpg",
+   "https://commons.wikimedia.org/wiki/File:2016_Voerendaal,_Kasteel_Puth_01.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-11-13_12_40_32_London_Plane_Trees_in_late_autumn_along_New_Jersey_State_Route_29_(John_Fitch_Way)_in_Trenton,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:Aranjuez._Retazos_de_oto%C3%B1o_(15477212491).jpg",
+   "https://commons.wikimedia.org/wiki/File:Aranjuez._Retazos_de_oto%C3%B1o_(15480001512).jpg",
+   "https://commons.wikimedia.org/wiki/File:Auer-Welsbach-Park_02.jpg"
+  ],
+  "autumn_hex": "#725d2f",
+  "autumn_lit_hex": "#9d8340",
+  "autumn_measure": "non-green leaf pixels",
+  "autumn_lab": [
+   40.6,
+   2.3,
+   29.2
+  ],
+  "n_photos_autumn": 12,
+  "green_fraction_autumn": 0.132
+ },
+ "styphnolobium": {
+  "taxon": "Styphnolobium japonicum",
+  "commons_autumn": [
+   "https://commons.wikimedia.org/wiki/File:2023-11-18_12_45_25_Pagoda_tree_in_autumn_along_Willis_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-10_14_01_15_Pagoda_Tree_changing_color_in_autumn_along_Whitewood_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-13_14_31_08_Pagoda_Tree_changing_color_in_autumn_along_Westwood_Drive_at_Whitewood_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-13_14_33_00_Pagoda_Tree_changing_color_in_autumn_along_Whitewood_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-19_11_46_14_Pagoda_Tree_changing_color_in_autumn_along_Whitewood_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-24_10_59_52_Pagoda_Tree_changing_color_in_autumn_within_Ann_M._Banchoff_Park_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-24_11_00_07_Pagoda_Tree_changing_color_in_autumn_within_Ann_M._Banchoff_Park_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-25_14_27_35_Pagoda_Tree_changing_color_in_autumn_along_Willis_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-25_14_29_26_Pagoda_Tree_changing_color_in_autumn_along_Willis_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-25_14_32_47_Pagoda_Tree_changing_color_in_autumn_along_Willis_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2024-10-25_14_33_00_View_up_into_the_canopy_of_a_Pagoda_Tree_changing_color_in_autumn_along_Willis_Drive_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:Bergpark_Wilhelmsh%C3%B6he_-_Baum_120a_2020-10-28.JPG",
+   "https://commons.wikimedia.org/wiki/File:Bergpark_Wilhelmsh%C3%B6he_-_Baum_120a_2021-10-29.JPG",
+   "https://commons.wikimedia.org/wiki/File:StephonolobiumFlavi-rameus.jpg",
+   "https://commons.wikimedia.org/wiki/File:%D0%A1%D0%BE%D1%84%D0%BE%D1%80%D0%B0_%D1%8F%D0%BF%D0%BE%D0%BD%D1%81%D1%8C%D0%BA%D0%B0_%D1%83_%D0%BF%D0%B0%D1%80%D0%BA%D1%83._%D1%81._%D0%A5%D0%BE%D0%BB%D0%BE%D0%B4%D0%BD%D0%B0_%D0%91%D0%B0%D0%BB%D0%BA%D0%B0.jpg",
+   "https://commons.wikimedia.org/wiki/File:%ED%9A%8C%ED%99%94%EB%82%98%EB%AC%B4.JPG"
+  ],
+  "autumn_hex": "#887432",
+  "autumn_lit_hex": "#c0a750",
+  "autumn_measure": "non-green leaf pixels",
+  "autumn_lab": [
+   49.4,
+   -0.0,
+   38.3
+  ],
+  "n_photos_autumn": 16,
+  "green_fraction_autumn": 0.124
+ },
+ "ulmus": {
+  "taxon": "Ulmus minor (Madrid's Ulmus pumila had no autumn canopy photos)",
+  "commons_autumn": [
+   "https://commons.wikimedia.org/wiki/File:98207895fd.jpg",
+   "https://commons.wikimedia.org/wiki/File:AZ0053_Ulmus_minor._Granton_Road._(02).jpg",
+   "https://commons.wikimedia.org/wiki/File:ND_Feldulme_Altsprucke_(Guben).jpg",
+   "https://commons.wikimedia.org/wiki/File:Olmo_de_la_Iglesia.jpg",
+   "https://commons.wikimedia.org/wiki/File:Ulmus_minor_%27Louis_van_Houtte%27_-_Christchurch_Botanic_Gardens_-_Christchurch,_NZ_-_DSC01951.jpg",
+   "https://commons.wikimedia.org/wiki/File:Ulmus_minor_%27Umbraculifera_Gracilis%27,_Edinburgh,_October_2014.jpg"
+  ],
+  "autumn_hex": "#726338",
+  "autumn_lit_hex": "#9a8852",
+  "autumn_measure": "non-green leaf pixels",
+  "autumn_lab": [
+   42.4,
+   -0.3,
+   26.3
+  ],
+  "n_photos_autumn": 6,
+  "green_fraction_autumn": 0.19
+ },
+ "celtis": {
+  "taxon": "Celtis australis and Celtis occidentalis",
+  "commons_autumn": [
+   "https://commons.wikimedia.org/wiki/File:1-Castielfabib-centralHidroel%C3%A9ctrica_(2015)1748.jpg",
+   "https://commons.wikimedia.org/wiki/File:Madrid,_Cu%C3%B1a_Verde_2022_04.jpg",
+   "https://commons.wikimedia.org/wiki/File:2014-10-06_08_01_01_Small_tree_during_autumn_leaf_coloration_in_Elko,_Nevada.JPG",
+   "https://commons.wikimedia.org/wiki/File:2023-11-08_09_53_16_Hackberry_changing_color_in_autumn_along_Windybush_Way_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:2026-10-16_15_57_21_Hackberry_leaves_changing_color_in_autumn_along_Windybush_Way_in_the_Mountainview_section_of_Ewing_Township,_Mercer_County,_New_Jersey.jpg",
+   "https://commons.wikimedia.org/wiki/File:Celtis_occidentalis_Wi%C4%85zowiec_zachodni_2021-10-02_05.jpg",
+   "https://commons.wikimedia.org/wiki/File:Celtis_occidentalis_kz01.jpg"
+  ],
+  "autumn_hex": "#716130",
+  "autumn_lit_hex": "#ad9b54",
+  "autumn_measure": "non-green leaf pixels",
+  "autumn_lab": [
+   41.6,
+   0.0,
+   29.7
+  ],
+  "n_photos_autumn": 7,
+  "green_fraction_autumn": 0.304
+ },
+ "melia": {
+  "taxon": "Melia azedarach",
+  "commons_autumn": [
+   "https://commons.wikimedia.org/wiki/File:Melia_azedarach_en_automne_Vend%C3%A9mian.jpg",
+   "https://commons.wikimedia.org/wiki/File:Starr_041127-1155_Melia_azedarach.jpg",
+   "https://commons.wikimedia.org/wiki/File:Starr_041127-1157_Melia_azedarach.jpg",
+   "https://commons.wikimedia.org/wiki/File:Starr_041127-1158_Melia_azedarach.jpg",
+   "https://commons.wikimedia.org/wiki/File:Starr_041127-1204_Melia_azedarach.jpg"
+  ],
+  "autumn_hex": "#857238",
+  "autumn_lit_hex": "#a08d43",
+  "autumn_measure": "non-green leaf pixels",
+  "autumn_lab": [
+   48.7,
+   -0.5,
+   34.3
+  ],
+  "n_photos_autumn": 5,
+  "green_fraction_autumn": 0.333
+ },
+ "prunus_cerasifera": {
+  "taxon": "Prunus cerasifera, purple-leaved cultivars ('Pissardii' and kin)",
+  "commons_summer": [
+   "https://commons.wikimedia.org/wiki/File:A_photo_of_a_group_of_red_urban_trees_in_the_Plantage-district,_Amsterdam;_high_resolution_image_by_FotoDutch_in_June_2013..jpg",
+   "https://commons.wikimedia.org/wiki/File:Arc_20130615_Aix-en-Provence_08.jpg",
+   "https://commons.wikimedia.org/wiki/File:Arc_20130615_Aix-en-Provence_09.jpg",
+   "https://commons.wikimedia.org/wiki/File:Cherry_plum_%27Prunus_cerasifera%27_at_Boreham,_Essex,_England.jpg",
+   "https://commons.wikimedia.org/wiki/File:Cherry_plum_Prunus_cerasifera_%27Pissardii%27_at_Woods_Mill,_Sussex_Wildlife_Trust,_England.jpg",
+   "https://commons.wikimedia.org/wiki/File:Monlezun_18.jpg",
+   "https://commons.wikimedia.org/wiki/File:Prunus_cerasifera_Thundercloud_10zz.jpg",
+   "https://commons.wikimedia.org/wiki/File:Prunus_cerasifera,_var_atropurpurea.jpg",
+   "https://commons.wikimedia.org/wiki/File:Prunus_pisardii_leaves.jpg",
+   "https://commons.wikimedia.org/wiki/File:Prunus_pisardii.jpg",
+   "https://commons.wikimedia.org/wiki/File:Viciarg_unbekannter_baum.JPG",
+   "https://commons.wikimedia.org/wiki/File:%D0%90%D0%BB%D1%8B%D1%87%D0%B0_%D1%9E_%D0%9B%D0%BE%D0%BD%D0%B4%D0%B0%D0%BD%D0%B5_01.jpg",
+   "https://commons.wikimedia.org/wiki/File:%D0%90%D0%BB%D1%8B%D1%87%D0%B0_%D1%9E_%D0%9B%D0%BE%D0%BD%D0%B4%D0%B0%D0%BD%D0%B5_02.jpg"
+  ],
+  "summer_hex": "#5a3835",
+  "summer_lit_hex": "#835851",
+  "summer_lab": [
+   27.4,
+   14.9,
+   8.3
+  ],
+  "n_photos_summer": 13,
+  "summer_measure": "non-green leaf pixels"
+ },
+ "_madrid_note": "Keys platanus, styphnolobium, ulmus, celtis, melia and prunus_cerasifera were measured for Madrid by scripts/foliage_measure.py with this method; the photos were checked one by one on contact sheets (canopy of the taxon in autumn colour; for the purple plum, summer canopies)."
 }
