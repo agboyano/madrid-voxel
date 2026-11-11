@@ -414,16 +414,17 @@ if trunks:
     NEEDLES = np.array([pal(c_, M_LEAF) for c_ in ("#3f5f48", "#456a4f", "#4d7356", "#37553f", "#52785a")], np.uint16)
     leafidx[vr_[cm_], vc_[cm_]] = NEEDLES[(vr_[cm_] * 7 + vc_[cm_] * 3) % len(NEEDLES)]
     note("conifer crowns (database species):", int(con.sum()), "cells", int(cm_.sum()))
-# clearance under the crowns: street trees in Madrid are pruned to keep the leaves above walkers and traffic, so over
-# carriageways, cycle lanes, parking and rails the leaves start at CLEAR_ROAD, over pavements, squares, tree pits and
-# the gravel and earth of boulevards and park paths (the Salón del Prado, the Retiro) at CLEAR_WALK; only over lawns,
-# beds and scrub, where nobody walks, the 2 m floor stands. A crown's rim left thinner than a voxel there loses its
-# leaves rather than hang as a slab at head height (veg itself is kept: the parked-car test reads it)
-CLEAR_ROAD, CLEAR_WALK = 4.5, 3.0  # metres
+# clearance under the crowns: street trees in Madrid are pruned to keep the leaves well above walkers and traffic
+# (Serrano's plane trees branch at about 4-5 m), so over carriageways, cycle lanes, parking and rails the leaves start
+# at CLEAR_ROAD (buses and lorries), over pavements, squares, tree pits and the gravel and earth of boulevards and park
+# paths (the Salón del Prado, the Retiro) at CLEAR_WALK, and over lawns, beds and scrub at CLEAR_PLANTED. A crown's
+# rim left thinner than a voxel loses its leaves rather than hang as a slab (veg itself is kept: the parked-car test
+# reads it)
+CLEAR_ROAD, CLEAR_WALK, CLEAR_PLANTED = 6.0, 4.5, 3.0  # metres
 _road_under = _hard & (gcol != C["water"])
 _planted = np.isin(gcol, [C[k] for k in ("grass", "grass2", "garden", "flower", "flower2", "scrub")]) & ~is_road
 _clear = np.where(_road_under, round(CLEAR_ROAD / VOXEL_SIZE),
-                  np.where(_planted, 0, round(CLEAR_WALK / VOXEL_SIZE))).astype(np.int32)
+                  np.where(_planted, round(CLEAR_PLANTED / VOXEL_SIZE), round(CLEAR_WALK / VOXEL_SIZE))).astype(np.int32)
 crown_bot = np.maximum(crown_bot, _clear)
 leaf_at = veg & (crown_top - crown_bot >= 1)
 note("canopy cells raised to clear walkers and traffic:", int((veg & (_clear > 0)).sum()),
