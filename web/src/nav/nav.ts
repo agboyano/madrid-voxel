@@ -6,11 +6,13 @@ import type { TileStreamer } from '../stream';
 import type { View } from '../types';
 import { clamp, coarsePointer, ease } from '../util';
 import type { World } from '../world';
+import { Input, KEYMAP, type Press } from './input';
 import { rideCamera } from './ride';
 import { backOff, EYE, findStreet, openSpot, walkNet } from './spots';
 
 // Three modes, one set of keys as in games (W/S forward and back, A/D turn, Q/E nose up and down, Shift faster;
-// arrows alike) and one gesture language for mouse, trackpad and touch:
+// arrows alike), the same as axes from a gamepad or the on-screen stick (input.ts), and one gesture language for
+// mouse, trackpad and touch:
 //   orbit: drag moves the map, right-drag turns and tilts, wheel zooms at the cursor, double-click flies there
 //   walk:  drag looks, click walks there, wheel steps, Space jumps, Esc flies up
 //   ride:  following a pedestrian, car or tram; move keys walk as that person, or get out of a vehicle
@@ -24,11 +26,6 @@ export interface Ride extends Picked {
 interface WalkOpts { at?: THREE.Vector3; exact?: boolean; facing?: THREE.Vector3; pitch?: number; ms?: number; deckOK?: boolean }
 interface Transition { from: THREE.Vector3; fromQ: THREE.Quaternion; fromFov: number; t0: number; ms: number }
 
-type Action = 'f' | 'b' | 'tl' | 'tr' | 'tu' | 'td';
-const KEYMAP: Record<string, Action> = {
-  KeyW: 'f', KeyS: 'b', KeyA: 'tl', KeyD: 'tr', KeyQ: 'tu', KeyE: 'td',
-  ArrowUp: 'f', ArrowDown: 'b', ArrowLeft: 'tl', ArrowRight: 'tr',
-};
 const STEP = 1.05, HEAD = 1.9, GRAV = 16, TILT = Math.PI * 0.48, WALK_FOV = 65;
 
 export class Nav {
@@ -37,10 +34,10 @@ export class Nav {
   world: World | null = null;
   streamer: TileStreamer | null = null;
   cancelFly: () => void = () => {};
+  onHour: (step: number) => void = () => {};
+  readonly input = new Input();
   private lifeRef: StreetLife | null = null;
   private net: ReturnType<typeof walkNet> | null = null;
-  private readonly keys = new Set<Action>();
-  private shift = false;
   private turned = false;
   private yaw = 0;
   private pitch = 0;
@@ -76,6 +73,7 @@ export class Nav {
     scene.add(this.marker);
     this.bindKeys();
     this.bindPointer();
+    this.input.onPress = (p) => this.press(p);
   }
 
   get life() { return this.lifeRef; }
@@ -84,32 +82,51 @@ export class Nav {
   get turning() { return this.turned; }
 
   // ------------------------------------------------------------------ input
-  private axis(pos: Action, neg: Action) { return (this.keys.has(pos) ? 1 : 0) - (this.keys.has(neg) ? 1 : 0); }
-
   private bindKeys() {
     addEventListener('keydown', (e) => {
       if ((e.target as Element).closest?.('input:not([type=range]), textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
-      this.shift = e.shiftKey;
+      this.input.shift = e.shiftKey;
       if (e.code === 'Escape') { if (this.mode !== 'orbit') this.flyUp(); return; }
-      if (e.code === 'Space' && (this.mode === 'walk' || this.ride?.kind === 'person')) { // following someone: become them, then jump
-        if (this.mode === 'walk') { if (this.vy === 0) this.vy = 5.2; } else this.jumpAsked = true;
-        e.preventDefault(); return;
-      }
+      if (e.code === 'Space' && (this.mode === 'walk' || this.ride?.kind === 'person')) { this.jump(); e.preventDefault(); return; }
       const k = KEYMAP[e.code];
       if (!k) return;
-      this.keys.add(k);
+      this.input.keys.add(k);
       if (this.ride && this.ride.kind !== 'person') this.hopOff();
       this.goal = null;
       this.cancelFly();
       e.preventDefault();
     });
     addEventListener('keyup', (e) => {
-      this.shift = e.shiftKey;
+      this.input.shift = e.shiftKey;
       const k = KEYMAP[e.code];
-      if (k) this.keys.delete(k);
-      if (this.turned && ![...this.keys].some((a) => a[0] === 't')) { this.turned = false; this.retarget(); }
+      if (k) this.input.keys.delete(k);
     });
-    addEventListener('blur', () => this.keys.clear());
+    addEventListener('blur', () => this.input.keys.clear());
+  }
+
+  // a gamepad button: A down to the street or jump (out of a vehicle), B back up, LB / RB an hour back or on
+  private press(p: Press) {
+    this.cancelFly();
+    if (p === 'a') {
+      if (this.mode === 'orbit') this.land();
+      else if (this.mode === 'walk' || this.ride?.kind === 'person') this.jump();
+      else this.hopOff();
+    } else if (p === 'b') { if (this.mode !== 'orbit') this.flyUp(); }
+    else this.onHour(p === 'hourOn' ? 1 : -1);
+  }
+
+  // on foot, a jump; following someone, become them, then jump
+  jump() {
+    if (this.mode === 'walk') { if (this.vy === 0) this.vy = 5.2; }
+    else if (this.ride?.kind === 'person') this.jumpAsked = true;
+  }
+
+  // from the air, down to the street in the middle of the screen
+  land() {
+    if (this.mode !== 'orbit') return;
+    this.cancelFly();
+    this.retarget();
+    this.setWalk();
   }
 
   private bindPointer() {
@@ -404,20 +421,38 @@ export class Nav {
   // ------------------------------------------------------------------ every frame
   update(dt: number) {
     dt = Math.min(dt, 0.1);
+    const I = this.input;
+    I.poll();
+    if (Math.abs(I.move) + Math.abs(I.strafe) > 0.05) { // a stick pushed, as a key pressed: no click-to-walk, no flight, out of a vehicle
+      this.goal = null;
+      this.cancelFly();
+      if (this.ride && this.ride.kind !== 'person' && !this.walkPending) this.hopOff();
+    } else if (Math.abs(I.turn) + Math.abs(I.pitch) + Math.abs(I.rise) > 0.05) this.cancelFly();
     if (this.mode === 'walk') this.updateWalk(dt);
     else if (this.mode === 'ride') this.updateRide(dt);
     else this.updateOrbit(dt);
   }
 
-  // A/D/Q/E turn in place; W/S fly along the view, faster higher up; reaching the street lands you on it
+  // A/D/Q/E turn in place; W/S fly along the view, faster higher up; reaching the street lands you on it. A stick also
+  // slides sideways, and the triggers rise and sink
   private updateOrbit(dt: number) {
-    const tr = this.axis('tr', 'tl'), tp = this.axis('tu', 'td');
-    if (tr || tp) { this.turnInPlace(-tr * (this.shift ? 2.4 : 1.2) * dt, tp * 0.8 * dt); this.turned = true; }
-    const go = this.axis('f', 'b'), w = this.world;
-    if (!go || !w) return;
-    const cam = this.camera.position, len0 = this.dir().length(), look = this.dir().normalize();
-    const h = Math.max(3, cam.y - w.groundAt(cam.x, cam.z));
-    let step = go * (this.shift ? 3 : 1) * Math.min(400, 8 + h * 0.9) * dt;
+    const I = this.input, tr = I.turn, tp = I.pitch;
+    if (tr || tp) { this.turnInPlace(-tr * (I.shift ? 2.4 : 1.2) * dt, tp * 0.8 * dt); this.turned = true; }
+    else if (this.turned) { this.turned = false; this.retarget(); }
+    const go = I.move, side = I.strafe, rise = I.rise, w = this.world;
+    if (!w || !(go || side || rise)) return;
+    const cam = this.camera.position;
+    const h = Math.max(3, cam.y - w.groundAt(cam.x, cam.z)), speed = (I.shift ? 3 : 1) * Math.min(400, 8 + h * 0.9);
+    if (side || rise) {
+      const look = this.dir().normalize(), m = new THREE.Vector3(-look.z, 0, look.x).normalize().multiplyScalar(side * speed * dt);
+      m.y = rise > 0 && h > 3600 ? 0 : rise * speed * dt;
+      cam.add(m);
+      this.controls.target.add(m);
+      this.zoomT = performance.now();
+    }
+    if (!go) return;
+    const len0 = this.dir().length(), look = this.dir().normalize();
+    let step = go * speed * dt;
     const ahead = w.raycast(cam, look, 4000);
     if (go > 0 && ahead < 8) { this.setWalk(); return; }
     if (go > 0) step = Math.min(step, ahead - 6);
@@ -472,10 +507,18 @@ export class Nav {
     P.y = this.feet + EYE;
   }
 
+  // forward and sideways, from the yaw; a stick pushed diagonally is no faster than straight
+  private feetStep(go: number, side: number, speed: number) {
+    const v = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(go)
+      .addScaledVector(new THREE.Vector3(-Math.cos(this.yaw), 0, Math.sin(this.yaw)), side);
+    if (v.lengthSq() > 1) v.normalize();
+    return v.multiplyScalar(speed);
+  }
+
   private updateWalk(dt: number) {
-    const tr = this.axis('tr', 'tl'), tp = this.axis('tu', 'td'), go = this.axis('f', 'b');
-    if (tr || tp) this.look(-tr * (this.shift ? 2.6 : 1.8) * dt, tp * dt);
-    if (go) this.stepBy(new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(go * (this.shift ? 20 : 6) * dt));
+    const I = this.input, tr = I.turn, tp = I.pitch, go = I.move, side = I.strafe;
+    if (tr || tp) this.look(-tr * (I.fast ? 2.6 : 1.8) * dt, tp * dt);
+    if (go || side) this.stepBy(this.feetStep(go, side, (I.fast ? 20 : 6) * dt));
     else if (this.goal) this.walkToGoal(dt);
     this.stand(dt);
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.pitch, this.yaw + Math.PI, 0, 'YXZ'));
@@ -513,7 +556,9 @@ export class Nav {
 
   private updateRide(dt: number) {
     const R = this.ride!, life = this.life;
-    if (R.kind === 'person' && (this.keys.size || this.jumpAsked || this.possessed === R.obj)) this.possess(dt);
+    const I = this.input;
+    if (R.kind === 'person' && (I.walking || this.jumpAsked || this.possessed === R.obj)) this.possess(dt);
+    else if (I.turn || I.pitch) this.look(-I.turn * 1.8 * dt, I.pitch * dt); // the right stick looks around
     const pose = life?.pose(R.kind, R.obj);
     if (!pose) { // it left the map: the nearest one of the same kind, else on foot
       const next = life?.nearest(R.kind, { x: this.camera.position.x, z: this.camera.position.z }, R.obj);
@@ -542,12 +587,12 @@ export class Nav {
       this.feet = p.y; this.vy = 0; this.yaw = p.h;
     }
     if (this.jumpAsked) { if (this.vy === 0) this.vy = 5.2; this.jumpAsked = false; }
-    const C = o.ctl!, P = this.walkPos, tp = this.axis('tu', 'td'), go = this.axis('f', 'b');
-    this.yaw -= this.axis('tr', 'tl') * (this.shift ? 2.6 : 1.8) * dt;
+    const I = this.input, C = o.ctl!, P = this.walkPos, tp = I.pitch, go = I.move, side = I.strafe;
+    this.yaw -= I.turn * (I.fast ? 2.6 : 1.8) * dt;
     if (tp) R.dpitch = clamp(R.dpitch + tp * dt, -1.2, 1.2);
     this.yaw += R.dyaw;
     R.dyaw = 0;
-    C.moving = !!go && this.stepBy(new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(go * (this.shift ? 7 : 2.2) * dt));
+    C.moving = !!(go || side) && this.stepBy(this.feetStep(go, side, (I.fast ? 7 : 2.2) * dt));
     this.stand(dt);
     Object.assign(C, { x: P.x, y: this.feet, z: P.z, h: this.yaw });
   }

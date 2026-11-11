@@ -20,6 +20,12 @@ const MOUSE: Record<Mode, [string, string, string][]> = {
   walk: [['l', mouse('l', true), 'look'], ['', mouse('l'), 'walk'], ['', PERSON, 'follow'], ['Escape', ESC, 'fly up']],
   ride: [['l', mouse('l', true), 'look'], ['Escape', ESC, 'fly up']],
 };
+// a gamepad's buttons and sticks, standard layout (input.ts), as key caps
+const PAD: Record<Mode, [string, string][]> = {
+  orbit: [['LS', 'fly'], ['RS', 'turn'], ['LT/RT', 'down/up'], ['A', 'street'], ['LB/RB', 'hour']],
+  walk: [['LS', 'walk'], ['RS', 'look'], ['RT', 'run'], ['A', 'jump'], ['B', 'fly up'], ['LB/RB', 'hour']],
+  ride: [['LS', 'walk'], ['RS', 'look'], ['A', 'get out'], ['B', 'fly up'], ['LB/RB', 'hour']],
+};
 const WHO: Record<string, string> = { person: 'Following a pedestrian', car: 'Following a car', bus: 'Following a bus', tram: 'Following a tram' };
 
 // the key legend, bottom left: keys and mouse gestures as outlines, lit while in use
@@ -27,12 +33,15 @@ export class Hud {
   rects: Rect[] = [];
   private readonly box = el('div', '');
   private readonly touch = coarsePointer();
+  private mode: Mode;
+  private ride: Ride | null = null;
 
   constructor(dom: HTMLElement, mode: Mode) {
+    this.mode = mode;
     const box = this.box;
     box.id = 'hud';
     box.innerHTML = `<div class="who"></div>${this.touch ? ''
-      : `<div class="row"><div class="keys">${KEYS.map(([c, k, g]) => `<span class="cap" data-k="${c}">${k}${g && `<i>${g}</i>`}</span>`).join('')}</div><div class="mouse"></div></div>`}`;
+      : `<div class="row"><div class="keys">${KEYS.map(([c, k, g]) => `<span class="cap" data-k="${c}">${k}${g && `<i>${g}</i>`}</span>`).join('')}</div><div class="mouse"></div></div>`}<div class="pad"></div>`;
     const lit = (k: string, on: boolean) => box.querySelectorAll(`[data-k="${k}"]`).forEach((n) => n.classList.toggle('on', on));
     addEventListener('keydown', (e) => { if (!(e.target as Element).closest?.('input:not([type=range])')) lit(ALIAS[e.code] ?? e.code, true); });
     addEventListener('keyup', (e) => lit(ALIAS[e.code] ?? e.code, false));
@@ -47,7 +56,18 @@ export class Hud {
     this.set(mode, null);
   }
 
+  // a gamepad in use: its legend instead of the keys and mouse
+  setPad(on: boolean) {
+    this.box.classList.toggle('gamepad', on);
+    this.set(this.mode, this.ride);
+  }
+
   set(mode: Mode, ride: Ride | null) {
+    this.mode = mode;
+    this.ride = ride;
+    const pad = this.box.classList.contains('gamepad');
+    const say = (k: string, word: string) => (k === 'A' && ride?.kind === 'person' ? 'jump' : word); // a person: you become them
+    $('.pad', this.box).innerHTML = pad ? PAD[mode].map(([k, word]) => `<figure><span class="cap">${k}</span><figcaption>${say(k, word)}</figcaption></figure>`).join('') : '';
     $('.who', this.box).textContent = mode === 'ride' && ride && ride.label !== 'you' ? WHO[ride.label] ?? (/^tram \w/.test(ride.label) ? `Following ${ride.label}` : WHO[ride.kind]) : '';
     if (this.touch) return;
     const items = [...MOUSE[mode]];
