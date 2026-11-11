@@ -30,21 +30,6 @@ export function startStats() {
     sessionStorage.setItem('wv-last', '{}');
     addEventListener('pagehide', () => { try { sessionStorage.removeItem('wv-last'); } catch {} });
   } catch {}
-  import('posthog-js/dist/module.slim').then(({ default: posthog }) => {
-    posthog.init(S.key, {
-      api_host: 'https://eu.i.posthog.com',
-      defaults: '2026-08-30',
-      cookieless_mode: 'always',
-      autocapture: false,
-      capture_pageview: false,
-      capture_pageleave: false,
-      disable_session_recording: true,
-      disable_surveys: true,
-      advanced_disable_flags: true,
-    });
-    posthog.register({ pid: S.common.pid, build: S.common.build });
-    posthog.capture('$pageview');
-  }).catch(() => {});
 }
 
 export function gpu(gl: WebGLRenderingContext | WebGL2RenderingContext) {
