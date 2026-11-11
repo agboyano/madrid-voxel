@@ -16,9 +16,11 @@ run prep            # -> areas/<key>/prep.npz (DSM, DTM, ortho, classes on the g
 run climate         # -> web/public/data/climate.json (Open-Meteo, once)
 run voxelize        # -> tiles, meta.json, trees.json, traffic.json, areas/<key>/ground.npz
 run terrain
-run cost1m          # triangles per tile (meshed in the viewer), for zones.py's block budget
-run zones
+run zones           # blocks, unpriced: the viewer needs every file on the new grid before cost1m can load it
 run windows
 run window_stats
 run places
 run phenology       # seasonal cycle and foliage.bin, from trees.json
+run cost1m          # triangles per tile (meshed in the viewer), for zones.py's block budget
+run zones           # again, with the blocks priced
+run labels_doc      # docs/labels.md, the label list for review
