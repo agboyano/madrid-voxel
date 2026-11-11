@@ -27,6 +27,8 @@ WFS = "https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx"
 UA = {"User-Agent": "madrid-voxel/0.1"}
 MARGIN = 50  # metres around the AOI
 TILE = 500  # metres per query, well under the service's area limit
+MIN_TILE = 60  # metres: the smallest tile a failing one is split into
+SKIPPED = []  # [type, bbox] of the tiles the service failed on at MIN_TILE
 DIR = AREA / "catastro"
 NS = {"gml": "http://www.opengis.net/gml/3.2",
       "bu-core2d": "http://inspire.jrc.ec.europa.eu/schemas/bu-core2d/2.0",
@@ -34,22 +36,42 @@ NS = {"gml": "http://www.opengis.net/gml/3.2",
 GML_ID = "{http://www.opengis.net/gml/3.2}id"
 
 
-def get_tile(type_name, bb, path):
+def get_tile(type_name, bb, path, rounds=3):
+    """The tile's GML, cached; None if the service keeps failing on it. Dense tiles sometimes come back with the
+    document's start replaced by an "Object moved" error page: not XML, so it counts as a failure."""
     if path.exists():
         return path.read_bytes()
     params = {"service": "WFS", "version": "2.0.0", "request": "GetFeature", "typeNames": type_name,
               "srsName": "EPSG::25830", "bbox": ",".join(f"{v:.1f}" for v in bb) + ",EPSG::25830"}
-    for attempt in range(5):
+    for attempt in range(rounds):
         try:
             r = requests.get(WFS, params=params, headers=UA, timeout=300)
-            if r.ok and b"FeatureCollection" in r.content[:2000]:
+            if r.ok and r.content.lstrip().startswith(b"<?xml") and b"FeatureCollection" in r.content[:2000]:
                 path.write_bytes(r.content)
                 return r.content
-            print(f"  retry {type_name} {r.status_code}: {r.text[:200]}", file=sys.stderr)
+            print(f"  retry {type_name} {r.status_code}: {r.text[:120]!r}", file=sys.stderr)
         except requests.RequestException as e:
             print(f"  retry {type_name}: {e}", file=sys.stderr)
         time.sleep(5 * (attempt + 1))
-    raise SystemExit(f"fetch_catastro: {type_name} tile {bb} failed")
+    return None
+
+
+def tile_features(type_name, bb, path, depth=0):
+    """The features of one tile; a tile the service fails on is split in four (cached as path_0..path_3), down to
+    MIN_TILE metres. A tile that still fails holds a record the service cannot serve: it is skipped and listed in
+    SKIPPED (the LiDAR heights stand there; only Catastro's floors are missing)."""
+    data = get_tile(type_name, bb, path)
+    if data is not None:
+        return ET.fromstring(data).iterfind(f".//bu-ext2d:{type_name.split(':')[1]}", NS)
+    x0, y0, x1, y1 = bb
+    if x1 - x0 <= MIN_TILE:
+        print(f"  {type_name} tile {bb} skipped: the service fails on it", file=sys.stderr)
+        SKIPPED.append([type_name, [round(v, 1) for v in bb]])
+        return []
+    xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+    quads = [(x0, y0, xm, ym), (xm, y0, x1, ym), (x0, ym, xm, y1), (xm, ym, x1, y1)]
+    print(f"  {type_name} tile {bb} split in four", file=sys.stderr)
+    return [f for k, q in enumerate(quads) for f in tile_features(type_name, q, path.with_name(f"{path.stem}_{k}.gml"), depth + 1)]
 
 
 def ring(el):
@@ -100,8 +122,7 @@ def collect(type_name, props, tiles):
     tag = type_name.split(":")[1]
     feats = {}
     for k, bb in enumerate(tiles):
-        root = ET.fromstring(get_tile(type_name, bb, DIR / f"{tag}_{k}.gml"))
-        for f in root.iterfind(f".//bu-ext2d:{tag}", NS):
+        for f in tile_features(type_name, bb, DIR / f"{tag}_{k}.gml"):
             feats.setdefault(f.get(GML_ID), {"type": "Feature", "properties": props(f), "geometry": geometry(f)})
     return list(feats.values())
 
@@ -116,7 +137,8 @@ def main():
                                    ("BU:BuildingPart", building_part, "building_parts")):
         feats = collect(type_name, props, tiles)
         out = DIR / f"{name}.geojson"
-        out.write_text(json.dumps({"type": "FeatureCollection", "crs": CRS, "features": feats}))
+        out.write_text(json.dumps({"type": "FeatureCollection", "crs": CRS, "features": feats,
+                                   "skipped": [b for t, b in SKIPPED if t == type_name]}))
         print(f"{len(feats)} {name} from {len(tiles)} tile(s) -> {out}")
 
 
