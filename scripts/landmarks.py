@@ -466,20 +466,21 @@ def details(vol, g, top, topi, bmask, feats, pal, C, osm, cells_of, note, leaf_i
 
 
 def make_views(g):
-    """Camera presets in three.js coords (x = col, y = up, z = row): the map's centre (Puerta del Sol) from above,
-    obliquely and from Calle Mayor at street level. At street level the target sits just below the eye: OrbitControls'
+    """Camera presets in three.js coords (x = col, y = up, z = row): the map's centre from above and obliquely, and
+    Calle Mayor at street level looking at Puerta del Sol. At street level the target sits just below the eye: OrbitControls'
     tilt limit lifts a camera that looks up."""
     H_, W_ = g.shape
     cx, cz = W_ / 2, H_ / 2
     gz = lambda x, z: float(g[int(z), int(x)])  # noqa: E731
     mx, mz = (float(v) for v in to_grid(440224.1, 4474235.9))  # Calle Mayor centreline (OSM), 125 m west of Sol
+    sx, sz = (float(v) for v in to_grid(440316.4, 4474264.1))  # Puerta del Sol (centre of the OSM square, relation 7424032)
     views = {
         "overview": dict(label="Overview", target=[cx, gz(cx, cz), cz], pos=[cx + 330, 380, cz + 420]),
         "top": dict(label="Top-down", target=[cx, gz(cx, cz), cz], pos=[cx, 900, cz + 1]),
         "sol": dict(label="Puerta del Sol", target=[cx, gz(cx, cz) + 8, cz], pos=[cx + 150, gz(cx, cz) + 110, cz + 170]),
     }
     if 0 <= mx < W_ and 0 <= mz < H_:
-        views["street"] = dict(label="Calle Mayor", target=[cx, gz(mx, mz) + 1.5, cz], pos=[mx, gz(mx, mz) + 2.5, mz])
+        views["street"] = dict(label="Calle Mayor", target=[sx, gz(mx, mz) + 1.5, sz], pos=[mx, gz(mx, mz) + 2.5, mz])
     return views
 
 
