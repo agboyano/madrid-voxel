@@ -46,11 +46,13 @@ export class TouchControls {
     });
   }
 
-  // the knob follows the thumb within the ring; its offset over the radius is the stick, -1..1 each way
+  // the knob follows the thumb within the ring; its offset over the radius is the stick, -1..1 each way. Fingers come
+  // as touch events, which keep their target wherever the finger goes and behave alike on iOS and Android (pointer
+  // capture does not); the mouse, for testing on a desktop, as pointer events
   private bindStick(ring: HTMLElement) {
     const knob = ring.querySelector('i')!, stick = this.nav.input.stick;
     let id: number | null = null;
-    const at = (e: PointerEvent) => {
+    const at = (e: { clientX: number; clientY: number }) => {
       const r = ring.getBoundingClientRect(), R = r.width / 2;
       let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R;
       const L = Math.hypot(x, y);
@@ -59,16 +61,27 @@ export class TouchControls {
       knob.style.transform = `translate(${x * R * 0.6}px, ${y * R * 0.6}px)`;
     };
     const end = () => { id = null; stick.x = stick.y = 0; knob.style.transform = ''; ring.classList.remove('on'); };
-    ring.addEventListener('pointerdown', (e) => {
+    const finger = (e: TouchEvent) => [...e.changedTouches].find((t) => t.identifier === id);
+    ring.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (id !== null) return;
+      const t = e.changedTouches[0];
+      id = t.identifier;
+      ring.classList.add('on');
+      at(t);
+    }, { passive: false });
+    ring.addEventListener('touchmove', (e) => { e.preventDefault(); const t = finger(e); if (t) at(t); }, { passive: false });
+    ring.addEventListener('touchend', (e) => { if (finger(e)) end(); });
+    ring.addEventListener('touchcancel', (e) => { if (finger(e)) end(); });
+    ring.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse') return;
       id = e.pointerId;
       ring.setPointerCapture(id);
       ring.classList.add('on');
       at(e);
     });
-    ring.addEventListener('pointermove', (e) => { if (e.pointerId === id) at(e); });
-    ring.addEventListener('pointerup', (e) => { if (e.pointerId === id) end(); });
-    ring.addEventListener('pointercancel', (e) => { if (e.pointerId === id) end(); });
+    ring.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && e.pointerId === id) at(e); });
+    ring.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse' && e.pointerId === id) end(); });
   }
 
   set(mode: Mode, ride: Ride | null) {

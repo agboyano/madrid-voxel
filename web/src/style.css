@@ -134,6 +134,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; /* p
   background: rgba(16,17,20,.7); color: #fff; font: 13px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }
 #touch-hint.on { opacity: 1; }
 .noui #touch, .noui #touch-hint, .loading #touch { display: none; }
+/* a phone on its side: the credits fit on one line, so the stick goes down to the edge, under the left thumb */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  #touch .stick { left: 28px; bottom: 20px; }
+  #touch .btns { bottom: 56px; }
+  #touch-hint { bottom: 64px; }
+  .walking #card { left: 156px; bottom: 12px; }
+}
 /* top right, in the legend's style: frames per second, and the one knob, how much of the city is drawn in detail */
 #perf { position: fixed; right: 14px; top: 14px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
   font: 11px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.85); text-shadow: 0 1px 2px rgba(0,0,0,.7); }
