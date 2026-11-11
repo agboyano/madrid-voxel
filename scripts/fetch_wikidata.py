@@ -37,8 +37,22 @@ CACHE = Path(RAW) / "wikidata" / "entities.json"
 OUT = AREA / "wikidata.json"
 LANGS = ("en", "es")
 OVERRIDES = {}  # qid -> [osm type, osm id] for a required landmark whose OSM element lacks the wikidata tag
-# the required landmarks (PLAN.md Phase 4), by Wikidata id; checked against the AOI's tags in the report
-REQUIRED = {}
+# the required landmarks (PLAN.md Phase 4), by Wikidata id; each is found through the wikidata tag of its OSM element
+# (checked in the report). Cibeles is the fountain, the city's icon; the Palacio de Cibeles is a separate item.
+REQUIRED = {
+    "Q171517": "Royal Palace of Madrid",     # OSM relation 30399 (and node 4451986389)
+    "Q849711": "Almudena Cathedral",         # relation 75658
+    "Q1123493": "Plaza Mayor",               # relation 16657232
+    "Q427163": "Puerta del Sol",             # relation 7424032
+    "Q465250": "Metropolis Building",        # relation 4655046
+    "Q2736564": "Cibeles Fountain",          # relation 6345116
+    "Q1140634": "Puerta de Alcalá",          # way 174805987
+    "Q160112": "Prado Museum",               # relation 7726080
+    "Q1131807": "El Retiro Park",            # relation 13616929
+    "Q2420025": "Palacio de Cristal",        # way 23596451
+}
+# English names where Wikidata's English label is not what the place is called in English
+ENGLISH_NAMES = {"Q1123493": "Plaza Mayor"}
 
 
 def _get(params):

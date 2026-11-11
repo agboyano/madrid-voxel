@@ -15,7 +15,7 @@ import numpy as np
 from scipy import ndimage
 
 from aoi import AREA, W, D
-from fetch_wikidata import REQUIRED
+from fetch_wikidata import ENGLISH_NAMES, REQUIRED
 
 WIKIDATA = AREA / "wikidata.json"
 EXTENDED_EXCLUDE = set()  # qids proposed for the extended set and turned down (DECISIONS.md)
@@ -85,7 +85,7 @@ def _anchor(geom, top_at, tall):
 
 
 def label(qid, f, t, geom, top_at, far):
-    en, es = cap(f.get("en") or t.get("name:en")), cap(f.get("es") or t.get("name"))
+    en, es = cap(ENGLISH_NAMES.get(qid) or f.get("en") or t.get("name:en")), cap(f.get("es") or t.get("name"))
     name = en or es
     kind = kind_of(t)
     if kind is None or (kind in GENERIC and f.get("types")):
