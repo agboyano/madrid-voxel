@@ -497,9 +497,11 @@ def build():
             if solid:
                 lane_lines.append(ln)
             else:
-                L = ln.length
-                for s in np.arange(1.0, L - 1, 9.0):
-                    lane_lines.append(substring(ln, s, min(s + 3, L)))
+                # (an offset that folds back on a tight bend comes as several pieces: dashes on each)
+                for piece in getattr(ln, "geoms", [ln]):
+                    L = piece.length
+                    for s in np.arange(1.0, L - 1, 9.0):
+                        lane_lines.append(substring(piece, s, min(s + 3, L)))
     _deg, _hw = {}, {}
     for oid, t, line in osm.lines:
         b = (t.get("highway") or "").replace("_link", "")
