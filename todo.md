@@ -25,7 +25,9 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   - the Metrópolis (slate dome, gilded statue);
   - the Puerta de Alcalá and the Cibeles fountain (sculptures, as monuments);
   - the Palacio de Cristal (glass) and the Almudena.
-- **Street lamp shape:** the heights are Madrid's now (8 / 5 / 4 m by street), but every lamp is still a plain 1 × 1 column with one lit voxel. The historic centre's "fernandino" lantern posts and the avenues' columns with arms could get their own shapes.
+- **"Fernandino" street lamps** (postponed by the user). The heights are Madrid's now (8 / 5 / 4 m by street), but every lamp is still a plain 1 × 1 column with one lit voxel. At 1 m a voxel cannot draw a slender cast-iron post with its lantern. Two ways:
+  - **Viewer model (preferred):** drop the lamp voxels and draw an instanced mesh at each of `meta.lamps`, like the pedestrians and cars (`web/src/sim/meshes.ts`): a base, a dark green iron shaft, a glass lantern lit at night, and a crown. The fernandino with one lantern goes in squares and pedestrian streets, the column with two arms on avenues. Keep `meta.lamps` for the light pools (`voxelMaterial.ts`).
+  - **Voxels only:** dark base, shaft, lit lantern and a cap, with a 1-voxel arm on avenues. Simpler, but still blocks.
 - **Madrid de los Austrias:** `landmarks.HISTORIC_CORE` was traced roughly. Trace it on the orthophoto or take an official barrio boundary.
 - **Orthophoto:** the PNOA orthophoto is from July 2023 and not a true orthophoto. Evaluate the Ayuntamiento's Geoportal orthophoto (newer, possibly true ortho) in `fetch_ortho.py`.
 
