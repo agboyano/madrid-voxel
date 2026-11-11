@@ -52,7 +52,8 @@ REQUIRED = {
     "Q2420025": "Palacio de Cristal",        # way 23596451
 }
 # English names where Wikidata's English label is not what the place is called in English
-ENGLISH_NAMES = {"Q1123493": "Plaza Mayor"}
+ENGLISH_NAMES = {"Q1123493": "Plaza Mayor", "Q1140634": "Puerta de Alcalá", "Q2736564": "Cibeles Fountain",
+                 "Q160112": "Prado Museum", "Q1131807": "Retiro Park", "Q2420025": "Palacio de Cristal"}
 
 
 def _get(params):

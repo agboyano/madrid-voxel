@@ -483,6 +483,37 @@ def make_views(g):
     return views
 
 
+# views of the required landmarks (fetch_wikidata.REQUIRED), by Wikidata id: (key, label, landmarks framed, camera
+# offset from their middle in metres: east, up, south)
+LANDMARK_VIEWS = [
+    ("sol", "Puerta del Sol", ["Q427163"], (150, 110, 170)),
+    ("palace", "Royal Palace and Almudena", ["Q171517", "Q849711"], (-260, 170, 320)),
+    ("plazamayor", "Plaza Mayor", ["Q1123493"], (140, 120, 160)),
+    ("granvia", "Gran Vía and Metrópolis", ["Q465250"], (-260, 130, -120)),
+    ("cibeles", "Cibeles and Puerta de Alcalá", ["Q2736564", "Q1140634"], (-420, 160, 180)),
+    ("prado", "Prado and the Retiro", ["Q160112"], (-330, 190, 190)),
+]
+
+
+def landmark_views(labels, g):
+    """Camera presets framing the required landmarks, from where their labels stand; the map's centre views otherwise."""
+    at = {l.get("qid"): l for l in labels if l.get("qid")}
+    H_, W_ = g.shape
+    views = {}
+    for key, name, qids, (dx, dy, dz) in LANDMARK_VIEWS:
+        ls = [at[q] for q in qids if q in at]
+        if not ls:
+            continue
+        x, z = float(np.mean([l["x"] for l in ls])) + 0.5, float(np.mean([l["y"] for l in ls])) + 0.5
+        y = float(g[int(z), int(x)]) + 10
+        px, pz = float(np.clip(x + dx, 0, W_)), float(np.clip(z + dz, 0, H_))
+        views[key] = dict(label=name, target=[x, y, z], pos=[px, y + dy, pz])
+    if len(views) >= 3:  # the whole map, from the south, steep
+        views["overview"] = dict(label="Whole map", target=[W_ / 2, float(np.median(g)) + 10, H_ * 0.45],
+                                 pos=[W_ / 2, 2600.0, H_ * 0.45 + 1700])
+    return views
+
+
 def mats_of(pal, v):
     return pal.entries[int(v)][3]
 

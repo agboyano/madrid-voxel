@@ -19,6 +19,12 @@ from fetch_wikidata import ENGLISH_NAMES, REQUIRED
 
 WIKIDATA = AREA / "wikidata.json"
 EXTENDED_EXCLUDE = set()  # qids proposed for the extended set and turned down (DECISIONS.md)
+# Wikidata types (instance of) of items that are not the place itself, though an OSM element points to them: the person a
+# tomb or statue honours, the event a memorial recalls, the body that sits in a building
+NOT_PLACE_TYPES = {"human", "mass shooting", "murder", "massacre", "terrorist attack", "battle", "event", "organization",
+                   "autonomous government", "government", "company", "business", "neighborhood of Madrid", "street",
+                   "rapid transit line", "commuter rail service", "Stolperstein", "commemorative inscription",
+                   "water depth", "remarkable tree"}
 # what an OSM element is, for the label's kind and for whether it is a place at all
 PLACE_TAGS = [("place", ("square",)), ("historic", None), ("tourism", ("museum", "attraction", "gallery", "artwork", "viewpoint")),
               ("amenity", ("place_of_worship", "theatre", "townhall", "library", "university", "arts_centre", "cinema",
@@ -123,7 +129,7 @@ def assemble(curated, osm, top_at):
             is_square = t.get("place") == "square"
             if qid in EXTENDED_EXCLUDE or (any(k in t for k in NOT_PLACES) and not is_square) or kind_of(t) is None:
                 continue
-            if not (f.get("heritage") or f.get("enwiki") or f.get("eswiki")):
+            if not (f.get("heritage") or f.get("enwiki") or f.get("eswiki")) or NOT_PLACE_TYPES & set(f.get("types", [])):
                 continue
             far = 2500 if f.get("wikis", 0) >= 15 else 1300 if f.get("wikis", 0) >= 4 or f.get("heritage") else 600
         l = label(qid, f, t, geom, top_at, far)

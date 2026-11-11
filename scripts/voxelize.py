@@ -851,6 +851,7 @@ import labels as labels_mod
 labels = labels_mod.assemble(labels, osm, lambda r, c: max(int(g[r, c] + (topi[r, c] if bmask[r, c] else 0)),
                                                             int(landmarks.MON_TOP[max(r - 1, 0):r + 2, max(c - 1, 0):c + 2].max())))
 labels_mod.radii(labels, g, g + np.where(bmask, topi, 0))
+views.update(landmarks.landmark_views(labels, g))
 
 # ---------------------------------------------------------------- floating debris
 import debris
