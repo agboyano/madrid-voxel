@@ -27,6 +27,24 @@ URL parameters:
 
 The generated data is in the repository (`web/public/data`, 32 MB), so the viewer runs without building anything.
 
+### Controls
+
+Three modes: the bird's-eye view, on foot, and following a pedestrian, car or tram (click or tap one).
+
+| | Mouse and keyboard | Touch | Gamepad |
+| --- | --- | --- | --- |
+| Move (air) | drag; W/S fly along the view | drag | left stick; LT/RT down and up |
+| Turn and tilt (air) | right-drag; A/D, Q/E | two fingers | right stick |
+| Zoom (air) | wheel | pinch | left stick forward |
+| Down to the street | zoom onto it, or double-click | **Walk here** | A |
+| Walk | W/S, A/D turn; click a spot | the stick; tap a spot | left stick (also sideways); RT runs |
+| Look around | drag | drag | right stick |
+| Jump | Space | **Jump** | A |
+| Back up to the air | Esc, or keep scrolling back | **Fly up** | B |
+| Hour | the slider | the slider | LB / RB, an hour back or on |
+
+Touch controls appear only on touch screens, and the gamepad legend replaces the keyboard's once a gamepad is connected (press any of its buttons first: browsers only expose a gamepad after a press).
+
 ## Build the data
 
 ```sh

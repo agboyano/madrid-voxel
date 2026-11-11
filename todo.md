@@ -53,6 +53,7 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 - **Vegetation masks and deck heights** are still computed in `voxelize.py` between 3D writes. Move them into `layers.py` to complete the 2D/3D split.
 - **`VOXEL_SIZE`:** the viewer does not read `meta.voxel` yet. The "1 m assumptions" section of `NOTES.md` lists what would have to change for another voxel size.
 - **Desktop performance on integrated GPUs:** post-processing is about half the frame time (5.4 fps for the whole map at full render size on an Intel UHD 620). A lighter post-processing level for weak GPUs would help.
+- **Touch and gamepad controls on real devices.** They were tested in headless Chromium with an emulated phone and a fake gamepad (`NOTES.md`, "Viewer: touch and gamepad controls"). Still to check: a real phone (iOS Safari and Android Chrome), a real gamepad, and whether the pad shows over plain HTTP on the local network.
 - **`web/tools/*.mjs`** (Node harnesses inherited from Warsaw) still hold Warsaw camera poses and macOS (Metal) flags. The Python `scripts/screenshot.py`, `profile.py` and `cost1m.py` replace the ones used here.
 - **Published site:** once published, check it after each data change. The workflow deploys `web/dist` on every push to `main`.
 

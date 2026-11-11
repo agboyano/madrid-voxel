@@ -314,3 +314,15 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** those records make every WFS query that touches them fail, on every retry. The ATOM file is the same Catastro data, and the only other way to get them.
 - **Against rule 4 (downloads limited to the AOI):** the ATOM file covers the whole municipality, but it is the smallest unit Catastro offers. It is downloaded only when a tile was skipped, and only the skipped squares are read from it.
 
+## 2026-11-11: Touch controls and gamepad support
+
+- **Decision:**
+  - **Touch:** an on-screen stick to walk and three buttons for what has no gesture (down to the street, jump, back up), drawn only on touch screens, with a gesture hint shown once per mode. The bird's-eye gestures stay as they were: they are the usual map gestures.
+  - **Gamepad:** the browser's Gamepad API in the standard layout. Left stick moves (also sideways), right stick looks, the triggers rise and sink in the air (RT runs on foot), A goes down to the street or jumps, B flies back up, LB / RB move the hour.
+  - **One input:** keys, stick and gamepad feed the same axes (`web/src/nav/input.ts`), so `nav.ts` has one code path for all three.
+- **Why:** on a phone there was no way back up from the street except a search, going down needed a zoom gesture nobody would guess, and walking was tap by tap only. The keys were on/off, so nothing analogue could plug in.
+- **Rejected:**
+  - `nipplejs` for the stick: a dependency for about 40 lines of Pointer Events;
+  - looking around with the phone's gyroscope: it needs a permission prompt on iOS and makes people dizzy;
+  - new bird's-eye gestures.
+

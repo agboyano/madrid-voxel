@@ -224,6 +224,7 @@ Total size of `web/public/data`: 55 MB.
 | `stats.ts` | PostHog (cookieless) events | — |
 | `util.ts`, `types.ts` | `fetchJson`, `fetchGzip`, `dataTexture`; Meta / Label / FloodInfo / Zones types | — |
 | `nav/nav.ts`, `nav/ride.ts`, `nav/spots.ts` | Orbit, walk and ride modes; camera rigs per vehicle; walk spots along footpaths | `traffic.json` (through life) |
+| `nav/input.ts`, `nav/touch.ts` | Keys, on-screen stick and gamepad as one set of axes (-1..1); the touch stick, buttons and gesture hints | |
 | `sim/life.ts`, `sim/trains.ts`, `sim/meshes.ts`, `sim/path.ts`, `sim/crossings.ts`, `sim/dance.ts`, `sim/types.ts` | Cars (IDM), signals, trams, pedestrians, bikes, trains; instanced meshes; zouk dancers | `traffic.json` |
 
 ## Warsaw-specific code
@@ -609,6 +610,13 @@ metres and converted**, unlike this code.
 | `web/src/voxelMaterial.ts:159` | hidden buildings folded to `vattr.z - 3.0` | 3 m under ground |
 | `web/src/voxelMaterial.ts:169` | `uZBlk` fetched at `ivec2(c.x, c.z)` | 1 texel per cell |
 | `web/src/voxelMaterial.ts:442-445` | staircase walls: shadow normal bias `+ 1.2` ("its 1 m steps") | tuned to a 1 m step |
+
+### Viewer: touch and gamepad controls
+
+- **One input, three sources** (`web/src/nav/input.ts`): `Input` turns the keys, the on-screen stick and a gamepad into axes from -1 to 1 (`move`, `strafe`, `turn`, `pitch`, `rise`) and one-shot presses. `Nav` reads only the axes, so the three sources mix (a key and the stick at once add up, clamped).
+- **Gamepad:** read once a frame with `navigator.getGamepads()`, preferring a pad in the `standard` mapping (axes 0-1 left stick, 2-3 right stick; buttons 0 A, 1 B, 4 LB, 5 RB, 6 LT, 7 RT). Dead zone 0.15, then a squared response. Browsers expose a pad only after one of its buttons is pressed, and some only in a secure context (HTTPS or `localhost`), so over plain HTTP on the local network a pad may not show.
+- **Touch** (`web/src/nav/touch.ts`, only when `(pointer: coarse)`): a stick bottom left on foot and when following, which captures its own finger so the other thumb still drags to look; buttons bottom right (**Walk here** in the air, **Jump**, **Fly up**). Their rectangles go to the labels so no pin sits on them. A one-line gesture hint shows once per mode and is remembered in `localStorage`.
+- **Testing:** Playwright with a phone context (`is_mobile`, `has_touch`, 390 × 844) drives the stick and the buttons with pointer events; a fake standard pad goes in with `add_init_script` (replace `navigator.getGamepads` with one that returns an object the test changes). `docs/img/controls-*.png` came from such a run.
 
 ### Viewer: shadows, lighting, camera, navigation, streaming, fog
 
