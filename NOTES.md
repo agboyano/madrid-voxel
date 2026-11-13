@@ -1433,4 +1433,8 @@ Not published yet: creating the public GitHub repository was blocked by the perm
 - **Known limits, not fixed:**
   - Where the 1 m tile has not loaded yet, clay is the right answer, and nothing pushes a walker out of it.
   - Steps are not split at low frame rates, so a 2 m step can pass a 1-voxel wall.
-  - The posts of bus shelters (`scripts/voxelize.py`) form diagonal fences.
+- **Bus shelters cannot trap a walker with the current data.** `voxelize.py` draws `amenity=shelter` areas as a roof 2 m up over 1-voxel stubs on a diagonal grid, and under the roof those stubs cannot be stepped over. But that code never runs in this area:
+  - The two public-transport shelter areas in OSM also carry `building=yes`, so they are drawn as small buildings and the shelter code skips them.
+  - The third shelter area, the Quiosco de la Música, is a `pavilion`, which the shelter code also skips.
+  - Most Madrid shelters are OSM nodes, which are not drawn.
+  - Rebuilding with posts only at the corners changed no tile, so the code was left as it is.
