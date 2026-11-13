@@ -30,6 +30,10 @@ function phase(ctrl: Controller, t: number, axis: number) {
   return ((u - (axis === 0 ? 0 : CYCLE / 2)) % CYCLE + CYCLE) % CYCLE;
 }
 const signal = (ctrl: Controller, t: number, axis: number) => { const k = phase(ctrl, t, axis); return k < GREEN ? 'G' : k < GREEN + AMBER ? 'Y' : 'R'; };
+// what an empty grid cell or list reads as, so a lookup that misses allocates nothing
+const NONE: readonly never[] = [];
+// a grid kept from tick to tick: its cells are emptied rather than dropped, and the map cleared once it has grown large
+function emptyGrid<V>(g: Map<number, V[]>) { if (g.size > 4096) g.clear(); else for (const a of g.values()) a.length = 0; }
 const pedGreen = (ctrl: Controller, t: number, axis: number) => phase(ctrl, t, axis) < PED_GREEN;
 
 function pickWeighted(w: number[], sum = w.reduce((a, b) => a + b, 0)) {
@@ -75,11 +79,17 @@ export class StreetLife {
   private sources: number[] = [];
   private laneKm = 0;
   private pedKm = 0;
-  private tramGrid = new Map<number, [number, number, Tram][]>();
-  private carGrid = new Map<number, Car[]>();
+  private readonly tramGrid = new Map<number, [number, number, Tram][]>();
+  private readonly carGrid = new Map<number, Car[]>();
+  private trammed = false; // a tram in tramGrid this tick
   private tramSections: [Tram, number, number, number, number][] = [];
   private idSeq = 1;
   private readonly tmp = pt();
+  // scratch points for each tick's geometry, and carObstacle's second answer (the speed of what it keeps behind)
+  private readonly sP = pt();
+  private readonly sF = pt();
+  private readonly sC = pt();
+  private obstacleV = 0;
 
   constructor(scene: THREE.Scene, data: TrafficData) {
     this.roads = data.roads.map((r, i) => Object.assign(prepPath(r), { i, lists: Array.from({ length: r.lanes }, () => []) }));
@@ -254,7 +264,7 @@ export class StreetLife {
   // approaches, opposite flows that don't turn left; never two into the same road at once.
   private boxBlocker(car: Car, e: Road, n: number): Car | null {
     const myTurn = this.nextTurn(car, e);
-    for (const h of this.box.get(n) ?? []) {
+    for (const h of this.box.get(n) ?? NONE) {
       if (h === car) continue;
       if (h.boxFrom === e.i) {
         const dl = car.lane - h.boxLane, dt = myTurn - h.boxTurn;
@@ -286,7 +296,7 @@ export class StreetLife {
   }
 
   // ------------------------------------------------------------------ what a car must keep its distance to
-  private carObstacle(car: Car, e: Road): [number, number] {
+  private carObstacle(car: Car, e: Road) {
     let gap = Infinity, lv = 0, why = 'free', by: Agent | null = null;
     const stop = (d: number, reason: string, who: Agent | null, speed = 0) => { if (d < gap) { gap = Math.max(d, 0.01); lv = speed; why = reason; by = who; } };
     const assertive = car.ghost > 0;
@@ -320,7 +330,7 @@ export class StreetLife {
     }
     const xs = this.roadX.get(e.i);
     const onCrossing = xs?.some((x) => car.s > x.sR - 2.5 && car.s - car.len < x.sR + 2.5);
-    for (const x of xs ?? []) {
+    for (const x of xs ?? NONE) {
       const d = x.sR - car.s;
       if (d < 2.5 || d > 40) continue;
       const busy = this.trams.find((tr) => tr.p === x.path && tr.s - TRAM_LEN < x.sT + 3 && (tr.s > x.sT - 2 || (tr.v > 1 && tr.s > x.sT - tr.v * 4)));
@@ -331,10 +341,10 @@ export class StreetLife {
         if (room < car.len + 1 && rb !== ig) stop(d - 3.5, 'keep-crossing-clear', rb);
       }
     }
-    if (!onCrossing && this.tramGrid.size) { // any tram body in the next 25 m of my path
-      const P = this.carPoint(car, car.s, pt()), F = this.carPoint(car, car.s + 1, pt());
+    if (!onCrossing && this.trammed) { // any tram body in the next 25 m of my path
+      const P = this.carPoint(car, car.s, this.sP), F = this.carPoint(car, car.s + 1, this.sF);
       const fx = F.x - P.x, fy = F.y - P.y, gx = (P.x / 32) | 0, gy = (P.y / 32) | 0;
-      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const [x, y, tro] of this.tramGrid.get((gx + i) * 100003 + (gy + j)) ?? []) {
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const [x, y, tro] of this.tramGrid.get((gx + i) * 100003 + (gy + j)) ?? NONE) {
         const rx = x - P.x, ry = y - P.y;
         if (Math.abs(rx) > 30 || Math.abs(ry) > 30) continue;
         const along = rx * fx + ry * fy, lat = Math.abs(rx * fy - ry * fx);
@@ -347,7 +357,8 @@ export class StreetLife {
     }
     car.why = assertive && why === 'free' ? 'assertive' : why;
     car.by = by;
-    return [gap, lv];
+    this.obstacleV = lv;
+    return gap;
   }
 
   // Every waiting agent waits for one other (by), so cycles are cheap to find; in each, the one with the softest
@@ -397,24 +408,26 @@ export class StreetLife {
   private snapshot() {
     const A = this.active, q = pt();
     for (const tr of this.trams) { at(this.tramPaths[tr.p], tr.s, 0, q); tr.near = !A || (q.x - A.x) ** 2 + (q.y - A.z) ** 2 < (ACTIVE_R + 200) ** 2; }
-    this.tramGrid = new Map();
+    emptyGrid(this.tramGrid);
+    this.trammed = false;
     for (const tr of this.trams) {
       if (!tr.near) continue;
+      this.trammed = true;
       for (let s0 = 0; s0 <= TRAM_LEN; s0 += 3) { at(this.tramPaths[tr.p], tr.s - s0, 0, q); pushTo(this.tramGrid, cellKey(q.x, q.y, 32), [q.x, q.y, tr]); }
     }
     const G = 8;
-    this.carGrid = new Map();
+    emptyGrid(this.carGrid);
     for (const c of this.cars) {
-      const P = this.carPoint(c, c.s, pt()), F = this.carPoint(c, c.s + 1, pt()), C = this.carPoint(c, c.s - c.len / 2, pt());
-      const l = Math.hypot(F.x - P.x, F.y - P.y) || 1;
-      c.geo = { px: P.x, py: P.y, cx: C.x, cy: C.y, z: P.z, fx: (F.x - P.x) / l, fy: (F.y - P.y) / l };
+      const P = this.carPoint(c, c.s, this.sP), F = this.carPoint(c, c.s + 1, this.sF), C = this.carPoint(c, c.s - c.len / 2, this.sC);
+      const l = Math.hypot(F.x - P.x, F.y - P.y) || 1, g = c.geo;
+      g.px = P.x; g.py = P.y; g.cx = C.x; g.cy = C.y; g.z = P.z; g.fx = (F.x - P.x) / l; g.fy = (F.y - P.y) / l;
       c.block = null;
       pushTo(this.carGrid, cellKey(C.x, C.y, G), c);
     }
     for (const c of this.cars) {
       const g0 = c.geo, gx = (g0.px / G) | 0, gy = (g0.py / G) | 0;
       let best = Infinity, who: Car | null = null;
-      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const o of this.carGrid.get((gx + i) * 100003 + (gy + j)) ?? []) {
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const o of this.carGrid.get((gx + i) * 100003 + (gy + j)) ?? NONE) {
         if (o === c || Math.abs(o.geo.z - g0.z) > 2) continue;
         const rx = o.geo.cx - g0.px, ry = o.geo.cy - g0.py;
         const along = rx * g0.fx + ry * g0.fy, lat = Math.abs(rx * g0.fy - ry * g0.fx);
@@ -440,7 +453,7 @@ export class StreetLife {
       this.changeLane(car, e, dt);
       let v0 = e.v * car.v0f;
       if (car.next >= 0 && e.L - car.s < 30 && this.nextTurn(car, e) !== Turn.Straight) v0 = Math.min(v0, this.nextTurn(car, e) === Turn.Right ? 4.5 : 6);
-      const [gap, lv] = this.carObstacle(car, e);
+      const gap = this.carObstacle(car, e), lv = this.obstacleV;
       const ss = IDM.s0 + Math.max(0, car.v * IDM.T + (car.v * (car.v - lv)) / (2 * Math.sqrt(IDM.a * IDM.b)));
       const acc = Math.max(-9, IDM.a * (1 - (car.v / Math.max(v0, 0.1)) ** 4 - (gap === Infinity ? 0 : (ss / Math.max(gap, 0.1)) ** 2)));
       car.brake = acc < -0.8 || car.v < 0.3 ? 1 : 0;
@@ -538,7 +551,7 @@ export class StreetLife {
         }
       }
       const gx = (q.x / 8) | 0, gy = (q.y / 8) | 0;
-      for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) for (const c of this.carGrid.get((gx + i) * 100003 + (gy + j)) ?? []) {
+      for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) for (const c of this.carGrid.get((gx + i) * 100003 + (gy + j)) ?? NONE) {
         const rx = c.geo.cx - q.x, ry = c.geo.cy - q.y, along = rx * fdx + ry * fdy, lat = Math.abs(rx * fdy - ry * fdx);
         if (along > -1 && along < 30 && lat < 2.4 && !ignored(c)) stop(along - 2.5, 'car-on-track', c);
       }
@@ -648,6 +661,7 @@ export class StreetLife {
   private drawCars(back: number, night: number) {
     const M = this.M, m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     const A = pt(), B = pt(), tailOff = new THREE.Color(0.55, 0.06, 0.05), tailOn = new THREE.Color(2.2, 0.15, 0.1), tail = new THREE.Color();
+    const parts = [M.body, M.dark, M.head, M.tail];
     this.cars.forEach((c, i) => {
       // both axles on the blended path: the body follows the curve
       const s = c.s - c.ds * back, off = c.off - c.dOff * back;
@@ -656,7 +670,7 @@ export class StreetLife {
       c.rh = Math.atan2(A.x - B.x, A.y - B.y);
       c.rp = (c.rp ?? new THREE.Vector3()).set((A.x + B.x) / 2, Math.max(A.z, B.z), (A.y + B.y) / 2);
       m.compose(c.rp, q.setFromAxisAngle(up, c.rh), sc.set(1, c.bus ? 1.75 : 1, c.bus ? c.len / 4.4 : 1));
-      for (const mesh of [M.body, M.dark, M.head, M.tail]) mesh.setMatrixAt(i, m);
+      for (const mesh of parts) mesh.setMatrixAt(i, m);
       M.body.setColorAt(i, c.col);
       M.tail.setColorAt(i, tail.copy(c.brake ? tailOn : tailOff).multiplyScalar(c.brake ? 1 : 0.4 + 1.2 * night));
     });
@@ -745,8 +759,9 @@ export class StreetLife {
     const M = this.M, m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
     const pos = new THREE.Vector3(), col = new THREE.Color();
     const LAMP = { R: [2.2, 0.12, 0.08, 3.95], Y: [2.2, 1.3, 0.1, 3.6], G: [0.1, 2.0, 0.6, 3.25] };
-    this.heads.forEach(([x, row, gz, rot, ctrl, axis], i) => {
-      const [r, g, b, hy] = LAMP[signal(this.ctrls[ctrl], this.t, axis)], a = rot + Math.PI;
+    this.heads.forEach((h, i) => { // indexed, not destructured: no iterator per head and frame
+      const x = h[0], row = h[1], gz = h[2], L = LAMP[signal(this.ctrls[h[4]], this.t, h[5])], a = h[3] + Math.PI;
+      const r = L[0], g = L[1], b = L[2], hy = L[3];
       m.compose(pos.set(x + Math.sin(a) * 0.19, gz + hy, row + Math.cos(a) * 0.19), q.setFromAxisAngle(up, a), one);
       M.lamp.setMatrixAt(i, m);
       M.lamp.setColorAt(i, col.setRGB(r, g, b));

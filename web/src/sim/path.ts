@@ -38,10 +38,10 @@ export function prepPath<T extends PathData>(e: T): T & Path {
 export function at(e: Path, s: number, off: number, out: Pt): Pt {
   let x, y, z, dx, dy;
   if (s <= 0) {
-    [dx, dy] = e.startD; const p = e.p[0];
+    dx = e.startD[0]; dy = e.startD[1]; const p = e.p[0];
     x = p[0] + dx * s; y = p[1] + dy * s; z = p[2];
   } else if (s >= e.L) {
-    [dx, dy] = e.endD; const p = e.p[e.p.length - 1];
+    dx = e.endD[0]; dy = e.endD[1]; const p = e.p[e.p.length - 1];
     x = p[0] + dx * (s - e.L); y = p[1] + dy * (s - e.L); z = p[2];
   } else {
     const c = e.cum;
