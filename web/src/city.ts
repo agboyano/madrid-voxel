@@ -209,7 +209,8 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
     settled = tilesNow === wanted;
     if (stage === 1 && lmShown === landmarks.length) toStage2();
     if (stage === 2 && tilesNow === wanted) stage = U.uStage.value = 3;
-    if (stage >= 3) for (let ty = 0; ty < d.ny; ty++) for (let tx = 0; tx < d.nx; tx++) {
+    // over clay a block's trees come with it, even during the first load (see `real` below)
+    if (stage >= 3 || clay === 'ready') for (let ty = 0; ty < d.ny; ty++) for (let tx = 0; tx < d.nx; tx++) {
       const i = index(tx, ty);
       if (want[i] && inTile[i] && !folTile[i]) S.requestFoliage(tx, ty, prio(i, f));
     }
@@ -219,10 +220,11 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
     if (changed) shownTex.needsUpdate = true;
     realTris = 0;
     for (let k = 0; k < nk; k++) {
-      // a block coming back from clay turns real once its trees are in too (after the first full load): a 1 m tile
-      // without its foliage tile shows bare earth, which flashed in 128 m squares while zooming; the clay has the trees
-      // meanwhile. One already real stays so
-      const real = blkWant[k + 1] > 0 && blockTiles[k].every((i) => inTile[i] && (folTile[i] || stage < 3 || flags[k + 1] > 0));
+      // where there is clay, a block turns real once its trees are in too: a 1 m tile without its foliage tile shows
+      // bare earth, which flashed in 128 m squares while zooming (also during the first load, before every base tile
+      // was in); the clay has the trees meanwhile. Without clay the first load shows each block as it comes. One
+      // already real stays so
+      const real = blkWant[k + 1] > 0 && blockTiles[k].every((i) => inTile[i] && (folTile[i] || (stage < 3 && clay !== 'ready') || flags[k + 1] > 0));
       flags[k + 1] = real ? 255 : 0;
       if (real) realTris += blocks[k][7] || 0;
     }

@@ -1653,6 +1653,10 @@ Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish
   simulated one) during the first half minute, each step sending visible blocks back to clay. `main.ts` now keeps the
   level the adapting settled at in `localStorage` (`madrid-voxel.level`) and starts the next visit there; it still
   steps up when frames allow. In the simulation the second visit started at 0.32 instead of 0.75.
+- **Also during the first load (2026-11-14):** zooming before the first load finished still showed bare squares:
+  until every base tile was in, foliage was not requested and blocks turned real without it. Now, once the clay is
+  shown, foliage tiles are requested as their base tiles arrive and every block waits for them. Zooming onto the
+  Retiro 4 s after opening (render size 0.25): bare squares in the first frames before, none after.
 
 
 ## Trunks and limbs (2026-11-13)
