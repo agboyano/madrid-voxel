@@ -625,7 +625,7 @@ These are metric. While the scene stays in metres they keep working, but several
 | file:line | what | notes |
 | --- | --- | --- |
 | `web/src/daylight.ts:45-50`, `main.ts:58` | shadow map 4096 (2048 on phones), `bias -0.0004`, `radius 3` | at full extent (`R` up to `0.75 * max(W, D)`, `:162`) a texel is about 1.6 m, too coarse for 0.5 m voxels |
-| `web/src/daylight.ts:114` | `normalBias = clamp(0.3 / L.y, 0.5, 3)` | 0.5-3 m: up to 6 half-metre voxels of light leaking |
+| `web/src/daylight.ts` `fitSun` | `normalBias = clamp(texel·0.3, 0.02, 0.25)·sin(el)`, depth bias `clamp(texel·0.25, 0.02, 0.15)·sin(el)`; angled walls ×3 (`voxelMaterial.ts`) | metric caps; at most 0.25 m, so half-metre voxels keep their shadows (was 0.5-3 m before 2026-11-13) |
 | `web/src/daylight.ts:160-163`, `:178`, `:185-186` | fit `R >= 300`, refit grid `Rq/16`, sun 2 500 m away, `near = -b.max.z - 700` | metric |
 | `web/src/daylight.ts:135`, `web/src/post.ts:46` | N8AO `aoRadius 6-9`, `distanceFalloff 1.5` | metric; relative to voxel detail |
 | `web/src/daylight.ts:136`, `:149-155` | fog `2500..7000`, `near = max(2500k², dist·…)`, `far = near + 4500k` | metric |
@@ -694,8 +694,8 @@ stay as they are if the scene stays in metres.
 - **Texture limits.** `zones` (R16UI), `windows` and `flood` are already W×D = 3 950 × 4 430 texels. At 0.5 m they
   would be 7 900 × 8 860, beyond `MAX_TEXTURE_SIZE` 8 192 on many GPUs and all phones. Keep these maps at 1 m and
   sample them with `floor(world_m)`.
-- **Shadows.** The texel at full extent is about 1.6 m (`daylight.ts:162-164`), and `normalBias` 0.5-3 m. Half-metre
-  detail would be lost in the shadows or leak light unless the fit range or the map size changes.
+- **Shadows.** The texel at full extent is about 1.6 m (`daylight.ts:162-164`). The biases are now capped at 0.25 m,
+  but half-metre detail would still be lost in the shadows unless the fit range or the map size changes.
 - **Shading semantics.** Facade storeys and window bays are counted in cells (`voxelMaterial.ts:224-283`). At 0.5 m a
   "3-cell storey" becomes 1.5 m, so these must become `lvl_m = lvl * VOXEL_SIZE`.
 - **Physics.** `World.raycast` and `blocked` step 1 cell, `STEP 1.05` climbs one voxel, and `clearAround` probes ±1
@@ -1485,3 +1485,18 @@ Not published yet: creating the public GitHub repository was blocked by the perm
   - The third shelter area, the Quiosco de la Música, is a `pavilion`, which the shelter code also skips.
   - Most Madrid shelters are OSM nodes, which are not drawn.
   - Rebuilding with posts only at the corners changed no tile, so the code was left as it is.
+
+## Shadow bias (2026-11-13)
+
+Adopted from dtla-voxel `6fd3b9d`, in `Daylight.fitSun`:
+
+- **Before:** the normal offset was `clamp(0.3 / sin(el), 0.5, 3)` m and the depth bias a fixed `-0.0004` of the
+  shadow camera's depth range (about 1 m at street level). Both grew, or stayed large, as the sun went down.
+- **Why that detached shadows:** an offset of the receiver along its normal lands on the ground as roughly
+  `offset / sin(el)`. At golden hour the shadow of a lamp post in Plaza Mayor started a metre or two from its base.
+- **Now:** both offsets come from the shadow map's texel, have metric caps (0.25 m normal, 0.15 m depth), and shrink
+  with `sin(el)` (floored at 0.05). The staircase walls' extra changed from `+1.2 m` to `×3`, so it shrinks with them.
+- **Check:** `docs/img/shadow-before-plazamayor-golden.png` against `shadow-after-plazamayor-golden.png` (13 November,
+  16:20): the post's shadow now starts at its base. No acne showed at noon, at golden hour, in the overview
+  (`shadow-after-overview-golden.png`) or with the phone's 2048 map (`shadow-after-street-golden-phone.png`).
+

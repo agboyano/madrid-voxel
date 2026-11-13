@@ -372,3 +372,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Ordering by projected size alone:** the overview would have put its detail at the near edge of the map instead of where the visitor looks.
   - **Dropping bloom and SMAA too:** they are cheap next to N8AO and the depth blur.
 
+## 2026-11-13: Shadow biases from the texel, smaller at low sun
+
+- **Decision:** the sun's normal and depth biases are sized from the shadow map's texel, capped at 0.25 m and 0.15 m and scaled by the sun's elevation (dtla-voxel `6fd3b9d`). The extra for staircase walls is a ×3 multiplier instead of +1.2 m.
+- **Why:** Warsaw's normal offset grew to 3 m at low sun, which detached golden-hour shadows from their casters.
+- **Rejected:** keeping a fixed floor of 0.5 m: it was the floor itself that showed as a gap at street level.
+

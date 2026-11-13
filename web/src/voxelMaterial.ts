@@ -448,7 +448,7 @@ export function makeVoxelMaterial(uniforms: VoxelUniforms, { clay = false } = {}
         vec3 objectNormal = nAng > 0.5 ? vec3(cos((nAng - 1.0) * 0.261799), 0., sin((nAng - 1.0) * 0.261799)) : normalFromIdx(nAx);`)
       // and its 1 m steps don't shade each other: shadow lookups step out further along the wall's true direction
       .replace('#include <shadowmap_vertex>', THREE.ShaderChunk.shadowmap_vertex.replace(
-        'directionalLightShadows[ i ].shadowNormalBias', '(directionalLightShadows[ i ].shadowNormalBias + (nAng > 0.5 ? 1.2 : 0.0))'))
+        'directionalLightShadows[ i ].shadowNormalBias', '(directionalLightShadows[ i ].shadowNormalBias * (nAng > 0.5 ? 3.0 : 1.0))'))
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         vVox = position; vN = normalFromIdx(nAx); vAO = vattr.y / 3.0; vGz = vattr.z; vPal = int(vpal + 0.5); vHide = 0.0;
         ${BUILD_VERTEX} vHide = hideB;`);

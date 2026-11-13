@@ -111,7 +111,6 @@ export class Daylight {
     sun.color.setRGB(T[0] / T[0], T[1] / T[0], T[2] / T[0]).lerp(new THREE.Color(0xa8b4cc), night).lerp(new THREE.Color(0xd8dde6), cloud * day);
     sun.intensity = lerp(5.9 * lumT * adapt, 0.5, night) * (elDeg > -2 ? smooth(-2, 1, elDeg) * day + night : night) * lerp(1, 0.4 * sinEl, cloud);
     sun.shadow.radius = lerp(3, 22, cloud);
-    sun.shadow.normalBias = clamp(0.3 / Math.max(light.y, 0.05), 0.5, 3);
     const skyRel = sky / 0.075 * adapt;
     hemi.color.setRGB(0.63, 0.77, 1).lerp(new THREE.Color(1, 0.82, 0.66), golden * 0.45).lerp(new THREE.Color(0x46557a).lerp(new THREE.Color(0x4a443c), deep), night);
     hemi.groundColor.copy(sun.color).multiplyScalar(0.4).lerp(new THREE.Color(0x4a3c2c), night);
@@ -185,6 +184,11 @@ export class Daylight {
     cam.near = Math.max(1, -b.max.z - 700); // towers outside the square still cast into it
     cam.far = -b.min.z + 10;
     cam.updateProjectionMatrix();
+    // biases from the map's texel, smaller as the sun goes down (dtla-voxel 6fd3b9d): a receiver offset lands on the
+    // ground as offset / sin(elevation), so offsets that grew at low sun (0.5-3 m) detached golden-hour shadows
+    const el = clamp(L.y, 0.05, 1);
+    sun.shadow.normalBias = clamp(texel * 0.3, 0.02, 0.25) * el;
+    sun.shadow.bias = -clamp(texel * 0.25, 0.02, 0.15) * el / (cam.far - cam.near);
     sun.shadow.needsUpdate = true;
   }
 
