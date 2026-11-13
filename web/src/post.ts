@@ -56,10 +56,13 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, came
     new BrightnessContrastEffect({ brightness: 0, contrast: 0.06 }),
     new VignetteEffect({ offset: 0.3, darkness: 0.45 }),
     new SMAAEffect()));
+  // light: for slow GPUs, no ambient occlusion and no depth blur, the two passes that read depth all over the screen
+  let light = false;
+  const setLight = (on: boolean) => { light = on; n8.enabled = !on; };
   // focused on what the camera looks at; the blur fades out towards the street, and eases over the whole map
   const setHeight = (h: number, enabled: boolean, focus = 500) => {
-    tiltPass.enabled = enabled && h > 60;
+    tiltPass.enabled = enabled && !light && h > 60;
     tilt.set(focus, clamp((h - 60) / 250, 0, 1) * (1 - 0.5 * clamp((h - 1200) / 1500, 0, 1)), renderer.domElement.height);
   };
-  return { composer, n8, bloom, tone, setHeight };
+  return { composer, n8, bloom, tone, setHeight, setLight };
 }

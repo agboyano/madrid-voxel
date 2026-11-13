@@ -20,7 +20,7 @@ import type { Kind, TrafficData } from './sim/types';
 import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
 import { dateOf, dayOfYear, hourAt, setSite, solarNoon } from './sun';
-import { $, coarsePointer, ease, el, fetchJson, lerp } from './util';
+import { $, clamp, coarsePointer, ease, el, fetchJson, lerp } from './util';
 import { floodlight } from './sky';
 import { Card } from './card';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
@@ -40,9 +40,13 @@ const qs = new URLSearchParams(location.search);
 // Render size, one level from 0 to 1 (the slider; set by the frames, adapt): how much of the city is 1 m around the focus
 // (city.ts; the rest is 8 m clay), from 0.2 M triangles of buildings to all of them, and in its lower part how many
 // pixels, down to half of the screen's. Phones hold 0.75 M at most, as the 1 m tiles of the whole map need ~2 GB of GPU.
+// Below LIGHT_POST the post-processing drops its ambient occlusion and depth blur. ?level= fixes the level (screenshots,
+// profiles): nothing adapts it then.
 const phone = Math.min(screen.width, screen.height) < 600;
 const ceiling = phone ? 0.75e6 : Infinity;
-let level = 0.75;
+const LIGHT_POST = 0.4;
+const fixedLevel = qs.get('level') !== null && Number.isFinite(+qs.get('level')!);
+let level = fixedLevel ? clamp(+qs.get('level')!, 0, 1) : 0.75;
 const budget = () => (level >= 1 ? ceiling : Math.min(ceiling, 0.2e6 * ((city?.cityTris ?? 14e6) / 0.2e6) ** level));
 const pixelsAt = (l: number) => Math.max(0.5, Math.min(1, 0.4 + 0.8 * l)) * Math.min(devicePixelRatio, 2);
 const renderer = makeRenderer();
@@ -53,6 +57,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.5, 9000);
 const controls = makeControls();
 const post = makePost(renderer, scene, camera);
+post.setLight(level < LIGHT_POST);
 const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);
 const bar = new Bar({ days: DAYS, weathers: ['typical', ...Object.keys(WEATHERS)], onDay: (d) => { setDay(d); share(); trackLater('date', { day: d }); },
@@ -359,12 +364,13 @@ function stillChanged() {
 // The level from steady frames: frames that redrew the city's shadow or changed the pixels are left out. In windows of
 // 30 frames (or 1 s): slow twice running (median under 27 fps), a step down, bigger the slower, and no growing past it
 // for a minute; smooth twice running (the slowest tenth over 30 fps) with all the city asked for in, a step up, bigger
-// at the screen's own rate.
+// at the screen's own rate. The slider sets the level and the most it may grow back to; it never stops the stepping down.
 let busy = false, stillDue = false, redrawnAt = 0, slow = 0, calm = 0, cap = 1, capAt = 0, windowAt = 0;
 function setLevel(l: number) {
   level = Math.max(0, Math.min(1, l));
   const px = pixelsAt(level);
   if (Math.abs(px - renderer.getPixelRatio()) > 0.01) { renderer.setPixelRatio(px); onResize(); busy = true; }
+  post.setLight(level < LIGHT_POST);
   perf.show(level);
 }
 function adapt(dt: number, now: number) {
@@ -378,19 +384,20 @@ function adapt(dt: number, now: number) {
   frames.sort((a, b) => a - b);
   const median = frames[frames.length >> 1], p90 = frames[Math.floor(frames.length * 0.9)];
   frames.length = 0;
-  if (perf.manual) return;
+  if (fixedLevel) return;
   if (now - capAt > 60000) cap = 1;
+  const top = Math.min(cap, perf.ceiling);
   if (median > 1 / 27) {
     calm = 0;
     if (++slow < 2) return;
     slow = 0;
     setLevel(level - 0.08 * Math.min(3, median * 27));
     cap = level; capAt = now;
-  } else if (p90 < 1 / 30 && city.settled && level < cap) {
+  } else if (p90 < 1 / 30 && city.settled && level < top) {
     slow = 0;
     if (++calm < 2) return;
     calm = 0;
-    setLevel(Math.min(cap, level + (p90 < 1 / 50 ? 0.1 : 0.04)));
+    setLevel(Math.min(top, level + (p90 < 1 / 50 ? 0.1 : 0.04)));
   } else { slow = 0; calm = 0; }
 }
 
