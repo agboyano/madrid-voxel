@@ -406,3 +406,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Keeping the arrays:** costs memory all the time for a rare event.
   - **Dropping and reloading every tile through `city.ts`:** more state to rebuild, and tiles would pop in as clay first.
 
+## 2026-11-13: No paced GPU uploads
+
+- **Decision:** new tiles still reach the GPU the frame they are first shown.
+- **Why:** dtla-voxel's pacing (upload in a hidden draw, a few MB per frame) was implemented and measured on a flight through the views: frame times did not improve (66 frames over 100 ms against 55-62 without), and tiles appeared later.
+- **Rejected:** keeping it for phones without a measurement there.
+

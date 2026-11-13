@@ -1582,3 +1582,23 @@ left the page black (`docs/img/ctxloss-before.png`).
   takes a screenshot 8 s later: the same triangle count as before, shadows included (`docs/img/ctxloss-after.png`).
 - dtla-voxel (`1034c95`) disposes its geometry and lets its streamer reload; Madrid's tiles keep their place instead.
 
+## Paced GPU uploads: tried and dropped (2026-11-13)
+
+dtla-voxel (`1034c95`) uploads each new tile in a draw of nothing before showing it, a few megabytes per frame, so a
+batch of tiles arriving together does not make one long frame. `web/tools/uploads.mjs` flies through the named views
+at a fixed level, recording each frame's time, the bytes it passed to `gl.bufferData` and whether it redrew the
+city's shadow map.
+
+- **What it suggested:** frames uploading 1 MB or more had a median of 67 ms against 33 ms for frames doing nothing.
+  Frames redrawing the shadow map alone had a median of 83 ms.
+- **What pacing did** (4 MB a frame, at least one tile; two runs each, UHD 620, level 0.5):
+
+  | | median | p95 | frames over 100 ms |
+  | --- | --- | --- | --- |
+  | as before | 50 ms | 133-150 ms | 55, 62 |
+  | paced | 50 ms | 133 ms | 66, 66 |
+
+- **Conclusion:** no gain here. The upload frames were slow because they come during flights, together with the
+  city's own work, not because of the uploads. Pacing also delays showing each tile. Not adopted; phones may differ,
+  and `uploads.mjs` can measure them.
+
