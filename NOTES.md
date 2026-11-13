@@ -1519,3 +1519,31 @@ Adapted from dtla-voxel `cf1c7e1` (`web/src/sun.ts`, `daylight.ts`, `main.ts`, `
   `docs/img/north-before-palace-sunset.png` and `north-after-palace-sunset.png` (13 November, 17:45): a slightly
   lower, dimmer light, and no other change.
 
+## Frame allocations (2026-11-13)
+
+`web/tools/allocs.mjs` runs Chrome's sampling heap profiler for 6 s over a still view of Gran Vía and 6 s of walking
+(`node tools/allocs.mjs [level] [seconds]`, dev server on :5173) and lists the bytes per second each function
+allocates, collected or not. The rate is what the young-generation collector has to sweep; on phones its pauses show
+as dropped frames. The profiler slows the page to about 40 fps, so compare runs with each other, not with real fps.
+
+| | still view | walking |
+| --- | --- | --- |
+| before | 43.5 MB/s | 37.8 MB/s |
+| after | 22.1 MB/s | 20.6 MB/s |
+
+What changed:
+
+- **`World`:** voxel queries returned a `[tile, index]` pair; the index is now a field (dtla-voxel `98283fe`). The
+  focus raycast alone made 6.9 MB/s.
+- **Street life (`sim/life.ts`):** the car and tram grids are emptied each tick instead of rebuilt; a missed cell
+  reads a shared empty list instead of a new `[]` (25 lookups per car per tick); the per-car geometry reuses its
+  object and three scratch points; `carObstacle` returns the gap and leaves the leader's speed in a field.
+- **Destructuring:** `[dx, dy] = e.startD` in `path.at` and the signal heads' parameters walk an iterator in code V8
+  has not optimised; they read by index now.
+- **Labels:** the ordering, the placed rectangles and the candidate sides reuse arrays, and a label's transform is
+  written only when it moves (a still view no longer restyles every label every frame). 2.2 MB/s to 0.3 MB/s.
+- **Left:** `carObstacle`'s closures (about 3.5 MB/s) and the remaining sim arithmetic. Rewriting Warsaw's car
+  logic to drop them was not worth the risk.
+- **Check:** traffic statistics over 75 s (cars, mean speed, stopped, blocked, reasons) match before and after within
+  the simulation's own randomness, and `tools/walkstuck.mjs` passes.
+

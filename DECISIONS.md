@@ -384,3 +384,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** small but free corrections. Shadows pointed half a degree off, the sunset light stayed 2.5° up after the sun had gone down, and a visitor in another time zone could see "today" as the wrong day.
 - **Rejected:** a full ellipsoidal convergence formula: the spherical one agrees with pyproj to within 0.0001° here.
 
+## 2026-11-13: Fewer allocations per frame
+
+- **Decision:** reuse arrays, objects and grids in the voxel queries, the street-life tick and the label placement, guided by a heap-sampling profile (`web/tools/allocs.mjs`). This halved the garbage per second.
+- **Why:** garbage-collection pauses cost frames on phones, and the changes are local.
+- **Rejected:** rewriting `carObstacle` without closures: it is Warsaw's traffic logic, and the gain (about 3.5 MB/s) did not justify the risk.
+
