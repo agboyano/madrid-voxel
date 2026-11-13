@@ -15,6 +15,7 @@ export interface TileNode {
   used: number;
   pinned: number;
   mesh?: THREE.Mesh;
+  extra?: THREE.InstancedMesh; // a foliage tile's tree trunks (trunks.ts)
   data?: ColumnData;
   empty?: boolean;
   dataJob?: Job;
@@ -60,6 +61,7 @@ export class TileStreamer implements ColumnSource {
   private remeshing = 0;
   bldMap: { data: Uint16Array; W: number } | null = null;
   update: (camera: THREE.Camera) => void = () => {};
+  onFoliage: ((tx: number, ty: number) => THREE.InstancedMesh | undefined) | null = null;
   private queue: Job[] = [];
   private inflight = 0;
   private readonly maxWorkers = Math.min(Math.max(2, (navigator.hardwareConcurrency || 4) - 2), 10);
@@ -204,10 +206,20 @@ export class TileStreamer implements ColumnSource {
       if (m.quads && n.mesh) { n.mesh.geometry = this.makeGeometry(m.pos, m.attr, m.pal, m.bld, m.quads); this.remeshed++; }
       else if (m.quads) n.mesh = this.makeMesh(this.makeGeometry(m.pos, m.attr, m.pal, m.bld, m.quads));
       if (m.data) this.setData(n, m.data);
+      if (n.foliage) this.attachExtra(n);
       n.state = 'ready';
       n.job.resolve();
     }
     this.pump();
+  }
+
+  // a foliage tile's trunks, hidden until city.ts shows the tile
+  attachExtra(n: TileNode) {
+    if (n.extra || !this.onFoliage) return;
+    n.extra = this.onFoliage(n.tx, n.ty);
+    if (!n.extra) return;
+    n.extra.visible = n.mesh?.visible ?? false;
+    this.group.add(n.extra);
   }
 
   private makeGeometry(pos: Int16Array, attr: Uint8Array, pal: Uint16Array, bld: Uint16Array | null, quads: number) {
@@ -274,6 +286,7 @@ export class TileStreamer implements ColumnSource {
     n.dataJob?.resolve();
     n.dataJob = undefined;
     if (n.mesh) { n.mesh.geometry.dispose(); this.group.remove(n.mesh); }
+    if (n.extra) { n.extra.dispose(); this.group.remove(n.extra); }
     this.nodes.delete(n.key);
     if (n.data) this.version++;
   }

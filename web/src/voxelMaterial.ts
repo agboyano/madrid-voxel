@@ -140,7 +140,9 @@ const FOLIAGE = `
     vec3 fo = foliageAt(cell);
     return (1.0 - fo.x) * fo.y * (1.0 - smoothstep(uFolDate[cls].z + 15.0, uFolDate[cls].z + 50.0, uDay));
   }
-  bool leafGone(vec3 cell, vec3 fo) { return hash13(cell * 1.7 + 3.1) > fo.x && hash13(cell * 2.3 + 7.7) > 0.3; }`;
+  // a bare crown loses every leaf voxel: 1 m cubes of dead leaves floated in the air, and the crown's shape in winter is
+  // the trunks' limbs (trunks.ts); the 8 m clay browns them instead
+  bool leafGone(vec3 cell, vec3 fo) { return hash13(cell * 1.7 + 3.1) > fo.x; }`;
 
 const NORMAL_FROM_IDX = `
   vec3 normalFromIdx(float i) {
@@ -167,7 +169,7 @@ const BUILD_VERTEX = `
   }`;
 
 // Where the budget leaves the city to the 8 m clay (city.ts, uZOn): a city block is real once uZFBlk says so
-const ZONES_PARS = `
+export const ZONES_PARS = `
   uniform int uZOn; uniform highp usampler2D uZBlk; uniform sampler2D uZFBlk;
   bool zreal(vec3 c) {
     if (uZOn == 0) return true;

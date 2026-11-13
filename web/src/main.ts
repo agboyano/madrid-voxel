@@ -7,6 +7,7 @@ import { Daylight } from './daylight';
 import { loadFoliage } from './foliage';
 import { loadWindows } from './windows';
 import { Fountains } from './fountains';
+import { Trunks } from './trunks';
 import { Hud } from './hud';
 import { Labels } from './labels';
 import { always, blank, gpu, remember, startStats, track, trackLater } from './stats';
@@ -74,7 +75,7 @@ const card = new Card();
 const map = new THREE.Box3();
 const tiltShift = qs.get('tilt') !== '0' && innerWidth >= 600 && !phone;
 let world: World | null = null, labels: Labels | null = null, hud: Hud | null = null;
-let life: StreetLife | null = null, fountains: Fountains | null = null;
+let life: StreetLife | null = null, fountains: Fountains | null = null, trunks: Trunks | null = null;
 let city: Awaited<ReturnType<typeof installCity>> | null = null;
 let uniforms: ReturnType<typeof makeUniforms> | null = null, streamer: TileStreamer | null = null, views: Record<string, View> = {};
 let fly: ((now: number) => void) | null = null;
@@ -276,11 +277,16 @@ async function boot() {
   if (meta.lonlat) setSite(...meta.lonlat);
   places = meta.labels;
   uniforms = makeUniforms(meta);
-  loadFoliage(meta, uniforms).then((city) => bar.setDays({ 'leaves out': city.leaf, 'trees in colour': city.colour, 'leaves down': city.fall, ...DAYS }))
+  const foliageIn = loadFoliage(meta, uniforms);
+  foliageIn.then((city) => bar.setDays({ 'leaves out': city.leaf, 'trees in colour': city.colour, 'leaves down': city.fall, ...DAYS }))
     .catch((e) => console.warn('foliage', e));
   loadWindows(meta, uniforms).then((set) => { setWindows = set; }).catch((e) => console.warn('windows', e));
   streamer = new TileStreamer(meta, makeVoxelMaterial(uniforms), scene);
   world = nav.world = streamer.world;
+  const S = streamer, minTrunk = qs.get('trunkmin') ? +qs.get('trunkmin')! : undefined; // ?trunkmin=: narrowest trunk, m
+  const trunksIn = qs.get('trunks') !== '0' ? Trunks.load(meta, uniforms, meta.tiles.N, { minTrunk }) : null;
+  trunksIn?.then((t) => { trunks = t; t.attachAll(S); foliageIn.then((c) => t.setLeafDays(c.leaf, c.colour)).catch(() => {}); })
+    .catch((e) => console.warn('trunks', e));
   daylight.casters(streamer.group, () => life?.group ?? null);
   nav.streamer = streamer;
   map.set(new THREE.Vector3(0, 0, 0), new THREE.Vector3(meta.W, meta.H, meta.D));
@@ -335,6 +341,7 @@ renderer.setAnimationLoop((now) => {
   if (uniforms) { uniforms.uTime.value = t; floodlight(uniforms.uFloodlight.value); }
   setWindows?.(daylight.hour, daylight.day);
   fountains?.update(t, daylight.night);
+  if (uniforms) trunks?.season(uniforms.uDay.value);
   precip.update(t, camera.position, daylight.weather, daylight.night);
   if (city?.complete) document.body.classList.remove('loading');
   if (life) {

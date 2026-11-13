@@ -43,6 +43,7 @@ export interface Meta {
   W: number;
   D: number;
   H: number;
+  voxel?: number; // edge of a voxel in metres (scripts/aoi.py VOXEL_SIZE)
   base: number;
   theta_deg: number;
   tiles: { N: number; levels: TileLevel[] };

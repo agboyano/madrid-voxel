@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Caption } from './caption';
-import type { TileStreamer } from './stream';
+import type { TileNode, TileStreamer } from './stream';
 import type { Meta, Zones } from './types';
 import { dataTexture, dataUrl, fetchGzip, fetchJson } from './util';
 import { makeBuildDepthMaterial, makeClayDepthMaterial, makeVoxelMaterial, type VoxelUniforms } from './voxelMaterial';
@@ -136,6 +136,7 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
   folMat.polygonOffset = true; folMat.polygonOffsetFactor = -1; folMat.polygonOffsetUnits = -2; // grass wins over the base's bare earth
   const inTile = new Uint8Array(total), folTile = new Uint8Array(total), complete = new Uint8Array(nb), counted = new Set<string>();
   let lmShown = 0, stage = 1, last = 0, flagKey = '', realTris = 0, settled = false;
+  const vis = (n: TileNode, v: boolean) => { if (n.mesh) n.mesh.visible = v; if (n.extra) n.extra.visible = v; };
   const show = (b: number) => { if (!shown[b + 1]) { shown[b + 1] = 255; if (isLandmark.has(b)) lmShown++; } };
   function toStage2() {
     stage = U.uStage.value = 2;
@@ -185,7 +186,7 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
       if (n.s !== 1 || n.state !== 'ready') continue;
       const i = index(n.tx, n.ty);
       if (!want[i]) {
-        if (n.mesh && clay === 'ready') n.mesh.visible = false;
+        if (clay === 'ready') vis(n, false);
         if (clay === 'ready' && now - n.used > 4000 && !(n.pinned > now)) {
           if (counted.delete(n.key)) { if (n.foliage) folTile[i] = 0; else inTile[i] = 0; }
           S.free(n);
@@ -193,9 +194,9 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
         continue;
       }
       n.used = now;
-      if (counted.has(n.key)) { if (n.mesh) n.mesh.visible = true; continue; }
+      if (counted.has(n.key)) { vis(n, true); continue; }
       counted.add(n.key);
-      if (n.foliage) { folTile[i] = 1; if (n.mesh) { n.mesh.material = folMat; n.mesh.visible = true; } continue; }
+      if (n.foliage) { folTile[i] = 1; if (n.mesh) n.mesh.material = folMat; vis(n, true); continue; }
       inTile[i] = 1;
       if (n.mesh) { n.mesh.customDepthMaterial = depthMat; n.mesh.visible = true; }
       for (const b of onTile[i]) if (!complete[b] && tilesOf[b].every((k) => inTile[k])) {
