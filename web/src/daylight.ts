@@ -98,7 +98,7 @@ export class Daylight {
   }
 
   // the grid is turned (scripts/aoi.py) and UTM grid north is not true north: compass bearings turn by theta in the scene
-  set theta(t: number) { this.northTheta = t; this.apply(this.hour); }
+  set theta(t: number) { this.northTheta = t; this.sky.north = t; this.apply(this.hour); }
 
   private skyDir(az: number, el: number) {
     const a = az + this.northTheta;

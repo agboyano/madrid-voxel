@@ -76,6 +76,7 @@ let uniforms: ReturnType<typeof makeUniforms> | null = null, streamer: TileStrea
 let fly: ((now: number) => void) | null = null;
 let barRect: DOMRect | null = null;
 let climate: Climate | null = null;
+let base = 571; // metres above sea level of the model's y = 0 (meta.base)
 let places: Label[] = [];
 const caption = new Caption();
 const perf = new Perf(setLevel);
@@ -285,6 +286,8 @@ async function boot() {
   daylight.uniforms = uniforms;
   daylight.bloom = post.bloom;
   daylight.ao = post.n8.configuration;
+  base = meta.base;
+  if (qs.get('mountains') !== '0') daylight.sky.loadHorizon();
   daylight.theta = meta.lonlat && meta.crs ? trueNorthRotation(meta.theta_deg || 0, meta.lonlat, meta.crs) : (meta.theta_deg || 0) * Math.PI / 180;
   const md = qs.get('date')?.split('-').map(Number);
   setDay(md ? dayOfYear(new Date(SOLAR_YEAR, md[0] - 1, md[1])) : TODAY);
@@ -335,6 +338,7 @@ renderer.setAnimationLoop((now) => {
     if (life.group.visible) { life.day = daylight.day; life.update(dt, daylight.hour, daylight.night, focus()); }
   }
   daylight.sky.mesh.position.copy(camera.position);
+  daylight.sky.eye = camera.position.y + base;
   streamer?.update(camera);
   daylight.fitShadow(focus(), camera, viewDist, map);
   const redraws = daylight.redraws;

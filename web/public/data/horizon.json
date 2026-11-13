@@ -1,0 +1,33 @@
+{
+  "source": "https://servicios.idee.es/wcs-inspire/mdt (Elevacion25830_200)",
+  "credit": "MDT200 \u00a9 Instituto Geogr\u00e1fico Nacional (CC BY 4.0)",
+  "dem_sha256": "aa33006542b3c5f3d0904b6932975e0b90425d9f37e95dc92e0eb179f3fb5eb1",
+  "center_lonlat": [
+    -3.693956,
+    40.417457
+  ],
+  "samples": 2048,
+  "min_distance_m": 20000,
+  "max_distance_m": 120000,
+  "eye_elevations_m": [
+    0,
+    500,
+    1000,
+    1500,
+    2000,
+    2500,
+    3000,
+    3500
+  ],
+  "encoding": "RGBA8: RG = (slope + 0.25) / 0.4; BA = curvature-corrected elevation / 4095; uint16 big endian",
+  "maximum_angles_deg": [
+    2.638,
+    2.03,
+    1.422,
+    0.813,
+    0.203,
+    -0.363,
+    -0.891,
+    -1.134
+  ]
+}

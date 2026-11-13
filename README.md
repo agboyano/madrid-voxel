@@ -95,6 +95,7 @@ The main rules:
 
 Data the map is built from:
 - **PNOA-LiDAR, 3rd coverage (NPC02)** and **PNOA orthophoto**: © [Instituto Geográfico Nacional](https://www.ign.es/), from the [Centro de Descargas del CNIG](https://centrodedescargas.cnig.es/) and the IGN's WMS, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **MDT200** (digital terrain model, 200 m): © [Instituto Geográfico Nacional](https://www.ign.es/), through the IGN's elevation WCS, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), for the distant skyline of the Sierra de Guadarrama.
 - **[OpenStreetMap](https://www.openstreetmap.org/)**: © OpenStreetMap contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/), via the Overpass API.
 - **Catastro**: buildings from the INSPIRE service of the Dirección General del Catastro ([sede.catastro.gob.es](https://www.sedecatastro.gob.es/)). Source: Dirección General del Catastro.
 - **Tree inventory**: "Arbolado en parques y zonas verdes de Madrid (detalle)", Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { clamp } from './util';
+import { clamp, dataUrl, fetchData } from './util';
 
 const VERT = `varying vec3 vDir;
 void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); gl_Position.z = gl_Position.w * 0.99999; }`;
@@ -8,6 +8,7 @@ const FRAG = `
 uniform vec3 uTop; uniform vec3 uHorizon; uniform vec3 uWarm; uniform float uGolden; uniform vec3 uGround;
 uniform vec3 uSunDir; uniform vec3 uTrueSun; uniform vec3 uSunCol; uniform float uNight; uniform float uDeep;
 uniform vec3 uAfterglow; uniform vec3 uCityGlow; uniform vec3 uCloudLit; uniform vec3 uCloudDark; uniform float uCloud;
+uniform sampler2D uRidge; uniform float uMountains; uniform float uNorth; uniform float uEye;
 varying vec3 vDir;
 float hash(vec3 p) { p = fract(p * 0.3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -24,8 +25,21 @@ void main() {
   col += uAfterglow * tw * exp(-max(h, 0.) * 14.0);
   col += uCityGlow * exp(-max(h, 0.) * 14.0);
   col = mix(col, uGround, smoothstep(0.0, -0.25, h));
+  // the ranges 20-120 km away (scripts/horizon.py), by true bearing; adapted from dtla-voxel 9eeb73e: a crest in the
+  // haze, its foot lost in it, fading as the eye rises past 3 km or the sky clouds over
+  float mountain = 0.;
+  if (uMountains > 0. && h > -0.08 && h < 0.18) {
+    float bearing = atan(d.x, -d.z) - uNorth, aa = max(fwidth(h), 0.00015);
+    vec4 ridge = texture2D(uRidge, vec2(bearing / 6.28318530718 + 0.5 / 2048., (clamp(uEye / 500., 0., 7.) + 0.5) / 8.));
+    float elevation = dot(ridge.ba, vec2(256., 1.)) / 257. * 4095., slope = dot(ridge.rg, vec2(256., 1.)) / 257. * 0.4 - 0.25;
+    float top = slope / sqrt(1. + slope * slope), base = -uEye / 40000.;
+    mountain = (1. - smoothstep(top - aa, top + aa, h)) * smoothstep(base - 0.012, base + 0.025, h) * smoothstep(-0.08, -0.06, h)
+      * (1. - smoothstep(3000., 3500., uEye)) * smoothstep(150., 650., elevation) * uMountains * (1. - 0.85 * uCloud);
+    vec3 tint = mix(mix(vec3(0.19, 0.25, 0.33), vec3(0.23, 0.17, 0.25), uGolden), vec3(0.025, 0.025, 0.055), uNight);
+    col = mix(col, mix(col, tint, mix(0.19, 0.24, uGolden) * mix(1., 0.55, uDeep)), mountain);
+  }
   float s = max(dot(d, uSunDir), 0.);
-  col += uSunCol * (pow(s, 600.) * 6. * (1. - uCloud) + pow(s, 12.) * 0.35 + pow(s, 3.) * 0.12) * (1. - uNight) * (1. - 0.8 * uCloud);
+  col += uSunCol * (pow(s, 600.) * 6. * (1. - uCloud) * (1. - mountain) + pow(s, 12.) * 0.35 + pow(s, 3.) * 0.12) * (1. - uNight) * (1. - 0.8 * uCloud);
   if (h > 0.02) {
     vec2 uv = d.xz / (h + 0.12) * 1.4;
     float f = fbm(uv * 1.3 + vec2(3.7, 1.2));
@@ -33,14 +47,15 @@ void main() {
     float under = 1. - smoothstep(0.02, 0.5, h);
     vec3 cl = mix(uCloudDark, uCloudLit, clamp(0.35 + 0.65 * under, 0., 1.)) + uAfterglow * tw * 0.6;
     cl *= 1. - uCloud * 0.22 * smoothstep(0.35, 0.75, f);
-    col = mix(col, cl, cov * mix(0.85, 1.0, uCloud));
-    if (uDeep > 0.01) col += vec3(step(0.9965, hash(floor(d * 380.)))) * uDeep * 0.2 * smoothstep(0.08, 0.4, h) * (1. - cov);
+    col = mix(col, cl, cov * mix(0.85, 1.0, uCloud) * (1. - mountain));
+    if (uDeep > 0.01) col += vec3(step(0.9965, hash(floor(d * 380.)))) * uDeep * 0.2 * smoothstep(0.08, 0.4, h) * (1. - cov) * (1. - mountain);
   }
   gl_FragColor = vec4(col, 1.);
   #include <colorspace_fragment>
 }`;
 
 const C = (h: number) => new THREE.Color(h);
+const SAMPLES = 2048; // bearings in the skyline profile
 const mixC = (a: THREE.Color, b: THREE.Color, t: number) => a.clone().lerp(b, clamp(t, 0, 1));
 
 export interface SkyState {
@@ -63,15 +78,37 @@ export class Sky {
     uWarm: { value: C(0xffc89a) }, uGolden: { value: 0 }, uSunCol: { value: C(0xfff2d8) }, uNight: { value: 0 },
     uDeep: { value: 0 }, uAfterglow: { value: C(0x000000) }, uCityGlow: { value: C(0x000000) },
     uCloudLit: { value: C(0xffffff) }, uCloudDark: { value: C(0xdde3ea) }, uCloud: { value: 0 },
+    uRidge: { value: new THREE.DataTexture(new Uint8Array(SAMPLES * 8 * 4), SAMPLES, 8) }, uMountains: { value: 0 }, uNorth: { value: 0 }, uEye: { value: 700 },
   };
   private env: THREE.Scene | null = null;
 
   constructor() {
+    const ridge = this.u.uRidge.value;
+    ridge.wrapS = THREE.RepeatWrapping; // interpolates across north
+    ridge.minFilter = ridge.magFilter = THREE.LinearFilter;
+    ridge.generateMipmaps = false;
+    ridge.needsUpdate = true;
     this.material = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: this.u, side: THREE.BackSide, depthWrite: false, fog: false });
     this.mesh = new THREE.Mesh(new THREE.SphereGeometry(6000, 48, 24), this.material);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = -1;
   }
+
+  // the skyline profile (data/horizon.bin); without it the sky is drawn as before
+  async loadHorizon() {
+    try {
+      const res = await fetchData(dataUrl('horizon.bin'));
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = new Uint8Array(await res.arrayBuffer());
+      if (data.length !== SAMPLES * 8 * 4) throw new Error('unexpected size');
+      Object.assign(this.u.uRidge.value.image, { data });
+      this.u.uRidge.value.needsUpdate = true;
+      this.u.uMountains.value = 1;
+    } catch (e) { console.warn('horizon', e); }
+  }
+
+  set north(t: number) { this.u.uNorth.value = t; }
+  set eye(metres: number) { this.u.uEye.value = metres; } // the camera's height above sea level
 
   // night: 0 by day .. 1 after sunset; deep: 0 at blue hour .. 1 in full night
   set({ elDeg, sunDir, trueSun, golden, night, deep, cloud }: SkyState) {

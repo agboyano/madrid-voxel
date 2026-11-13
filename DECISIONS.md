@@ -412,3 +412,12 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** dtla-voxel's pacing (upload in a hidden draw, a few MB per frame) was implemented and measured on a flight through the views: frame times did not improve (66 frames over 100 ms against 55-62 without), and tiles appeared later.
 - **Rejected:** keeping it for phones without a measurement there.
 
+## 2026-11-13: The Sierra de Guadarrama in the sky
+
+- **Decision:** a skyline profile baked from the IGN's MDT200 is drawn by the sky shader (dtla-voxel `9eeb73e`).
+- **Why:** from mid-height views the horizon was empty; Madrid's own horizon is the Sierra. The profile costs 64 kB and one texture read.
+- **Rejected:**
+  - **Copernicus GLO-90:** another agency and licence, where the IGN offers the same coverage with an automatable WCS.
+  - **The MDT25 or MDT05:** at 20-120 km a 200 m cell is under a pixel.
+  - **Terrain geometry beyond the map:** far more cost for a band a few pixels tall.
+

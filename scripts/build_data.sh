@@ -16,6 +16,7 @@ run prep            # -> areas/<key>/prep.npz (DSM, DTM, ortho, classes on the g
 run climate         # -> web/public/data/climate.json (Open-Meteo, once)
 run voxelize        # -> tiles, meta.json, trees.json, traffic.json, areas/<key>/ground.npz
 run terrain
+run horizon         # the distant skyline from the IGN's MDT200 (downloaded once) -> web/public/data/horizon.bin
 run zones           # blocks, unpriced: the viewer needs every file on the new grid before cost1m can load it
 run windows
 run window_stats

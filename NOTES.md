@@ -1602,3 +1602,24 @@ city's shadow map.
   city's own work, not because of the uploads. Pacing also delays showing each tile. Not adopted; phones may differ,
   and `uploads.mjs` can measure them.
 
+## Distant skyline (2026-11-13)
+
+Adapted from dtla-voxel `9eeb73e` (`scripts/horizon.py`, `web/src/sky.ts`):
+
+- **Source:** the IGN's MDT200 (200 m, orthometric heights, EPSG:25830, CC BY 4.0) from its WCS
+  (`servicios.idee.es/wcs-inspire/mdt`, coverage `Elevacion25830_200`), 121 km around the map's centre, one 2.9 MB
+  GeoTIFF cached at `{AREA}/horizon_mdt200.tif`. Its highest cell is 2389 m at Peñalara (2428 m; the 200 m cells
+  smooth the peak). dtla used USGS 3DEP; the IGN keeps the elevation with the same agency, datum and licence as the
+  PNOA-LiDAR.
+- **Bake:** for 2048 true bearings and eyes at 0-3500 m above sea level, the highest angle to the terrain 20-120 km
+  away, with the Earth's curvature (no refraction). `web/public/data/horizon.bin` (64 kB) and `horizon.json`.
+  From an eye at 500 m the highest crest is at 335° (Guadarrama, 2.0° up); due north 1.2°, and to the south under
+  0.4°.
+- **Drawing:** the sky shader turns its view direction into a true bearing (`Sky.north`, the same rotation as the
+  sun), reads the row for the camera's height above sea level (`camera.y + meta.base`) and tints a band below the
+  crest, lost in the haze at its foot. It fades out above 3 km (the overview, at 5.8 km, shows nothing) and with
+  clouds. The sun's disc, clouds and stars go behind it. No geometry and no pass: one texture read in the sky.
+- `?mountains=0` turns it off. Captures: `docs/img/horizon-nnw-day.png`, `horizon-nnw-golden.png`, and
+  `horizon-nnw-off.png` without it.
+- **Possible later:** snow on the crest in winter (Guadarrama is usually white from December to March).
+
