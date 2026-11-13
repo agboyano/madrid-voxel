@@ -20,6 +20,7 @@ interface Pin {
   on: boolean;
   side: 'r' | 'l' | 's';
   since: number;
+  at: number; // where the label was last moved to, in tenths of a pixel (x * 1e5 + y)
 }
 export interface Placed extends Facts { x: number; y: number; z: number }
 
@@ -28,6 +29,12 @@ const levelAt = (d: number, far: number) => d < Math.max(250, Math.min(far * 0.3
 
 const STEM = 20, TOP = 8, MAX = 12, SETTLE = 150;
 const overlap = (r: Rect, q: Rect) => r.x0 < q.x1 + 6 && r.x1 + 6 > q.x0 && r.y0 < q.y1 + 2 && r.y1 + 2 > q.y0;
+const setRect = (r: Rect, x0: number, x1: number, y0: number, y1: number) => { r.x0 = x0; r.x1 = x1; r.y0 = y0; r.y1 = y1; };
+// major labels first, then the shown ones; the sort is stable, so the list order breaks ties
+const rank = (p: Pin) => (p.far >= 9000 ? 0 : 2) + (p.on ? 0 : 1);
+const byRank = (a: Pin, b: Pin) => rank(a) - rank(b);
+// the sides to try: a shown label first where it is
+const SIDES = { r: ['r', 'l', 's'], l: ['l', 'r', 's'], s: ['s', 'r', 'l'], new: ['r', 'l', 's'] } as const;
 
 // Map pins: a dot on the roof, a hairline stem, the name above. Hidden when something else is in the way (a voxel
 // ray) or when a more important label is there; the MAX most important ones in view, however far. The major ones
@@ -38,6 +45,10 @@ export class Labels {
   private readonly pins: Pin[] = [];
   private picked: Pin | null = null;
   private frame = 0;
+  // reused every frame, so placing labels allocates only for what gets placed
+  private readonly order: Pin[] = [];
+  private readonly placed: Rect[] = [];
+  private readonly rects = { r: { x0: 0, x1: 0, y0: 0, y1: 0 }, l: { x0: 0, x1: 0, y0: 0, y1: 0 }, s: { x0: 0, x1: 0, y0: 0, y1: 0 } };
 
   constructor(labels: Label[], onClick: (l: Label) => void) {
     labels.forEach((l) => {
@@ -54,7 +65,7 @@ export class Labels {
   private add(cls: string, f: Facts, p: THREE.Vector3, base: THREE.Vector3, R: number): Pin {
     const facts = details(f).map((d) => `<span>${d}</span>`).join('');
     const e = el('div', cls, `<i class="dot"></i><i class="stem"></i><div class="txt"><b>${f.name}</b><span>${f.en ?? f.kind}</span>${facts ? `<p>${facts}</p>` : ''}</div>`, this.host);
-    return { el: e, txt: $('.txt', e), p, base, R, occluded: false, w: 0, h: 0, far: f.far ?? 1300, level: -1, dims: [], shift: 0, on: false, side: 'r', since: -1 };
+    return { el: e, txt: $('.txt', e), p, base, R, occluded: false, w: 0, h: 0, far: f.far ?? 1300, level: -1, dims: [], shift: 0, on: false, side: 'r', since: -1, at: NaN };
   }
 
   // a temporary label on a searched place
@@ -67,13 +78,22 @@ export class Labels {
 
   update(camera: THREE.Camera, world: World | null, bar: DOMRect, obstacles: Rect[]) {
     if (world) this.checkOcclusion(camera, world);
-    const placed: Rect[] = bar.width ? [{ x0: bar.left - 8, x1: bar.right, y0: bar.top, y1: bar.bottom + 8 }, ...obstacles] : [...obstacles];
-    const free = (r: Rect) => r.x0 >= 4 && r.x1 <= innerWidth - 4 && r.y0 >= 4 && r.y1 <= innerHeight - 4 && !placed.some((q) => overlap(r, q));
+    const placed = this.placed, rects = this.rects, order = this.order;
+    placed.length = 0;
+    if (bar.width) placed.push({ x0: bar.left - 8, x1: bar.right, y0: bar.top, y1: bar.bottom + 8 });
+    for (const o of obstacles) placed.push(o);
+    const free = (r: Rect) => {
+      if (r.x0 < 4 || r.x1 > innerWidth - 4 || r.y0 < 4 || r.y1 > innerHeight - 4) return false;
+      for (const q of placed) if (overlap(r, q)) return false;
+      return true;
+    };
     const under = (x: number) => bar.width > 0 && x > bar.left - 8 && x - 4 < bar.right;
     const v = new THREE.Vector3(), now = performance.now();
     let shown = 0;
-    const rank = (p: Pin) => (p.far >= 9000 ? 0 : 2) + (p.on ? 0 : 1);
-    for (const L of this.pins.map((p, i) => [rank(p), i, p] as const).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((e) => e[2])) {
+    order.length = 0;
+    for (const p of this.pins) order.push(p);
+    order.sort(byRank);
+    for (const L of order) {
       v.copy(L.p).project(camera);
       const inFront = v.z < 1, d = camera.position.distanceTo(L.p);
       let x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight;
@@ -93,10 +113,15 @@ export class Labels {
         if (y <= innerHeight + 4) {
           const st = pinned ? 4 : STEM, y0 = y - st - L.h, y1 = y + 4;
           const sx = Math.min(Math.max(x - L.w / 2, 4), innerWidth - L.w - 4);
-          const rects = { r: { x0: x - 4, x1: x + L.w, y0, y1 }, l: { x0: x - L.w, x1: x + 4, y0, y1 }, s: { x0: sx, x1: sx + L.w, y0, y1 } };
-          const order = (L.on ? [L.side, 'r', 'l', 's'] : ['r', 'l', 's']) as ('r' | 'l' | 's')[];
-          const pick = order.find((k) => (k !== 's' || L.w < innerWidth - 8) && free(rects[k]));
-          if (pick) { fits = true; side = pick; placed.push(rects[pick]); if (pick === 's') L.shift = sx - x; }
+          setRect(rects.r, x - 4, x + L.w, y0, y1);
+          setRect(rects.l, x - L.w, x + 4, y0, y1);
+          setRect(rects.s, sx, sx + L.w, y0, y1);
+          for (const k of SIDES[L.on ? L.side : 'new']) {
+            if ((k !== 's' || L.w < innerWidth - 8) && free(rects[k])) {
+              fits = true; side = k; placed.push({ ...rects[k] }); if (k === 's') L.shift = sx - x;
+              break;
+            }
+          }
         }
       }
       if (fits) { shown++; if (L.since < 0) L.since = now; } else L.since = -1;
@@ -104,7 +129,10 @@ export class Labels {
       if (vis) { L.side = side; L.el.classList.toggle('left', side === 'l'); L.el.classList.toggle('pinned', pinned); L.txt.style.left = side === 's' ? `${L.shift.toFixed(0)}px` : ''; }
       L.on = vis;
       L.el.classList.toggle('off', !vis);
-      if (inFront) L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      if (inFront) { // unchanged for a still view: no style write, no restyle
+        const at = Math.round(x * 10) * 1e5 + Math.round(y * 10);
+        if (at !== L.at) { L.at = at; L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; }
+      }
     }
   }
 
