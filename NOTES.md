@@ -17,7 +17,7 @@ The import copied the files tracked at that Warsaw commit (`git archive`), witho
 
 ### Git identity
 
-`user.name = Agboyano`, `user.email = agboyano@protonmail.com` (global config, set by the user). A local, unversioned `commit-msg` hook in `.git/hooks/` rejects AI attribution; it was tested with a real commit in both directions.
+The user's own global `user.name` and `user.email` (set by the user, never changed here). A local, unversioned `commit-msg` hook in `.git/hooks/` rejects AI attribution; it was tested with a real commit in both directions.
 
 ### Environment and installation
 
@@ -1455,7 +1455,7 @@ Not published yet: creating the public GitHub repository was blocked by the perm
 - **Workflow:** `.github/workflows/pages.yml` builds the viewer with the pnpm lockfile and deploys `web/dist` to GitHub Pages on every push to `main` (Warsaw's workflow, the same as dtla-voxel's but with pnpm; the analytics variables are removed). The data is committed, so the workflow does not build it.
 - **Removed from the viewer:** the PostHog analytics library and Warsaw's sharing image.
 - **Attribution review before publishing:**
-  - Every commit is the user's (`Agboyano <agboyano@protonmail.com>`), with no trailers.
+  - Every commit is the user's (author Agboyano), with no trailers.
   - The repository has no AI credits. The remaining mentions are the `CLAUDE.md` rules file, referred to by name.
   - The inherited `web/tools` scripts' temp paths were renamed.
 
