@@ -55,6 +55,7 @@ export interface Meta {
   sources: { osm: string };
   lonlat?: [number, number];
   crs?: string;
+  assets?: Record<string, string>; // build only: data path -> content-hashed file (tools/version-data.mjs)
 }
 
 export interface FloodInfo {

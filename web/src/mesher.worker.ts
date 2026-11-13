@@ -26,7 +26,7 @@ const post = (msg: MeshReply, transfer: Transferable[] = []) =>
   (self as unknown as { postMessage(m: MeshReply, t: Transferable[]): void }).postMessage(msg, transfer);
 
 async function fetchGzip(url: string) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: /\/immutable\//.test(url) ? 'force-cache' : 'no-cache' }); // as util.ts fetchData
   if (!res.ok || !res.body) throw new Error(`${res.status} ${url}`);
   return new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
 }

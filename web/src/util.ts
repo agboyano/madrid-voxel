@@ -19,13 +19,20 @@ export async function gunzip(data: ArrayBuffer | ReadableStream<Uint8Array<Array
   return new Response(stream.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
 }
 
+// A data file's URL. A build lists each file's content hash in meta.json (tools/version-data.mjs): the hashed copy
+// never changes, so the browser may keep it without asking the server again. In development there are no hashes.
+let assets: Record<string, string> | undefined;
+export function setDataAssets(a: Record<string, string> | undefined) { assets = a; }
+export const dataUrl = (path: string) => new URL(`data/${assets?.[path] ? `immutable/${assets[path]}` : path}`, location.href).href;
+export const fetchData = (url: string) => fetch(url, { cache: /\/immutable\//.test(url) ? 'force-cache' : 'no-cache' });
+
 export async function fetchGzip(url: string): Promise<ArrayBuffer> {
-  const res = await fetch(url);
+  const res = await fetchData(url);
   if (!res.ok || !res.body) throw new Error(`${res.status} ${url}`);
   return gunzip(res.body);
 }
 
-export const fetchJson = <T>(url: string): Promise<T> => fetch(url).then((r) => r.json() as Promise<T>);
+export const fetchJson = <T>(url: string): Promise<T> => fetchData(url).then((r) => r.json() as Promise<T>);
 
 export function dataTexture(data: Uint8Array | Uint16Array, w: number, h: number, format: THREE.PixelFormat,
   type: THREE.TextureDataType = THREE.UnsignedByteType) {

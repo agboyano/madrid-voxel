@@ -20,7 +20,7 @@ import type { Kind, TrafficData } from './sim/types';
 import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
 import { dateOf, dayOfYear, hourAt, madridDate, setSite, SOLAR_YEAR, solarNoon, trueNorthRotation } from './sun';
-import { $, clamp, coarsePointer, ease, el, fetchJson, lerp } from './util';
+import { $, clamp, coarsePointer, dataUrl, ease, el, fetchJson, lerp, setDataAssets } from './util';
 import { floodlight } from './sky';
 import { Card } from './card';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
@@ -264,7 +264,8 @@ function keepInside() {
 
 async function boot() {
   let meta: Meta;
-  [meta, climate] = await Promise.all([fetchJson<Meta>('data/meta.json'), fetchJson<Climate>('data/climate.json')]);
+  [meta, climate] = await Promise.all([fetchJson<Meta>(dataUrl('meta.json')), fetchJson<Climate>(dataUrl('climate.json'))]);
+  setDataAssets(meta.assets);
   views = meta.views;
   if (meta.lonlat) setSite(...meta.lonlat);
   places = meta.labels;
@@ -294,10 +295,10 @@ async function boot() {
   hud = new Hud(renderer.domElement, nav.mode);
   if (nav.input.pad) hud.setPad(true);
   bar.search.setItems(searchItems(meta));
-  fetchJson<{ places: Place[] }>('data/places.json').then(({ places }) => bar.search.setItems([...searchItems(meta),
+  fetchJson<{ places: Place[] }>(dataUrl('places.json')).then(({ places }) => bar.search.setItems([...searchItems(meta),
     ...places.map(([name, kind, x, y, size, alt]) => ({ name, alt, kind, go: () => goPlace(x, y, size, { name, kind }) }))]));
   fountains = new Fountains(scene, meta.jets ?? []);
-  fetchJson<TrafficData>('data/traffic.json').then((td) => {
+  fetchJson<TrafficData>(dataUrl('traffic.json')).then((td) => {
     life = nav.life = new StreetLife(scene, td);
     life.world = world;
     window.__life = life;

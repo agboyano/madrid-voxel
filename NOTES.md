@@ -1547,3 +1547,21 @@ What changed:
 - **Check:** traffic statistics over 75 s (cars, mean speed, stopped, blocked, reasons) match before and after within
   the simulation's own randomness, and `tools/walkstuck.mjs` passes.
 
+## Content-hashed data files (2026-11-13)
+
+Adapted from dtla-voxel `3e77ad7` (`web/tools/version-data.mjs`, run by `vite build`):
+
+- **What the build does:** every file in `dist/data` but `meta.json` is copied to `dist/data/immutable/<sha256>.<ext>`,
+  and `meta.json` gets an `assets` map from each path to its hashed name. The plain files stay for tabs opened before
+  a deploy, so the published site holds the data twice (about 64 MB). `public/data` and the dev server are untouched;
+  without `assets` the viewer reads the plain paths.
+- **How the viewer reads it:** `util.ts` `dataUrl()` maps a path to its hashed copy, which `fetchData()` and the
+  mesher worker fetch with `cache: 'force-cache'` (used from the cache however old). Everything else, `meta.json`
+  first, is fetched with `cache: 'no-cache'`, so a deploy is seen at once.
+- **Why it helps on GitHub Pages:** Pages serves everything with `max-age=600` and an ETag, and its headers cannot be
+  set (dtla's `_headers` file is for Cloudflare). After those 10 minutes each of the hundreds of tiles a view needs was
+  revalidated one by one, and a deploy could change the ETags of tiles whose content did not change.
+- **Check** (a local server imitating Pages, two visits to Puerta del Sol at level 0.3 in one browser profile): the
+  first visit downloaded 119 data files, 10.2 MB; the second asked only for `meta.json` and `climate.json`, both
+  answered 304, and no tile.
+

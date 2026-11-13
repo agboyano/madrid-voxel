@@ -390,3 +390,11 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** garbage-collection pauses cost frames on phones, and the changes are local.
 - **Rejected:** rewriting `carObstacle` without closures: it is Warsaw's traffic logic, and the gain (about 3.5 MB/s) did not justify the risk.
 
+## 2026-11-13: Content-hashed data files in the build
+
+- **Decision:** the build copies each data file under a name made from its content hash and lists the names in `meta.json`; the viewer keeps hashed files from the browser cache without asking again (dtla-voxel `3e77ad7`).
+- **Why:** GitHub Pages cannot be told to cache tiles for long; repeated visits revalidated every tile, and redeploys could invalidate unchanged ones.
+- **Rejected:**
+  - **dtla's `_headers` and Cloudflare deployment:** GitHub Pages ignores the file.
+  - **Dropping the plain copies to halve the upload:** tabs left open across a deploy would fail to load tiles.
+

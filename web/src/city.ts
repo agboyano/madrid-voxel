@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Caption } from './caption';
 import type { TileStreamer } from './stream';
 import type { Meta, Zones } from './types';
-import { dataTexture, fetchGzip, fetchJson } from './util';
+import { dataTexture, dataUrl, fetchGzip, fetchJson } from './util';
 import { makeBuildDepthMaterial, makeClayDepthMaterial, makeVoxelMaterial, type VoxelUniforms } from './voxelMaterial';
 
 const T = 128;
@@ -26,7 +26,7 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
   budget: () => number;
 }) {
   const d = S.dims[1], total = d.nx * d.ny, { W, D } = meta, index = (tx: number, ty: number) => ty * d.nx + tx;
-  const zonesIn = Promise.all([fetchGzip('data/zones.bin'), fetchJson<Zones>('data/zones.json')]);
+  const zonesIn = Promise.all([fetchGzip(dataUrl('zones.bin')), fetchJson<Zones>(dataUrl('zones.json'))]);
   let terrain: Awaited<ReturnType<typeof loadTerrain>> | null = null;
   const d8 = S.dims[8], n8 = d8.nx * d8.ny, clayIn: Promise<void>[] = [];
   let claysIn = 0;
@@ -246,7 +246,7 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
 // one terrain piece per 128 m tile (heights every 4 m, ground colours every 2 m), each dropped once its tile is in:
 // under the real ground it would flicker through
 async function loadTerrain(meta: Meta, scene: THREE.Scene, nx: number, ny: number) {
-  const { W, D } = meta, buf = await fetchGzip('data/terrain.bin');
+  const { W, D } = meta, buf = await fetchGzip(dataUrl('terrain.bin'));
   const tw = Math.ceil(W / 4), th = Math.ceil(D / 4), hd = new Uint16Array(buf, 0, tw * th), C = T / 4;
   const cw = Math.floor(W / 2), ch = Math.floor(D / 2), rgb = new Uint8Array(buf, tw * th * 2, cw * ch * 3), rgba = new Uint8Array(cw * ch * 4);
   for (let i = 0; i < cw * ch; i++) { rgba.set(rgb.subarray(3 * i, 3 * i + 3), 4 * i); rgba[4 * i + 3] = 255; }
