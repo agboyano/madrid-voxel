@@ -368,6 +368,228 @@
      "tiles_8": 12
     }
    ]
+  },
+  {
+   "when": "2026-11-13 18:38",
+   "gpu": "headless Chromium, ANGLE Vulkan",
+   "rows": [
+    {
+     "view": "overview",
+     "variant": "baseline",
+     "phone": false,
+     "level": 1.0,
+     "fps": 3.3,
+     "triangles": 43935103,
+     "calls": 1633,
+     "geometries": 1636,
+     "textures": 51,
+     "heap_mb": 539,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "overview",
+     "variant": "no shadows",
+     "phone": false,
+     "level": 1.0,
+     "fps": 4,
+     "triangles": 43853714,
+     "calls": 1623,
+     "geometries": 1636,
+     "textures": 51,
+     "heap_mb": 518,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "overview",
+     "variant": "no post",
+     "phone": false,
+     "level": 1.0,
+     "fps": 3.8,
+     "triangles": 43938181,
+     "calls": 1602,
+     "geometries": 1636,
+     "textures": 51,
+     "heap_mb": 516,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "sol",
+     "variant": "baseline",
+     "phone": false,
+     "level": 1.0,
+     "fps": 14,
+     "triangles": 2141414,
+     "calls": 141,
+     "geometries": 247,
+     "textures": 51,
+     "heap_mb": 1479,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "sol",
+     "variant": "no shadows",
+     "phone": false,
+     "level": 1.0,
+     "fps": 15.8,
+     "triangles": 2052133,
+     "calls": 131,
+     "geometries": 247,
+     "textures": 51,
+     "heap_mb": 1478,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "sol",
+     "variant": "no post",
+     "phone": false,
+     "level": 1.0,
+     "fps": 32.6,
+     "triangles": 2146717,
+     "calls": 109,
+     "geometries": 247,
+     "textures": 51,
+     "heap_mb": 1474,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "top",
+     "variant": "baseline",
+     "phone": false,
+     "level": 1.0,
+     "fps": 11.9,
+     "triangles": 5400494,
+     "calls": 264,
+     "geometries": 959,
+     "textures": 51,
+     "heap_mb": 457,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "top",
+     "variant": "no shadows",
+     "phone": false,
+     "level": 1.0,
+     "fps": 15.3,
+     "triangles": 1695942,
+     "calls": 106,
+     "geometries": 1636,
+     "textures": 51,
+     "heap_mb": 597,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    },
+    {
+     "view": "top",
+     "variant": "no post",
+     "phone": false,
+     "level": 1.0,
+     "fps": 27.1,
+     "triangles": 1796975,
+     "calls": 85,
+     "geometries": 1636,
+     "textures": 51,
+     "heap_mb": 598,
+     "tiles_1": 1610,
+     "tiles_8": 0
+    }
+   ]
+  },
+  {
+   "when": "2026-11-13 18:39",
+   "gpu": "headless Chromium, ANGLE Vulkan",
+   "rows": [
+    {
+     "view": "overview",
+     "variant": "baseline",
+     "phone": false,
+     "level": 0.3,
+     "fps": 17,
+     "triangles": 4798681,
+     "calls": 187,
+     "geometries": 171,
+     "textures": 41,
+     "heap_mb": 261,
+     "tiles_1": 126,
+     "tiles_8": 15
+    },
+    {
+     "view": "overview",
+     "variant": "no shadows",
+     "phone": false,
+     "level": 0.3,
+     "fps": 22.4,
+     "triangles": 4303391,
+     "calls": 163,
+     "geometries": 171,
+     "textures": 41,
+     "heap_mb": 185,
+     "tiles_1": 126,
+     "tiles_8": 15
+    },
+    {
+     "view": "overview",
+     "variant": "no post",
+     "phone": false,
+     "level": 0.3,
+     "fps": 21.3,
+     "triangles": 4566698,
+     "calls": 157,
+     "geometries": 171,
+     "textures": 41,
+     "heap_mb": 275,
+     "tiles_1": 126,
+     "tiles_8": 15
+    },
+    {
+     "view": "sol",
+     "variant": "baseline",
+     "phone": false,
+     "level": 0.3,
+     "fps": 34.6,
+     "triangles": 1153776,
+     "calls": 81,
+     "geometries": 132,
+     "textures": 41,
+     "heap_mb": 216,
+     "tiles_1": 94,
+     "tiles_8": 15
+    },
+    {
+     "view": "sol",
+     "variant": "no shadows",
+     "phone": false,
+     "level": 0.3,
+     "fps": 42,
+     "triangles": 1042535,
+     "calls": 71,
+     "geometries": 96,
+     "textures": 41,
+     "heap_mb": 219,
+     "tiles_1": 94,
+     "tiles_8": 15
+    },
+    {
+     "view": "sol",
+     "variant": "no post",
+     "phone": false,
+     "level": 0.3,
+     "fps": 57,
+     "triangles": 1137740,
+     "calls": 60,
+     "geometries": 132,
+     "textures": 41,
+     "heap_mb": 212,
+     "tiles_1": 94,
+     "tiles_8": 15
+    }
+   ]
   }
  ]
 }

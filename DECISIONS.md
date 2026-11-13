@@ -354,3 +354,21 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Clay as collision until the tile loads (as before):** it stops the walker at invisible walls in some places and lets them through in others.
   - **Splitting steps at low frame rates:** a separate problem, left for when it shows.
 
+## 2026-11-13: Coloured clay, camera-aware blocks and the slider as a ceiling
+
+- **Decision:**
+  - **Clay colour:** the 8 m clay is drawn in its own palette colours, 30 % desaturated, not flat grey.
+  - **Block choice:** the 1 m budget goes first to the blocks within 150 m of the focus, then to the blocks in view, nearest the camera and the focus first.
+  - **Slider:** the Render size slider sets a ceiling and no longer switches the adapting off. `?level=` fixes the level.
+  - **Light post-processing:** below level 0.4, ambient occlusion and the depth blur are off.
+- **Why:**
+  - From high up on slow devices the city looked white.
+  - Oblique views spent their budget behind the camera, and showed clay in the foreground.
+  - A visitor who raised the slider on a slow machine stayed at a few frames per second.
+  - Post-processing is about half the frame on an integrated GPU.
+- **Cost:** the coloured clay runs the full surface shader; at the overview that costs about 8 % on the UHD 620.
+- **Rejected:**
+  - **2 m and 4 m tile levels (dtla-voxel):** a large change, which Warsaw removed and the 2026-11-11 entry already turned down. Coloured clay was tried first.
+  - **Ordering by projected size alone:** the overview would have put its detail at the near edge of the map instead of where the visitor looks.
+  - **Dropping bloom and SMAA too:** they are cheap next to N8AO and the depth blur.
+

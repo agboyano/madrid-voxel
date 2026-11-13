@@ -48,8 +48,8 @@ Grid: W 3950 × D 4430 cells, H 351 levels.
 
 - `npm run dev` equivalent: `npx -y pnpm@12.11.2 exec vite` serves the viewer at `http://localhost:5173/` with the Warsaw tiles, unchanged.
 - Analytics (PostHog in `web/index.html` and `web/src/stats.ts`) stay off locally: they need a `phc_` key and the `p.migdal.pl` host.
-- Headless Chromium falls back to SwiftShader (software WebGL), which is far too slow to stream the city. `--use-angle=gl --ignore-gpu-blocklist --enable-gpu` gets the real GPU (Intel UHD 620 through Mesa).
-- The viewer adapts its "Render size" level to the frame rate and draws what the budget leaves out as grey 8 m clay. On this GPU (8-17 fps) that leaves most of the map grey, so `scripts/screenshot.py` sets the slider to 1 by default (`--level`).
+- Headless Chromium falls back to SwiftShader (software WebGL), which is far too slow to stream the city. `--use-angle=vulkan --enable-features=Vulkan --ignore-gpu-blocklist` gets the real GPU (Intel UHD 620 through Mesa). `--use-angle=gl` used to, but since 2026-11 Chromium falls back to SwiftShader with it.
+- The viewer adapts its "Render size" level to the frame rate and draws what the budget leaves out as 8 m clay. So that screenshots are comparable, `scripts/screenshot.py` fixes the level (`--level`, default 1) through the viewer's `?level=` query, which stops the adapting.
 - Reference screenshots in `docs/img/`: `warsaw-overview.png` (view `overview`, 15 Jun 17:00), `warsaw-street.png` (view `zlota`, 15 Jun 17:00), `warsaw-skyline.png` (view `skyline`, 10 Oct 09:00). Each takes 70-80 s at full render size.
 
 ### Corrections to `PLAN.md` assumptions
@@ -1343,6 +1343,43 @@ Headless Chromium on the development laptop's Intel UHD 620 (integrated), ANGLE 
 - Before `cost1m.py` existed, every city block cost 0 triangles in `zones.json`, so the budget never bit: the emulated phone loaded all 1 320 tiles with 0.8–1.3 GB of heap. Warsaw generated that table with `web/tools/cost1m.mjs`; `scripts/cost1m.py` is its port and runs in `build_data.sh`.
 - The 2 and 4 m tile levels (Phase 5 option) are not needed: phones stay within budget with clay beyond, and desktops load the whole map.
 
+### Clay colour, block choice and Render size (2026-11-13)
+
+**Clay colour:**
+- **Before:** the 8 m clay was one light grey, `vec3(0.62, 0.61, 0.59)`, that skipped the albedo dimming. From high up on a slow device the city read as a white sheet around a coloured patch.
+- **Now:** it keeps the palette colour of each block's topmost voxel (`tiles.py`), shaded like the 1 m city, 30 % desaturated and with no light of its own. Windows drawn on 8 m faces are not visible at the distances clay shows.
+- **Screenshots:**
+  - `docs/img/clay-before-*.png` and `clay-colour-*.png`: overview at levels 0, 0.3 and 0.75, an oblique view at 0.3, night at 0.3.
+  - `blocks-camera-oblique-0.3.png`: the oblique view after the new block choice.
+
+**Block choice** (`city.ts`, `choose()`). Before, blocks were ordered by distance to the point looked at only. Now the order is:
+1. the blocks within 150 m of the focus;
+2. the blocks in the camera's frustum (by 128 m tile), by distance to the camera plus distance to the focus;
+3. the rest.
+
+In an oblique view the foreground is now 1 m and the far background is clay, instead of the reverse.
+
+**Render size:**
+- **Slider as ceiling:** the slider sets the level and the most the automatic setting may grow back to. It no longer switches the adapting off.
+- **Example on the UHD 620:** at the overview, moving the slider to 1 is stepped back down to 0.24 within a minute, and the panel says "size lowered to 24 %".
+- **Light post-processing:** below level 0.4 (`LIGHT_POST`), N8AO and the depth blur are off.
+- **Fixed level:** `?level=` fixes the level.
+
+Measured with `scripts/profile.py` (UHD 620, ANGLE Vulkan, 1600 × 1000):
+
+| View, level | fps before | fps after | Change |
+| --- | --- | --- | --- |
+| overview, 0.3 | 18.2 | 17.0–18.2 | coloured clay (−8 %), then light post (+8 %) |
+| granvia, 0.3 | 26.3 | 35.5 | light post |
+| sol, 0.3 | — | 34.6 (57.0 with no post at all) | |
+
+At level 1, the whole city (1610 tiles since the −6° area) is a different load:
+- **overview:** 3.3 fps, 43.9 M triangles;
+- **sol:** 14.0 fps;
+- **top:** 11.9 fps.
+
+Post-processing is still about half the frame at street level.
+
 ### Defects reviewed at scale
 
 - **Map edges:** two crashes on features cut by the edge, both fixed. Church windows were probed past the grid, and a stairwell just off the map broke the underpasses.
@@ -1436,7 +1473,7 @@ Not published yet: creating the public GitHub repository was blocked by the perm
     - **Prefetch:** `keepDetail()` re-pins the full detail within 150 m of the walker every 40 m or 10 s, and at once when a step was refused for missing detail.
     - **Way out:** `unstick()` moves a walker standing inside something solid to the nearest spot within 6 m that `fits()`.
     - **Pedestrians:** all three also run when walking as a pedestrian.
-- **Check:** `node web/tools/walkstuck.mjs [outdir] [level]` (dev server running). It uses the system Chromium (`$CHROMIUM`, default `/usr/bin/chromium`). Here that runs on SwiftShader at about 1 fps, so distances walked are short. Screenshot: `docs/img/walk-low-level.png`. Four checks:
+- **Check:** `node web/tools/walkstuck.mjs [outdir] [level]` (dev server running). It uses the system Chromium (`$CHROMIUM`, default `/usr/bin/chromium`). It renders on the GPU through ANGLE's Vulkan backend (on SwiftShader, at about 1 fps, distances walked are short). Screenshot: `docs/img/walk-low-level.png`. Four checks:
   - **Wrong answers:** counts queries answered from clay where a 1 m tile is loaded. Before the cache fix, 163 of 163 queries around the walker were wrong; after it, none.
   - **Post:** puts the walker inside a lamp post and walks. Before the fix it did not move in 6 s; after it, it steps out.
   - **Edge:** walks along a street into a 1 m tile whose download is held back 15 s, where the clay leaves the way open.
