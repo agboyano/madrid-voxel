@@ -388,7 +388,7 @@ def _name(f):
 
 def small_tree(vol, g, r, c, h, leaves, trunk, height=None):
     """A young street tree as planted 2025-26 (Plac Centralny, Złota): photos show a clear trunk to ~4 m and a
-    narrow, airy crown on top (docs/warsaw/visual_ref.md, Złota 2026 photos)."""
+    narrow, airy crown on top (docs/warsaw/visual_ref.md, Złota 2026 photos). Returns (clear trunk, height) in cells."""
     H = int(height or 7 + h % 3)
     z0 = int(g[r, c])
     tr = max(3, int(H * 0.42))
@@ -410,6 +410,7 @@ def small_tree(vol, g, r, c, h, leaves, trunk, height=None):
                 if 0 <= rr < vol.shape[1] and 0 <= cc < vol.shape[2] and zz < vol.shape[0] and vol[zz, rr, cc] == 0:
                     vol[zz, rr, cc] = leaf if (dr + dc + k) % 3 else leaf2
     vol[z0 + tr:z0 + H - 1, r, c] = trunk  # leader through the crown
+    return tr, H
 
 
 def wall_override(f, pal):

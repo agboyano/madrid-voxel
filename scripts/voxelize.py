@@ -332,12 +332,18 @@ trunks = []  # (row, col, thick): drawn once the crowns are shaped around them
 
 
 trunk_conifer = []  # per trunk: a conifer by the database's species (or OSM leaf_type)
+# per trunk cell, what the viewer's trunk and branches need (trunks.py): girth, species, crown
+trunk_info = {}
 
 
-def put_trunk(r, c, thick=False, conifer=False):
+def put_trunk(r, c, thick=False, conifer=False, tree=None):
     trunks.append((r, c, thick))
     trunk_conifer.append(conifer)
     trunk_at[r, c] = True
+    tree = tree or {}
+    trunk_info.setdefault((r, c), dict(x=tree.get("x", c + 0.5), y=tree.get("y", r + 0.5), thick=thick,
+                                       girth=tree.get("trunk_cm"), species=tree.get("species"),
+                                       leaf_type=tree.get("leaf_type")))
 
 
 for t in all_trees:
@@ -351,7 +357,7 @@ for t in all_trees:
         if veg[r, c] and not trunk_ok_db[r, c] and _dbd[r, c] <= 3:  # mapped onto the road edge: to the kerb side
             r, c = int(_dbr[r, c]), int(_dbc[r, c])
         if veg[r, c]:
-            put_trunk(r, c, thick=(t.get("trunk_cm") or 0) >= 250, conifer=treedb.is_conifer(t))
+            put_trunk(r, c, thick=(t.get("trunk_cm") or 0) >= 250, conifer=treedb.is_conifer(t), tree=t)
             t["drawn"] = "lidar"
             t["z"] = int(g[r, c])
             t["h"] = int(crown_top[r, c])
@@ -362,7 +368,9 @@ for t in all_trees:
     n_new += 1
     # a known tree the leaf-off LiDAR resolved no crown for: drawn young, at its inventory height when it has one
     hgt = t.get("height")
-    landmarks.small_tree(vol, g, r, c, stable_hash(t["id"]), LEAVES, C["trunk"], height=hgt)
+    tr_, H_ = landmarks.small_tree(vol, g, r, c, stable_hash(t["id"]), LEAVES, C["trunk"], height=hgt)
+    trunk_info.setdefault((r, c), dict(x=t["x"], y=t["y"], girth=t.get("trunk_cm"), species=t.get("species"),
+                                       leaf_type=t.get("leaf_type"), hb=tr_, top=H_, radius=1.9 * VOXEL_SIZE, young=True))
     t["drawn"] = "procedural"
     t["z"] = int(g[r, c])
 note("trunks under LiDAR crowns at known trees:", n_trunk)
@@ -408,6 +416,8 @@ if trunks:
     bot = np.round(crown_top[vr_, vc_] - np.maximum(dep, 1)).astype(np.int32)
     bot = np.clip(bot, 2, crown_top[vr_, vc_] - 1)
     crown_bot[vr_[ok_], vc_[ok_]] = bot[ok_]
+    for i_, (r_, c_, _) in enumerate(trunks):
+        trunk_info[(r_, c_)].update(top=int(Ht[i_]), radius=float(Rt[i_]) * VOXEL_SIZE)
     # conifers (thuja, pine, spruce, yew...: the city database's species) in dark blue-green needles, not leaf green
     con = np.array(trunk_conifer, bool)
     cm_ = ok_.copy()
@@ -976,13 +986,16 @@ np.savez_compressed(AREA / "ground.npz", g=g.astype(np.int16), rgb=_lut[_ids],
                     b=np.where(bmask, topi, 0).astype(np.int16))  # building height above ground (photo-pose tools)
 import tiles
 EXPORT_IDS = dict(face_ids={i for i, e in enumerate(pal.entries) if e[3] == M_CLOCK},
-                         fol_ids={i for i, e in enumerate(pal.entries) if e[3] == M_LEAF} | {C["trunk"]},
+                         fol_ids={i for i, e in enumerate(pal.entries) if e[3] == M_LEAF}, drop_ids={C["trunk"]},
                          grass_ids={i for i, e in enumerate(pal.entries) if e[3] == M_GRASS}, bare_id=C["bare"])
 # nothing hangs in the air: crowns get trunks, building pieces walls or posts, specks go (debris.support_floating)
 debris.support_floating(vol, g, pal, bkind, note, C["trunk"], C["pole"], trunk_ok=trunk_ok_db)
 if os.environ.get("FINALDUMP"):  # the finished volume, for whole-city checks (scripts/floating.py)
     np.save("data/cache/final_vol.npy", vol)
     np.save("data/cache/final_g.npy", g)
+# the trunks leave the 1 m tiles: the viewer draws them at their own width, with branches (trunks.py)
+import trunks as trunk_records
+trunk_records.build(vol, g, C["trunk"], trunk_info, note, OUT)
 tile_info = tiles.export(vol, g, OUT / "tiles", note, **EXPORT_IDS)
 if os.environ.get("LMCACHE"):
     pickle.dump(dict(EXPORT_IDS, debris_keep=[i for i, e in enumerate(pal.entries) if e[3] == M_LEAF] + [C["trunk"]]),

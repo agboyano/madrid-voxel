@@ -10,8 +10,9 @@ Node file  tiles/{s}/{nx}_{ny}.bin, gzip of:
   runs    uint16[3 * sum]   (z0, len, palette) per run, z in cells of the level, bottom -> top
 
 Foliage at level 1 is its own file, loaded after every building (web/src/city.ts): tiles/1f/{nx}_{ny}.bin, the same
-format, holding only trees, trunks and grass (`fol_ids`, `grass_ids`); in tiles/1/ trees and trunks are left out and
-grass is bare earth (`bare_id`), the surface the grass is then drawn on.
+format, holding only tree crowns and grass (`fol_ids`, `grass_ids`); in tiles/1/ the crowns are left out and grass is
+bare earth (`bare_id`), the surface the grass is then drawn on. `drop_ids` (tree trunks) are in neither: the viewer
+draws them itself (scripts/trunks.py); the 8 m clay keeps them.
 
 Level 8: a cell is solid when at least a quarter of its block is; its colour is the topmost voxel in the block, so
 roofs stay roofs and the street stays paving when seen from above. Clock faces colour their whole block.
@@ -79,7 +80,7 @@ def column_runs(vol_win):
     return counts.astype(np.uint16), np.stack([s_z0, s_z1 - s_z0, val], 1).astype(np.uint16)
 
 
-def export(vol, g, out, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0):
+def export(vol, g, out, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0, drop_ids=()):
     """vol (H, D, W) level-1 voxels, g (D, W) ground level -> node files; returns the manifest for meta.json."""
     D, W = g.shape
     info = dict(N=N, levels=[], bytes=0)
@@ -94,6 +95,7 @@ def export(vol, g, out, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0):
             (out / "1f").mkdir(parents=True, exist_ok=True)
             is_fol = np.zeros(65536, bool); is_fol[list(fol_ids)] = True; is_fol[list(grass_ids)] = True
             is_grass = np.zeros(65536, bool); is_grass[list(grass_ids)] = True
+            is_drop = np.zeros(65536, bool); is_drop[list(drop_ids)] = True
         tot, nruns, ftot = 0, 0, 0
         for ty in range(ny):
             for tx in range(nx):
@@ -107,6 +109,7 @@ def export(vol, g, out, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0):
                 top = int(np.nonzero(win.reshape(Hs, -1).any(1))[0].max()) + 1 if win.any() else 1
                 win = win[:top]
                 if split:
+                    win = np.where(is_drop[win], 0, win).astype(np.uint16)
                     f = is_fol[win]
                     fol = np.where(f, win, 0).astype(np.uint16)
                     win = np.where(f, np.where(is_grass[win], bare_id, 0), win).astype(np.uint16)
@@ -128,7 +131,7 @@ def export(vol, g, out, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0):
     return info
 
 
-def export_region(vol, g, out, box, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0):
+def export_region(vol, g, out, box, note, face_ids=(), fol_ids=(), grass_ids=(), bare_id=0, drop_ids=()):
     """Rewrite only the nodes (every level) over box = (r0, r1, c0, c1) of the 1 m grid, from the same volume the
     full export would see (scripts/patch.py); each node is built from its own 1 m window, so the result matches
     export()."""
@@ -137,6 +140,7 @@ def export_region(vol, g, out, box, note, face_ids=(), fol_ids=(), grass_ids=(),
     face = np.array(sorted(face_ids), np.uint16)
     fol = np.zeros(65536, bool); fol[list(fol_ids)] = True; fol[list(grass_ids)] = True
     grass = np.zeros(65536, bool); grass[list(grass_ids)] = True
+    drop = np.zeros(65536, bool); drop[list(drop_ids)] = True
     n = 0
     for s in LEVELS:
         span = N * s
@@ -154,6 +158,7 @@ def export_region(vol, g, out, box, note, face_ids=(), fol_ids=(), grass_ids=(),
                 top = int(np.nonzero(win.reshape(Hs, -1).any(1))[0].max()) + 1 if win.any() else 1
                 win = win[:top]
                 if s == 1 and len(fol_ids):
+                    win = np.where(drop[win], 0, win).astype(np.uint16)
                     f = fol[win]
                     fv = np.where(f, win, 0).astype(np.uint16)
                     win = np.where(f, np.where(grass[win], bare_id, 0), win).astype(np.uint16)
