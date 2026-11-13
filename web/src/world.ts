@@ -17,26 +17,38 @@ export class World {
   readonly W: number;
   readonly D: number;
   hitAxis = 0;
-  private cache: ColumnData | null = null;
+  private readonly cache: (ColumnData | null | undefined)[];
+  private readonly cacheSize: number;
+  private readonly cacheWidth: number;
   private cacheVersion = -1;
   private readonly leaf = new Uint8Array(4096);
 
   constructor(private readonly src: ColumnSource, meta: Meta) {
     this.W = meta.W;
     this.D = meta.D;
+    this.cacheSize = src.N * src.levels[src.levels.length - 1];
+    this.cacheWidth = Math.ceil(meta.W / this.cacheSize);
+    this.cache = new Array(this.cacheWidth * Math.ceil(meta.D / this.cacheSize));
     meta.palette.forEach((e, i) => { if (e[3] === MAT.LEAF) this.leaf[i] = 1; });
   }
 
   inside(x: number, r: number) { return x >= 0 && r >= 0 && x < this.W && r < this.D; }
 
+  // Adapted from dtla-voxel (commits 1034c95, 98283fe; see LICENSE-dtla-voxel): one cache slot per finest-tile
+  // footprint, so a coarse tile found for one point never answers for a loaded fine tile next to it.
   private node(x: number, r: number): ColumnData | null {
-    const { src } = this, c = this.cache;
-    if (c && this.cacheVersion === src.version && x >= c.x0 && r >= c.y0 && x < c.x0 + src.N * c.s && r < c.y0 + src.N * c.s) return c;
+    const { src } = this;
+    if (this.cacheVersion !== src.version) {
+      this.cache.fill(undefined);
+      this.cacheVersion = src.version;
+    }
+    const index = Math.floor(x / this.cacheSize) + this.cacheWidth * Math.floor(r / this.cacheSize), cached = this.cache[index];
+    if (cached !== undefined) return cached;
     for (let i = src.levels.length - 1; i >= 0; i--) {
       const s = src.levels[i], L = src.N * s, d = src.columns(`${s}/${Math.floor(x / L)}_${Math.floor(r / L)}`);
-      if (d) { this.cache = d; this.cacheVersion = src.version; return d; }
+      if (d) return this.cache[index] = d;
     }
-    return null;
+    return this.cache[index] = null;
   }
 
   private column(x: number, r: number): [ColumnData, number] | null {
