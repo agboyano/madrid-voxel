@@ -1682,6 +1682,7 @@ Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish
 | --- | --- | --- |
 | overview | 3.5 fps, 42.4 M | 3.2 fps, 47.4 M |
 | sol | 11.3 fps, 3.0 M | 14.2 fps, 2.2 M (noise between runs) |
+| prado | 10.5 fps, 5.0 M | 9.8 fps, 5.9 M |
 
   In summer the limbs are not drawn, which leaves about a third of the instances.
 - **Screenshots** (`docs/img/`):
