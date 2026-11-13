@@ -125,6 +125,7 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [x] Credit Wikidata (CC0) in the README alongside the other data sources.
 - [x] Try 2 or 3 grid rotations 0° kept; −6° fits the full area better but needs four more LiDAR tiles (`DECISIONS.md`, `todo.md`). (0°, aligned with Gran Vía, aligned with Paseo del Prado) and compare screenshots of the staircase effect.
 - [x] Adjust the seasonal tree cycle to the most common species in the Madrid inventory.
+- [x] Trunks at their inventory width (girth at 1.3 m; estimated from the crown top where missing) instead of 1 m voxel columns, and simple bare limbs for deciduous trees in autumn and winter (`scripts/trunks.py`, `web/src/trunks.ts`).
 
 **Checkpoint 4:** the user approves palette, rotation, the landmark list (required and extended sets) and the info cards.
 

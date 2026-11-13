@@ -555,7 +555,7 @@ exist. `s` means both "metres per cell" and "cells per block" at the same time.
 | `scripts/voxelize.py:1523`, `:1531-1535` | lamp post: kerb within 4 cells; height 10/6 (or OSM `height`) cells; head = 1 voxel | **lamp = 1×1 cell column**, z in cells |
 | `scripts/voxelize.py:1544-1561` | inferred Złota lamps every 18 m, ±5.5 m, 9 m apart, 6 cells tall | metres = cells |
 | `scripts/voxelize.py:1567-1569`, `:1574-1575` | shelter roof at `g + 2`, posts every 3rd cell; flagpole 9 cells | |
-| `scripts/voxelize.py:1302-1306`, `:1393-1396` | trunks: 1 cell, "thick" = 2×2 cells | **trunk width = 1 or 2 cells** |
+| `scripts/voxelize.py:1302-1306`, `:1393-1396` | trunks: 1 cell, "thick" = 2×2 cells | **trunk width = 1 or 2 cells**. Madrid: only the 8 m clay sees them; the 1 m view draws trunks at their inventory width (`trunks.py`, `trunks.ts`: diameters in cm and crown radii in dm of metres, converted with `meta.voxel`) |
 | `scripts/voxelize.py:1309-1316` | tree placement `2 <= c < W-2`, snap `<= 2.5`, `<= 3` | |
 | `scripts/voxelize.py:1365-1375` | crown dome `Rt + 0.7`, `0.62 * Ht`, `max(dep, 1)`, `bot >= 2` | cells |
 | `scripts/voxelize.py:1450` | fountain jets `[c + 0.5, z0 + 1, r + 0.5]` | cell centres emitted as metres |
@@ -1654,3 +1654,37 @@ Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish
   level the adapting settled at in `localStorage` (`madrid-voxel.level`) and starts the next visit there; it still
   steps up when frames allow. In the simulation the second visit started at 0.32 instead of 0.75.
 
+
+## Trunks and limbs (2026-11-13)
+
+- **Source of the width:** the inventory's `PERIMETRO` (`trunk_cm`), the trunk's girth at 1.3 m in cm. It is filled for 99.99 % of the AOI's inventory trees: median 53 cm, p90 143 cm, max 600 cm. The file has no crown or diameter column.
+- **Girth for trees without one** (`trunks.girth_fit`): the median inventory girth per metre of LiDAR crown top, made non-decreasing, from 41 019 trees.
+  - By crown top: 4 m → 23 cm, 8 → 43, 12 → 64, 16 → 95, 20 → 113, 24 → 130, 28 → 140, 32 → 170, 36 → 200.
+  - It is used for 10 495 trunks: crowns the LiDAR found with no tree known, OSM trees without a `circumference` tag, and trunks under floating crowns.
+- **Records** (`scripts/trunks.py`):
+  - They are read from the finished volume, one per column of trunk voxels, so every trunk drawn has one.
+  - 58 137 trunks: 89 from `debris.support_floating`, and 36 tree records whose trunk voxels a landmark or a building edge removed. 9 445 are evergreen.
+  - Diameter p10 / median / p90 / max: 6 / 18 / 45 / 204 cm.
+  - `trunks.bin` is 16 bytes per trunk, 660 kB gzipped; its layout is in the module docstring.
+  - `scripts/patch.py` does not rewrite it: a patch that moves trunks needs a full build.
+- **Tiles:** `tiles.py` takes `drop_ids` (the trunk palette id), which is left out of both `tiles/1` and `tiles/1f`. Level 8 still downsamples the trunks, so the clay keeps them.
+- **Viewer** (`web/src/trunks.ts`):
+  - **Mesh:** one `InstancedMesh` of open-ended boxes per foliage tile. It is created when the tile arrives (`TileStreamer.onFoliage`), shown with it (`city.ts` `vis`), and freed with it.
+  - **Material:** a `MeshStandardMaterial`. It discards fragments where the block is clay (`zreal`, so `ZONES_PARS` is now exported), and snow lies on faces that point up.
+  - **Shape:** a deciduous tree gets a leader up to half its crown and 3–5 limbs at 35–55°. The limb ends stay within 2/3 of the crown radius and 3/4 of its depth. Crowns of 2.5 m radius or more add one or two forks per limb.
+  - **Young (procedural) trees:** a leader through the crown and three twigs.
+  - **Season:** instances are ordered trunks first, and the mesh `count` drops the limbs between the city's median leaf-out + 20 days and turn − 20 days.
+  - **Query parameters:** `?trunkmin=` sets the narrowest trunk in metres (default 0.25), and `?trunks=0` turns trunks off, for A/B tests.
+- **Bare crowns:** `leafGone` now discards every bare leaf voxel outside the clay. Before, 30 % stayed as dark-brown 1 m cubes.
+- **Cost** (`scripts/profile.py --query`, 15 January, render size 1, UHD 620; triangles per frame including the shadow pass):
+
+| View | without trunks | with trunks |
+| --- | --- | --- |
+| overview | 3.5 fps, 42.4 M | 3.2 fps, 47.4 M |
+| sol | 11.3 fps, 3.0 M | 14.2 fps, 2.2 M (noise between runs) |
+
+  In summer the limbs are not drawn, which leaves about a third of the instances.
+- **Screenshots** (`docs/img/`):
+  - `trees-before-prado-*`: before.
+  - `trees-after-prado-{aerial,street}-{jan,jun,nov}` and `trees-after-retiro-jan`: after.
+  - `trees-trunkmin-{0.1,0.25,0.4}-jan`: the narrowest trunk, compared.

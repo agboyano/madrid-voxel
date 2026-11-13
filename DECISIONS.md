@@ -427,3 +427,21 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** blocks flashed bare ground in 128 m squares while their trees loaded, and slow devices repeated the climb down from 0.75 on every visit.
 - **Rejected:** requesting foliage together with the base tile: the foliage mesher needs the base tile's columns, so it would fetch the base tile twice.
 
+
+## 2026-11-13: Trunks at their inventory width, with bare limbs in winter
+
+- **Decision:** the viewer draws every trunk as a thin instanced box of its real diameter (the inventory's `PERIMETRO`, girth at 1.3 m, divided by π), with a central leader and 3–5 limbs into each deciduous crown. The trunk voxels stay in the build for the 8 m clay but leave the 1 m tiles (`scripts/trunks.py`, `web/src/trunks.ts`). A bare crown now drops all its leaf voxels instead of keeping 30 % of them as brown cubes.
+- **Why:**
+  - A 1 m voxel trunk is about six times the median street tree's (53 cm girth, 17 cm across) and filled pavements and boulevards.
+  - In autumn and winter the crowns were a trunk column under floating brown 1 m cubes. The limbs give the bare tree its shape.
+  - The girth is public, already downloaded and filled for 99.99 % of the AOI's inventory trees. It correlates with height (Pearson 0.81 with the inventory height, 0.59 with the LiDAR crown top), so for trees without it (LiDAR-only crowns and most OSM-only trees, 18 %) it is estimated from the median girth per metre of crown top.
+- **Details:**
+  - Narrowest trunk drawn: 0.25 m (`?trunkmin=` to compare). At the real width (median 18 cm) young trees vanish a street away.
+  - Limbs are hidden while the city is in full leaf (20 days after the median leaf-out to 20 days before the median turn), where they only poked out under low crowns.
+  - Evergreens (`phenology.classify`) get only the trunk.
+- **Rejected:**
+  - **Trunks as 1 m voxels:** the mesher works in whole metres, so a trunk cannot be thinner than a voxel.
+  - **Changing the tile format or the voxel size:** both are fixed by the project rules, and the trunks alone do not justify it.
+  - **Estimating every girth from height:** the measured girth exists for almost every tree.
+  - **Keeping some brown voxels as dead leaves:** even 1 in 16 read as floating cubes.
+  - The 2026-11-11 decision to keep street lamps as voxels stands. Trunks differ because they are sub-voxel, and trees are 58 000 objects across the whole map.
