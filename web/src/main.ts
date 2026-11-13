@@ -46,7 +46,11 @@ const phone = Math.min(screen.width, screen.height) < 600;
 const ceiling = phone ? 0.75e6 : Infinity;
 const LIGHT_POST = 0.4;
 const fixedLevel = qs.get('level') !== null && Number.isFinite(+qs.get('level')!);
-let level = fixedLevel ? clamp(+qs.get('level')!, 0, 1) : 0.75;
+// where the adapting settled on the last visit from this browser: a slow device starts there instead of climbing down
+// from 0.75 again, block by block back to clay (it still steps up when frames allow). Without storage, 0.75
+const LEVEL_KEY = 'madrid-voxel.level';
+const lastLevel = () => { try { const v = parseFloat(localStorage.getItem(LEVEL_KEY) ?? ''); return Number.isFinite(v) ? clamp(v, 0, 1) : null; } catch { return null; } };
+let level = fixedLevel ? clamp(+qs.get('level')!, 0, 1) : lastLevel() ?? 0.75;
 const budget = () => (level >= 1 ? ceiling : Math.min(ceiling, 0.2e6 * ((city?.cityTris ?? 14e6) / 0.2e6) ** level));
 const pixelsAt = (l: number) => Math.max(0.5, Math.min(1, 0.4 + 0.8 * l)) * Math.min(devicePixelRatio, 2);
 const renderer = makeRenderer();
@@ -378,6 +382,7 @@ function setLevel(l: number) {
   if (Math.abs(px - renderer.getPixelRatio()) > 0.01) { renderer.setPixelRatio(px); onResize(); busy = true; }
   post.setLight(level < LIGHT_POST);
   perf.show(level);
+  if (!fixedLevel) try { localStorage.setItem(LEVEL_KEY, level.toFixed(3)); } catch { /* private window: start at 0.75 next time */ }
 }
 function adapt(dt: number, now: number) {
   const skip = busy;

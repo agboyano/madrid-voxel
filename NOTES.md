@@ -1638,3 +1638,19 @@ whose columns were not kept. A ray 15 m up through 300 m of the Retiro's woods m
   crowns is unchanged.
 - It was not the block choice: around the camera every block was real and every 1 m and foliage tile in.
 
+## Bare ground flashing while zooming (2026-11-13)
+
+Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish ground before the trees came back.
+
+- **Cause:** a block turned real (its clay cut away) as soon as its 1 m base tiles were in. Trees and grass are in
+  the foliage tiles, requested only after the base tile arrives, and a base tile shows grass as bare earth. Each block
+  coming back from clay showed its bare ground until its foliage arrived. Going the other way there is nothing to see:
+  the clay, trees included, is drawn back at once.
+- **Fix (`city.ts`):** after the first full load, a block coming back from clay turns real only once the foliage
+  tiles are in too; a block already real stays so. With the foliage tiles held back 600 ms
+  (Playwright route), real blocks with a tile in view lacking its foliage went from occasional to none.
+- **Why it happened so often:** the level starts at 0.75 and a slow GPU steps it down (0.75, 0.61, 0.46, 0.32 in the
+  simulated one) during the first half minute, each step sending visible blocks back to clay. `main.ts` now keeps the
+  level the adapting settled at in `localStorage` (`madrid-voxel.level`) and starts the next visit there; it still
+  steps up when frames allow. In the simulation the second visit started at 0.32 instead of 0.75.
+

@@ -218,7 +218,10 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
     if (changed) shownTex.needsUpdate = true;
     realTris = 0;
     for (let k = 0; k < nk; k++) {
-      const real = blkWant[k + 1] > 0 && blockTiles[k].every((i) => inTile[i]);
+      // a block coming back from clay turns real once its trees are in too (after the first full load): a 1 m tile
+      // without its foliage tile shows bare earth, which flashed in 128 m squares while zooming; the clay has the trees
+      // meanwhile. One already real stays so
+      const real = blkWant[k + 1] > 0 && blockTiles[k].every((i) => inTile[i] && (folTile[i] || stage < 3 || flags[k + 1] > 0));
       flags[k + 1] = real ? 255 : 0;
       if (real) realTris += blocks[k][7] || 0;
     }

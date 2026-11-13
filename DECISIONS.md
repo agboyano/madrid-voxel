@@ -421,3 +421,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **The MDT25 or MDT05:** at 20-120 km a 200 m cell is under a pixel.
   - **Terrain geometry beyond the map:** far more cost for a band a few pixels tall.
 
+## 2026-11-13: Blocks turn real with their trees; the level is remembered
+
+- **Decision:** a block coming back from clay waits for its foliage tiles as well as its base tiles before its clay is cut; the adapted render level is kept in the browser and the next visit starts from it.
+- **Why:** blocks flashed bare ground in 128 m squares while their trees loaded, and slow devices repeated the climb down from 0.75 on every visit.
+- **Rejected:** requesting foliage together with the base tile: the foliage mesher needs the base tile's columns, so it would fetch the base tile twice.
+
