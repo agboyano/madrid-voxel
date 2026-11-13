@@ -51,6 +51,12 @@ export class World {
     return this.cache[index] = null;
   }
 
+  // whether the finest level answers here, not the clay standing in for it (off the map nothing finer is coming)
+  detailed(x: number, r: number) {
+    if (!this.inside(x, r)) return true;
+    return this.node(x, r)?.s === this.src.levels[this.src.levels.length - 1];
+  }
+
   private column(x: number, r: number): [ColumnData, number] | null {
     if (!this.inside(x, r)) return null;
     const n = this.node(x, r);

@@ -27,6 +27,8 @@ interface WalkOpts { at?: THREE.Vector3; exact?: boolean; facing?: THREE.Vector3
 interface Transition { from: THREE.Vector3; fromQ: THREE.Quaternion; fromFov: number; t0: number; ms: number }
 
 const STEP = 1.05, HEAD = 1.9, GRAV = 16, TILT = Math.PI * 0.48, WALK_FOV = 65;
+// full detail kept around the walker (metres): asked again after this far or this long (tiles stay pinned 15 s)
+const DETAIL_R = 150, DETAIL_MOVE = 40, DETAIL_MS = 10000;
 
 export class Nav {
   mode: Mode = 'orbit';
@@ -52,6 +54,8 @@ export class Nav {
   private possessed: unknown = null;
   private jumpAsked = false;
   private walkPending = false;
+  private detailAt = { x: NaN, z: NaN, t: 0 };
+  private detailWanted = false;
   private zoomT = 0;
   private landT = 0;
   private hoverT = 0;
@@ -481,19 +485,46 @@ export class Nav {
 
   // one collision-checked horizontal step, sliding along walls; true if it moved
   private stepBy(m: THREE.Vector3) {
-    const w = this.world!, P = this.walkPos, feet = this.feet;
-    const clear = (x: number, z: number, from: number) => !w.blocked(x, z, Math.max(w.support(x, z, feet + STEP), feet + STEP), from);
+    const P = this.walkPos;
     for (const s of [m, new THREE.Vector3(m.x, 0, 0), new THREE.Vector3(0, 0, m.z)]) {
       if (!s.lengthSq()) continue;
-      const nx = P.x + s.x, nz = P.z + s.z, ax = nx + Math.sign(s.x) * 0.3, az = nz + Math.sign(s.z) * 0.3;
-      const sup = w.support(ax, az, feet + STEP);
-      if (!w.blocked(ax, az, Math.max(sup, feet + STEP), sup + HEAD) && clear(nx, nz, feet + HEAD)
-        && clear(nx + 0.4, nz, feet + HEAD) && clear(nx - 0.4, nz, feet + HEAD) && clear(nx, nz + 0.4, feet + HEAD) && clear(nx, nz - 0.4, feet + HEAD)) {
+      const nx = P.x + s.x, nz = P.z + s.z;
+      if (this.fits(nx, nz, s.x, s.z)) {
         P.x = nx; P.z = nz;
         return true;
       }
     }
     return false;
+  }
+
+  // room to stand at (nx, nz), come heading (sx, sz): up a kerb or stair, head clear, 0.8 m across. Only on full
+  // detail: the clay standing in for a tile still loading has none of its lamps, kiosks and railings
+  private fits(nx: number, nz: number, sx: number, sz: number) {
+    const w = this.world!, feet = this.feet, ax = nx + Math.sign(sx) * 0.3, az = nz + Math.sign(sz) * 0.3;
+    const body = [[nx, nz], [nx + 0.4, nz], [nx - 0.4, nz], [nx, nz + 0.4], [nx, nz - 0.4]];
+    if (!w.detailed(ax, az) || !body.every(([x, z]) => w.detailed(x, z))) { this.detailWanted = true; return false; }
+    const sup = w.support(ax, az, feet + STEP);
+    return !w.blocked(ax, az, Math.max(sup, feet + STEP), sup + HEAD)
+      && body.every(([x, z]) => !w.blocked(x, z, Math.max(w.support(x, z, feet + STEP), feet + STEP), feet + HEAD));
+  }
+
+  // standing inside something solid (a tile that came in around us, a landing on a post): out to the nearest spot
+  private unstick() {
+    const w = this.world!, P = this.walkPos, feet = this.feet;
+    if (this.vy !== 0 || !w.blocked(P.x, P.z, Math.max(w.support(P.x, P.z, feet + STEP), feet + STEP), feet + HEAD)) return;
+    for (let r = 0.5; r <= 6; r += 0.5) for (let k = 0; k < 16; k++) {
+      const sx = Math.sin(k * Math.PI / 8), sz = Math.cos(k * Math.PI / 8);
+      if (this.fits(P.x + sx * r, P.z + sz * r, sx, sz)) { P.x += sx * r; P.z += sz * r; return; }
+    }
+  }
+
+  // the full detail, with its column data, around the walker before a step needs it
+  private keepDetail() {
+    const S = this.streamer, P = this.walkPos, D = this.detailAt, now = performance.now();
+    if (!S || !(Math.hypot(P.x - D.x, P.z - D.z) > DETAIL_MOVE || now - D.t > DETAIL_MS || (this.detailWanted && now - D.t > 1000))) return;
+    Object.assign(D, { x: P.x, z: P.z, t: now });
+    this.detailWanted = false;
+    void S.ensure(P.x, P.z, DETAIL_R);
   }
 
   // on whatever is underfoot: up kerbs and stairs, off ledges, jumps
@@ -518,6 +549,8 @@ export class Nav {
   private updateWalk(dt: number) {
     const I = this.input, tr = I.turn, tp = I.pitch, go = I.move, side = I.strafe;
     if (tr || tp) this.look(-tr * (I.fast ? 2.6 : 1.8) * dt, tp * dt);
+    this.keepDetail();
+    this.unstick();
     if (go || side) this.stepBy(this.feetStep(go, side, (I.fast ? 20 : 6) * dt));
     else if (this.goal) this.walkToGoal(dt);
     this.stand(dt);
@@ -592,6 +625,8 @@ export class Nav {
     if (tp) R.dpitch = clamp(R.dpitch + tp * dt, -1.2, 1.2);
     this.yaw += R.dyaw;
     R.dyaw = 0;
+    this.keepDetail();
+    this.unstick();
     C.moving = !!(go || side) && this.stepBy(this.feetStep(go, side, (I.fast ? 7 : 2.2) * dt));
     this.stand(dt);
     Object.assign(C, { x: P.x, y: this.feet, z: P.z, h: this.yaw });
