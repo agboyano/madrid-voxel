@@ -36,8 +36,9 @@ OUT_DIR = ROOT / "docs" / "img"
 VIEW_PARAMS = ("view", "cam", "hour", "date", "weather", "ui", "tilt")
 # A system Chromium avoids downloading Playwright's bundled build; override with $CHROMIUM.
 CHROMIUM = os.environ.get("CHROMIUM") or shutil.which("chromium") or shutil.which("google-chrome")
-# Render WebGL on the real GPU through ANGLE; headless Chromium otherwise falls back to SwiftShader.
-CHROMIUM_ARGS = ["--use-angle=gl", "--ignore-gpu-blocklist", "--enable-gpu"]
+# Render WebGL on the real GPU through ANGLE's Vulkan backend; headless Chromium otherwise falls back to SwiftShader
+# (as it now does with --use-angle=gl, at about 1 fps).
+CHROMIUM_ARGS = ["--use-angle=vulkan", "--enable-features=Vulkan", "--ignore-gpu-blocklist"]
 
 
 def is_up(url: str) -> bool:
