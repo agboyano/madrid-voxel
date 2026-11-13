@@ -1565,3 +1565,20 @@ Adapted from dtla-voxel `3e77ad7` (`web/tools/version-data.mjs`, run by `vite bu
   first visit downloaded 119 data files, 10.2 MB; the second asked only for `meta.json` and `climate.json`, both
   answered 304, and no tile.
 
+## Lost WebGL context (2026-11-13)
+
+Phones drop a background tab's WebGL context. Three.js restores its own state on `webglcontextrestored`, but the
+viewer did not come back: `stream.ts` releases each tile's vertex arrays once they are on the GPU (`onUpload`), so
+three.js had nothing to upload again, threw `Cannot read properties of null (reading 'byteLength')` every frame and
+left the page black (`docs/img/ctxloss-before.png`).
+
+- **On loss:** every tile mesh gets an empty placeholder geometry, so it draws nothing and throws nothing.
+- **On restore:** every tile with a mesh is meshed again from its file (from the browser cache), the tiles in view
+  first, and the new geometry replaces the placeholder in the same mesh, so `city.ts` keeps its state. The sky's light
+  and the city's shadow map are drawn again (`Daylight.contextRestored`); the shadow map once more a second after the
+  last tile is back, because a redraw in the frame a tile returned could miss it.
+- **Kept:** releasing the arrays. Keeping them for a rare event would cost the CPU memory of every tile's geometry.
+- **Check:** `node web/tools/ctxloss.mjs [outdir]` loses the context through `WEBGL_lose_context`, restores it and
+  takes a screenshot 8 s later: the same triangle count as before, shadows included (`docs/img/ctxloss-after.png`).
+- dtla-voxel (`1034c95`) disposes its geometry and lets its streamer reload; Madrid's tiles keep their place instead.
+

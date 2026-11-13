@@ -52,7 +52,8 @@ const pixelsAt = (l: number) => Math.max(0.5, Math.min(1, 0.4 + 0.8 * l)) * Math
 const renderer = makeRenderer();
 always({ gpu: gpu(renderer.getContext()), cores: navigator.hardwareConcurrency ?? null,
   memory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null });
-renderer.domElement.addEventListener('webglcontextlost', () => track('contextlost'));
+renderer.domElement.addEventListener('webglcontextlost', () => { track('contextlost'); streamer?.contextLost(); });
+renderer.domElement.addEventListener('webglcontextrestored', () => { streamer?.contextRestored(); daylight.contextRestored(); });
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.5, 9000);
 const controls = makeControls();
@@ -356,7 +357,7 @@ function stillChanged() {
   if (!streamer || !uniforms) return false;
   let n = 0, ids = 0;
   for (const m of streamer.group.children) if (m.visible) { n++; ids += m.id; }
-  const U = uniforms, key = `${n},${ids},${U.uStage.value},${U.uBldOn.value.version},${U.uZOn.value},${U.uZFBlk.value.version},${U.uFolOn.value},${U.uDay.value},${U.uFolMap.value.id}`;
+  const U = uniforms, key = `${n},${ids},${streamer.remeshed},${U.uStage.value},${U.uBldOn.value.version},${U.uZOn.value},${U.uZFBlk.value.version},${U.uFolOn.value},${U.uDay.value},${U.uFolMap.value.id}`;
   if (key === stillKey) return false;
   stillKey = key;
   return true;

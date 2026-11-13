@@ -90,6 +90,13 @@ export class Daylight {
 
   redrawShadow() { this.sun.shadow.needsUpdate = true; }
 
+  // the sky's light and the shadow map were in the lost WebGL context: drawn again once it is back
+  contextRestored() {
+    this.envKey = '';
+    this.apply(this.hour);
+    this.redrawShadow();
+  }
+
   // the grid is turned (scripts/aoi.py) and UTM grid north is not true north: compass bearings turn by theta in the scene
   set theta(t: number) { this.northTheta = t; this.apply(this.hour); }
 

@@ -27,6 +27,7 @@ interface Job {
   dataOnly: boolean;
   state: 'queued' | 'loading';
   prio: number;
+  remesh?: boolean; // a shown tile meshed again after a lost WebGL context
   done: Promise<void>;
   resolve: () => void;
 }
@@ -34,6 +35,10 @@ interface Job {
 interface Pooled { worker: Worker; busy: number; idle: number }
 
 const releaseArray = function (this: THREE.BufferAttribute) { (this as { array: unknown }).array = null; };
+// what a tile draws while it waits to be meshed again: nothing, with the attributes its material reads
+const EMPTY = new THREE.BufferGeometry();
+for (const [k, a] of [['position', new Int16Array(0)], ['vattr', new Uint8Array(0)], ['vpal', new Uint16Array(0)]] as const)
+  EMPTY.setAttribute(k, new THREE.BufferAttribute(a, k === 'position' ? 3 : k === 'vattr' ? 4 : 1));
 
 function makeJob(node: TileNode, dataOnly: boolean, prio: number): Job {
   let resolve = () => {};
@@ -51,6 +56,8 @@ export class TileStreamer implements ColumnSource {
   readonly group = new THREE.Group();
   readonly world: World;
   version = 0;
+  remeshed = 0; // tiles meshed again after a lost context: the city's shadow map is drawn again
+  private remeshing = 0;
   bldMap: { data: Uint16Array; W: number } | null = null;
   update: (camera: THREE.Camera) => void = () => {};
   private queue: Job[] = [];
@@ -116,7 +123,7 @@ export class TileStreamer implements ColumnSource {
 
   dropQueued(keep: (n: TileNode) => boolean) {
     this.queue = this.queue.filter((j) => {
-      if (j.state !== 'queued' || keep(j.node)) return true;
+      if (j.state !== 'queued' || j.remesh || keep(j.node)) return true;
       if (j.dataOnly) { j.node.dataJob = undefined; j.resolve(); } else this.nodes.delete(j.node.key);
       return false;
     });
@@ -179,6 +186,9 @@ export class TileStreamer implements ColumnSource {
   private onReply(m: MeshReply, p: Pooled) {
     p.busy--; this.inflight--; p.idle = performance.now();
     const n = this.nodes.get(m.key);
+    // once the last tile is back, a second later, the shadow map once more: a redraw in the frame a tile came back
+    // could miss it
+    if (n && !m.dataOnly && n.job.remesh) { n.job.remesh = false; if (--this.remeshing === 0) setTimeout(() => this.remeshed++, 1000); }
     if (n && m.dataOnly) {
       const job = n.dataJob;
       n.dataJob = undefined;
@@ -190,7 +200,8 @@ export class TileStreamer implements ColumnSource {
       n.state = 'ready'; n.empty = true;
       n.job.resolve();
     } else if (n && m.type === 'node') {
-      if (m.quads) n.mesh = this.makeMesh(m.pos, m.attr, m.pal, m.bld, m.quads);
+      if (m.quads && n.mesh) { n.mesh.geometry = this.makeGeometry(m.pos, m.attr, m.pal, m.bld, m.quads); this.remeshed++; }
+      else if (m.quads) n.mesh = this.makeMesh(this.makeGeometry(m.pos, m.attr, m.pal, m.bld, m.quads));
       if (m.data) this.setData(n, m.data);
       n.state = 'ready';
       n.job.resolve();
@@ -198,7 +209,7 @@ export class TileStreamer implements ColumnSource {
     this.pump();
   }
 
-  private makeMesh(pos: Int16Array, attr: Uint8Array, pal: Uint16Array, bld: Uint16Array | null, quads: number) {
+  private makeGeometry(pos: Int16Array, attr: Uint8Array, pal: Uint16Array, bld: Uint16Array | null, quads: number) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('vattr', new THREE.BufferAttribute(attr, 4));
@@ -208,6 +219,10 @@ export class TileStreamer implements ColumnSource {
     geo.setDrawRange(0, quads * 6);
     geo.computeBoundingBox(); geo.computeBoundingSphere();
     for (const a of Object.values(geo.attributes)) (a as THREE.BufferAttribute).onUpload(releaseArray); // culling only needs the bounding sphere
+    return geo;
+  }
+
+  private makeMesh(geo: THREE.BufferGeometry) {
     const mesh = new THREE.Mesh(geo, this.material);
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.visible = false;
@@ -233,6 +248,25 @@ export class TileStreamer implements ColumnSource {
     const [x0, y0] = this.bounds(n.s, n.tx, n.ty);
     n.data = { s: n.s, x0, y0, S, counts, ground, runs, off };
     this.version++;
+  }
+
+  // A lost WebGL context (a phone putting the tab away) takes every tile's buffers with it, and their arrays were
+  // released on upload: the meshes stay where they are, empty, and their tiles are meshed again once it is back (the
+  // files come from the browser cache). Shown tiles first.
+  contextLost() {
+    for (const n of this.nodes.values()) if (n.mesh) n.mesh.geometry = EMPTY;
+  }
+
+  contextRestored() {
+    for (const n of this.nodes.values()) {
+      if (!n.mesh) continue;
+      const job = makeJob(n, false, n.mesh.visible ? 1e7 : 1e6);
+      job.remesh = true;
+      n.job = job;
+      this.remeshing++;
+      this.queue.push(job);
+    }
+    this.pump();
   }
 
   free(n: TileNode) {

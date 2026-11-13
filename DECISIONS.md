@@ -398,3 +398,11 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **dtla's `_headers` and Cloudflare deployment:** GitHub Pages ignores the file.
   - **Dropping the plain copies to halve the upload:** tabs left open across a deploy would fail to load tiles.
 
+## 2026-11-13: Re-mesh tiles after a lost WebGL context
+
+- **Decision:** on a lost WebGL context each tile mesh is emptied, and on restore it is meshed again from its (cached) file, keeping the same mesh object.
+- **Why:** the viewer went black for good when a phone dropped the context, because tile arrays are released after upload.
+- **Rejected:**
+  - **Keeping the arrays:** costs memory all the time for a rare event.
+  - **Dropping and reloading every tile through `city.ts`:** more state to rebuild, and tiles would pop in as clay first.
+
