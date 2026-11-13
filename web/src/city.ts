@@ -8,8 +8,8 @@ import { makeBuildDepthMaterial, makeClayDepthMaterial, makeVoxelMaterial, type 
 const T = 128;
 const RINGS: [string, number][] = [['Buildings in view', 0], ['Buildings within 1 km', 1000], ['Buildings within 2 km', 2000], ['Buildings to the edge', Infinity]];
 
-// The city at 1 m, as much of it as the budget allows (triangles of 1 m buildings, city blocks nearest to the focus
-// first; on most computers all of it), shown as it arrives, in one order:
+// The city at 1 m, as much of it as the budget allows (triangles of 1 m buildings: city blocks around the focus, then
+// those in view; on most computers all of it), shown as it arrives, in one order:
 //   1. the ground: the terrain, one small file; where the budget leaves some city out, the whole map at 8 m as clay
 //   2. landmarks: their tiles first, each landmark as soon as all its tiles are in (not over clay)
 //   3. everything else, nearest to the view first, each building once all its tiles are in; over clay a city block
@@ -65,13 +65,23 @@ export async function installCity({ streamer: S, uniforms: U, meta, scene, focus
   blkIds.internalFormat = 'R16UI';
   U.uZBlk.value = blkIds;
   const bdist = (b: number[], f: THREE.Vector3) => Math.hypot(Math.max(b[3] - f.x, 0, f.x - b[5]), Math.max(b[4] - f.z, 0, f.z - b[6]));
-  const order = blocks.map((_, k) => k);
+  const order = blocks.map((_, k) => k), score = new Float64Array(nk), cam = new THREE.Vector3();
   let whole = true;
+  // which blocks are real: those within RING of the focus, so what you look at never flickers as the view turns; then
+  // the blocks in view, near the camera and the focus first (the budget goes where it shows, not behind the camera);
+  // then the rest, nearest the focus first
+  const RING = 150;
   const choose = (f: THREE.Vector3) => {
     const B = budget();
     whole = B >= cityTris;
     if (whole) { blkWant.fill(1); want.fill(1); return; }
-    order.sort((a, b) => bdist(blocks[a], f) - bdist(blocks[b], f));
+    camera.getWorldPosition(cam);
+    const up = cam.y - f.y;
+    for (let k = 0; k < nk; k++) {
+      const b = blocks[k], df = bdist(b, f);
+      score[k] = df < RING ? df : blockTiles[k].some((i) => seen[i]) ? 1e5 + Math.hypot(bdist(b, cam), up) + df : 1e6 + df;
+    }
+    order.sort((a, b) => score[a] - score[b]);
     let sum = 0;
     const next = new Uint8Array(nk + 1);
     for (const k of order) {
