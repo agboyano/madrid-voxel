@@ -1429,10 +1429,20 @@ Not published yet: creating the public GitHub repository was blocked by the perm
   - **Cause:** `World` used to cache only the last node it found and reuse it for any point inside that node's footprint. An 8 m node covers 1024 × 1024 m. Once any query landed on clay (a label's occlusion ray, street life), the walker's own 1 m tile was read as clay: the head band sat inside clay and every step was rejected. Labels check a different label each frame, so it came and went.
   - **Fix:** the cache now has one slot per finest-tile footprint (128 m), adapted from dtla-voxel. The bug came unchanged from warsaw-vibe-voxel.
   - **Cost:** about 5 µs more per raycast in SwiftShader (2000 rays: 11 ms before, 20 ms after); labels cast 4 rays a frame. Walking queries cost the same.
-- **Check:** `node web/tools/walkstuck.mjs [outdir] [level]` (dev server running). It sets a low render level, walks, and counts queries answered from clay where a 1 m tile is loaded. Before the fix: 163 of 163 queries around the walker were wrong; after: none. It uses the system Chromium (`$CHROMIUM`, default `/usr/bin/chromium`). Here that runs on SwiftShader at about 1 fps, so the distance walked means nothing. Screenshot: `docs/img/walk-low-level.png`.
-- **Known limits, not fixed:**
-  - Where the 1 m tile has not loaded yet, clay is the right answer, and nothing pushes a walker out of it.
-  - Steps are not split at low frame rates, so a 2 m step can pass a 1-voxel wall.
+- **Walking off the loaded detail (fixed):**
+  - **Cause:** where a 1 m tile had not arrived yet (sprinting, a slow network), `World` answered from clay. A dense 8 m block is a wall, so the walker waited there until the tile came. A block that is mostly street is open, and it has none of the lamps, kiosks and railings. The walker walked on through it and could end up inside a post when the tile arrived. Then it never moved again: a step is taken only if the destination is clear, and small steps stay in the same cell.
+  - **Fix** (`web/src/nav/nav.ts`):
+    - **Detail only:** `fits()` refuses a step onto any point that the finest level does not answer (`World.detailed()`), so the walker waits at the border.
+    - **Prefetch:** `keepDetail()` re-pins the full detail within 150 m of the walker every 40 m or 10 s, and at once when a step was refused for missing detail.
+    - **Way out:** `unstick()` moves a walker standing inside something solid to the nearest spot within 6 m that `fits()`.
+    - **Pedestrians:** all three also run when walking as a pedestrian.
+- **Check:** `node web/tools/walkstuck.mjs [outdir] [level]` (dev server running). It uses the system Chromium (`$CHROMIUM`, default `/usr/bin/chromium`). Here that runs on SwiftShader at about 1 fps, so distances walked are short. Screenshot: `docs/img/walk-low-level.png`. Four checks:
+  - **Wrong answers:** counts queries answered from clay where a 1 m tile is loaded. Before the cache fix, 163 of 163 queries around the walker were wrong; after it, none.
+  - **Post:** puts the walker inside a lamp post and walks. Before the fix it did not move in 6 s; after it, it steps out.
+  - **Edge:** walks along a street into a 1 m tile whose download is held back 15 s, where the clay leaves the way open.
+    - Before the fix, the walker went 7.8 m into the clay.
+    - After it, the walker waits 0.6 m before the border until the tile is in, then goes on.
+- **Known limit, not fixed:** steps are not split at low frame rates, so a 2 m step can pass a 1-voxel wall.
 - **Bus shelters cannot trap a walker with the current data.** `voxelize.py` draws `amenity=shelter` areas as a roof 2 m up over 1-voxel stubs on a diagonal grid, and under the roof those stubs cannot be stepped over. But that code never runs in this area:
   - The two public-transport shelter areas in OSM also carry `building=yes`, so they are drawn as small buildings and the shelter code skips them.
   - The third shelter area, the Quiosco de la Música, is a `pavilion`, which the shelter code also skips.

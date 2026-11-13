@@ -342,3 +342,15 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - caching only nodes of the finest level, dtla-voxel's first fix: every query on clay would scan the levels again;
   - collision changes in `nav.ts` (depenetration, substeps) before measuring whether the walker still gets stuck once the cache is right.
 
+## 2026-11-13: The walker waits for the full detail
+
+- **Decision:**
+  - A walking step is allowed only where the 1 m tile and its column data are loaded. Until it arrives, the walker stops at the border of the missing tile.
+  - The detail within 150 m of the walker is kept pinned.
+  - A walker found inside something solid is moved to the nearest spot within 6 m that fits.
+- **Why:** the 8 m clay is a wall in some places and open in others. Where it was open, a walker crossed into a tile still loading and could end up inside a lamp or a kiosk when it arrived, stuck for good.
+- **Rejected:**
+  - **Walking on terrain only where detail is missing:** it lets the walker into buildings that then load around them.
+  - **Clay as collision until the tile loads (as before):** it stops the walker at invisible walls in some places and lets them through in others.
+  - **Splitting steps at low frame rates:** a separate problem, left for when it shows.
+
