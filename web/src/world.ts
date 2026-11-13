@@ -10,6 +10,7 @@ export interface ColumnSource {
 }
 
 type Point = { x: number; y: number; z: number };
+const AROUND = [[3, 0], [-3, 0], [0, 3], [0, -3]] as const;
 
 // Voxel queries over whatever is loaded, each cell answered by the finest loaded tile covering it.
 // Arguments are data coordinates: x east, r (row) south, z up, in metres; three.js has them as (x, z, r).
@@ -21,6 +22,7 @@ export class World {
   private readonly cacheSize: number;
   private readonly cacheWidth: number;
   private cacheVersion = -1;
+  private columnIndex = 0;
   private readonly leaf = new Uint8Array(4096);
 
   constructor(private readonly src: ColumnSource, meta: Meta) {
@@ -57,21 +59,24 @@ export class World {
     return this.node(x, r)?.s === this.src.levels[this.src.levels.length - 1];
   }
 
-  private column(x: number, r: number): [ColumnData, number] | null {
+  // the tile answering at (x, r), and the column's index in it left in columnIndex: no array per query, which ran
+  // thousands of times a frame while walking (dtla-voxel 98283fe)
+  private column(x: number, r: number): ColumnData | null {
     if (!this.inside(x, r)) return null;
     const n = this.node(x, r);
-    return n && [n, Math.floor((x - n.x0) / n.s) + 1 + n.S * (Math.floor((r - n.y0) / n.s) + 1)];
+    if (n) this.columnIndex = Math.floor((x - n.x0) / n.s) + 1 + n.S * (Math.floor((r - n.y0) / n.s) + 1);
+    return n;
   }
 
   groundAt(x: number, r: number) {
     const c = this.column(x, r);
-    return c ? c[0].ground[c[1]] : 0;
+    return c ? c.ground[this.columnIndex] : 0;
   }
 
   solid(x: number, r: number, z: number) {
     const c = this.column(x, r);
     if (!c) return z < 0;
-    const [n, i] = c, zc = Math.floor(z / n.s), R = n.runs;
+    const n = c, i = this.columnIndex, zc = Math.floor(z / n.s), R = n.runs;
     if (zc < 0) return true;
     for (let k = n.off[i], e = n.off[i + 1]; k < e; k++) {
       const z0 = R[k * 3];
@@ -84,14 +89,14 @@ export class World {
   top(x: number, r: number) {
     const c = this.column(x, r);
     if (!c) return 0;
-    const [n, i] = c, k = n.off[i + 1] - 1;
+    const n = c, i = this.columnIndex, k = n.off[i + 1] - 1;
     return k < n.off[i] ? n.ground[i] : (n.runs[k * 3] + n.runs[k * 3 + 1]) * n.s;
   }
 
   topSolid(x: number, r: number) {
     const c = this.column(x, r);
     if (!c) return 0;
-    const [n, i] = c, R = n.runs;
+    const n = c, i = this.columnIndex, R = n.runs;
     for (let k = n.off[i + 1] - 1; k >= n.off[i]; k--) if (!this.leaf[R[k * 3 + 2]]) return (R[k * 3] + R[k * 3 + 1]) * n.s;
     return n.ground[i];
   }
@@ -100,7 +105,7 @@ export class World {
   support(x: number, r: number, top: number) {
     const c = this.column(x, r);
     if (!c) return 0;
-    const [n, i] = c, R = n.runs;
+    const n = c, i = this.columnIndex, R = n.runs;
     let s = n.ground[i];
     for (let k = n.off[i], e = n.off[i + 1]; k < e; k++) {
       const t = (R[k * 3] + R[k * 3 + 1]) * n.s;
@@ -113,7 +118,7 @@ export class World {
   deckAt(x: number, r: number) {
     const d = this.floatingSurface(x, r);
     if (d == null || d - this.groundAt(x, r) > 35) return null;
-    for (const [dx, dr] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) {
+    for (const [dx, dr] of AROUND) {
       const e = this.floatingSurface(x + dx, r + dr);
       if (e == null || Math.abs(e - d) > 1.5) return null;
     }
@@ -123,7 +128,7 @@ export class World {
   private floatingSurface(x: number, r: number) {
     const c = this.column(x, r);
     if (!c) return null;
-    const [n, i] = c, R = n.runs, gz = n.ground[i] / n.s, e = n.off[i + 1];
+    const n = c, i = this.columnIndex, R = n.runs, gz = n.ground[i] / n.s, e = n.off[i + 1];
     for (let k = n.off[i]; k < e; k++) {
       const z0 = R[k * 3], top = z0 + R[k * 3 + 1];
       if (z0 <= gz + 2 / n.s) continue;
