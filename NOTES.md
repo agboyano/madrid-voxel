@@ -1421,3 +1421,16 @@ Not published yet: creating the public GitHub repository was blocked by the perm
   - Every commit is the user's (`Agboyano <agboyano@protonmail.com>`), with no trailers.
   - The repository has no AI credits. The remaining mentions are the `CLAUDE.md` rules file, referred to by name.
   - The inherited `web/tools` scripts' temp paths were renamed.
+
+## Walking and collision
+
+- **Where collision comes from:** walking asks `World` (`web/src/world.ts`) for `support` and `blocked`. Each query is answered by the finest tile loaded at that point: the 1 m tile if it is resident, the 8 m clay otherwise. Trees and grass are not in the 1 m collision data (`tiles/1f`), and pedestrians and vehicles never collide.
+- **Getting stuck (fixed):**
+  - **Cause:** `World` used to cache only the last node it found and reuse it for any point inside that node's footprint. An 8 m node covers 1024 × 1024 m. Once any query landed on clay (a label's occlusion ray, street life), the walker's own 1 m tile was read as clay: the head band sat inside clay and every step was rejected. Labels check a different label each frame, so it came and went.
+  - **Fix:** the cache now has one slot per finest-tile footprint (128 m), adapted from dtla-voxel. The bug came unchanged from warsaw-vibe-voxel.
+  - **Cost:** about 5 µs more per raycast in SwiftShader (2000 rays: 11 ms before, 20 ms after); labels cast 4 rays a frame. Walking queries cost the same.
+- **Check:** `node web/tools/walkstuck.mjs [outdir] [level]` (dev server running). It sets a low render level, walks, and counts queries answered from clay where a 1 m tile is loaded. Before the fix: 163 of 163 queries around the walker were wrong; after: none. It uses the system Chromium (`$CHROMIUM`, default `/usr/bin/chromium`). Here that runs on SwiftShader at about 1 fps, so the distance walked means nothing. Screenshot: `docs/img/walk-low-level.png`.
+- **Known limits, not fixed:**
+  - Where the 1 m tile has not loaded yet, clay is the right answer, and nothing pushes a walker out of it.
+  - Steps are not split at low frame rates, so a 2 m step can pass a 1-voxel wall.
+  - The posts of bus shelters (`scripts/voxelize.py`) form diagonal fences.

@@ -333,3 +333,12 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** the repository is about to be public; without a licence the code could be read but not reused. MIT matches the code it builds on, so the whole viewer and pipeline share one set of terms.
 - **Scope:** code only. The generated data in `web/public/data` derives from OpenStreetMap (ODbL), IGN/CNIG and the Ayuntamiento de Madrid (CC BY 4.0), Catastro and Wikidata (CC0), and keeps their terms (`README.md`, "Sources").
 - **Rejected:** a copyleft licence (GPL), which would put stricter terms on this code than on the code it is adapted from.
+
+## 2026-11-13: World's tile cache per finest-tile footprint
+
+- **Decision:** `World.node()` keeps one cache slot per 128 m cell (the footprint of a 1 m tile), holding the finest tile loaded there or none. The whole cache is cleared when the streamer's version changes. The code is adapted from dtla-voxel (commits `1034c95`, `98283fe`).
+- **Why:** the old single slot let an 8 m clay node answer queries inside a loaded 1 m tile, so the walker got stuck at random (`NOTES.md`, "Walking and collision").
+- **Rejected:**
+  - caching only nodes of the finest level, dtla-voxel's first fix: every query on clay would scan the levels again;
+  - collision changes in `nav.ts` (depenetration, substeps) before measuring whether the walker still gets stuck once the cache is right.
+
