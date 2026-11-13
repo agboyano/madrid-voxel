@@ -13,7 +13,9 @@ and repeats with shadows off (no light casts) and with post-processing off (the 
 
 Output: a table on stdout and docs/profile.json (append --out to change).
 
-usage: uv run python scripts/profile.py [--views overview,sol,top] [--phone] [--seconds 8]
+usage: uv run python scripts/profile.py [--views overview,sol,top] [--phone] [--seconds 8] [--level 1]
+
+--level fixes the Render size slider (default 1, the whole city at 1 m; lower levels draw the rest as 8 m clay).
 """
 import argparse
 import json
@@ -43,7 +45,7 @@ NO_SHADOWS = """() => { const t = window.__three; t.scene.traverse((o) => { if (
 NO_POST = """() => { const t = window.__three; t.post.composer.render = () => t.renderer.render(t.scene, t.camera); }"""
 
 
-def profile(url, views, seconds, phone):
+def profile(url, views, seconds, phone, level):
     rows = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, executable_path=CHROMIUM, args=CHROMIUM_ARGS)
@@ -55,14 +57,14 @@ def profile(url, views, seconds, phone):
                 page.wait_for_function("window.__ready === true", timeout=300_000)
                 wait_idle(page, 300)
                 if not phone:  # a phone keeps the viewer's own budget (0.75 M triangles at most)
-                    page.evaluate(SET_LEVEL, 1.0)
+                    page.evaluate(SET_LEVEL, level)
                     page.wait_for_timeout(1000)
                     wait_idle(page, 300)
                 if patch:
                     page.evaluate(patch)
                 page.wait_for_timeout(1500)
                 m = page.evaluate(MEASURE, seconds)
-                rows.append(dict(view=view, variant=variant, phone=phone, **m))
+                rows.append(dict(view=view, variant=variant, phone=phone, level=level, **m))
                 print(f"{view:10s} {variant:11s} fps {m['fps']:5.1f}  tris {m['triangles'] / 1e6:5.2f} M  calls {m['calls']:5d}  "
                       f"geo {m['geometries']:5d}  tex {m['textures']:3d}  heap {m['heap_mb']} MB  "
                       f"tiles {m['tiles_1']}+{m['tiles_8']}", flush=True)
@@ -76,18 +78,19 @@ def main():
     ap.add_argument("--views", default="overview,sol,top")
     ap.add_argument("--seconds", type=float, default=8)
     ap.add_argument("--phone", action="store_true")
+    ap.add_argument("--level", type=float, default=1.0, help="Render size slider, 0-1 (ignored with --phone)")
     ap.add_argument("--url", default="http://localhost:5173/")
     ap.add_argument("--out", default=str(ROOT / "docs" / "profile.json"))
     args = ap.parse_args()
     server = None if is_up(args.url) else start_server(args.url)
     try:
-        rows = profile(args.url, args.views.split(","), args.seconds, args.phone)
+        rows = profile(args.url, args.views.split(","), args.seconds, args.phone, args.level)
     finally:
         if server:
             server.terminate()
     out = Path(args.out)
     old = json.loads(out.read_text()) if out.exists() else {"runs": []}
-    old["runs"].append(dict(when=time.strftime("%Y-%m-%d %H:%M"), gpu="headless Chromium, ANGLE GL", rows=rows))
+    old["runs"].append(dict(when=time.strftime("%Y-%m-%d %H:%M"), gpu="headless Chromium, ANGLE Vulkan", rows=rows))
     out.write_text(json.dumps(old, indent=1))
     print("->", out, file=sys.stderr)
 
