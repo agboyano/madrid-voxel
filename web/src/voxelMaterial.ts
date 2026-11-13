@@ -388,7 +388,7 @@ const SURFACE = `
   if (!zreal(cell)) discard;
   #endif
   #ifdef CLAY
-  { gEmissive = vec3(0.0); gRough = 0.95; gMetal = 0.0; diffuseColor.rgb = vec3(0.62, 0.61, 0.59) * mix(0.75, 1.0, vAO); }
+  { gEmissive = vec3(0.0); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), 0.3); }
   #endif`;
 
 // the clay's shadow: none where the city is real (it casts its own)
