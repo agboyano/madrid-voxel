@@ -12,9 +12,10 @@ View parameters map one-to-one to the viewer's URL query (web/src/main.ts):
 view, cam (px,py,pz,tx,ty,tz in voxel coordinates), hour, date (M-D),
 weather, ui and tilt. --query appends any other raw query string.
 
---level sets the viewer's "Render size" slider (0 to 1), as a user would. The
-viewer otherwise lowers it on slow GPUs and draws distant blocks as grey 8 m
-clay, so a fixed level keeps screenshots comparable across machines.
+--level fixes the viewer's "Render size" (0 to 1) through its ?level= query,
+which also stops the viewer adapting it. The viewer otherwise lowers it on slow
+GPUs and draws distant blocks as 8 m clay, so a fixed level keeps screenshots
+comparable across machines.
 """
 
 import argparse
@@ -67,13 +68,6 @@ def build_query(args: argparse.Namespace) -> str:
     return "&".join(q for q in (query, args.query) if q)
 
 
-SET_LEVEL = """(level) => {
-  const input = [...document.querySelectorAll('label')]
-    .find((l) => l.textContent.trim() === 'Render size')?.querySelector('input');
-  if (!input) throw new Error('Render size slider not found');
-  input.value = String(level);
-  input.dispatchEvent(new Event('input'));
-}"""
 STREAMER_IDLE = "window.__streamer.inflight === 0 && window.__streamer.queue.length === 0"
 
 
@@ -85,7 +79,7 @@ def wait_idle(page, timeout_s: int) -> None:
 
 
 def capture(url: str, out: Path, width: int, height: int, timeout_s: int, settle_ms: int,
-            level: float | None, click: str | None = None) -> None:
+            click: str | None = None) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, executable_path=CHROMIUM, args=CHROMIUM_ARGS)
         page = browser.new_page(viewport={"width": width, "height": height})
@@ -96,10 +90,6 @@ def capture(url: str, out: Path, width: int, height: int, timeout_s: int, settle
         page.wait_for_function("window.__ready === true", timeout=timeout_s * 1000)
         page.wait_for_function("!document.body.classList.contains('loading')", timeout=timeout_s * 1000)
         wait_idle(page, timeout_s)
-        if level is not None:
-            page.evaluate(SET_LEVEL, level)
-            page.wait_for_timeout(1000)
-            wait_idle(page, timeout_s)
         page.wait_for_timeout(settle_ms)
         if click:  # a landmark's label, by its shown name: selects it and opens its info card
             # (labels move every frame, so Playwright never finds them "stable": the event is sent directly)
@@ -122,17 +112,16 @@ def main() -> None:
     ap.add_argument("--width", type=int, default=1600)
     ap.add_argument("--height", type=int, default=1000)
     ap.add_argument("--timeout", type=int, default=180, help="seconds to wait for the viewer")
-    ap.add_argument("--level", type=float, default=1.0, help="Render size slider, 0-1 (negative: leave it adaptive)")
+    ap.add_argument("--level", type=float, default=1.0, help="Render size, 0-1 (negative: leave it adaptive)")
     ap.add_argument("--click", help="click the label with this name (opens its info card) before capturing")
     ap.add_argument("--settle", type=int, default=2500, help="milliseconds to wait after loading")
     args = ap.parse_args()
 
     server = None if is_up(args.url) else start_server(args.url)
     try:
-        query = build_query(args)
+        query = build_query(args) + ("" if args.level < 0 else f"&level={args.level:g}")
         capture(f"{args.url}?{query}", OUT_DIR / f"{args.name}.png",
-                args.width, args.height, args.timeout, args.settle,
-                None if args.level < 0 else args.level, args.click)
+                args.width, args.height, args.timeout, args.settle, args.click)
     finally:
         if server:
             server.terminate()

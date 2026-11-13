@@ -15,7 +15,7 @@ Output: a table on stdout and docs/profile.json (append --out to change).
 
 usage: uv run python scripts/profile.py [--views overview,sol,top] [--phone] [--seconds 8] [--level 1]
 
---level fixes the Render size slider (default 1, the whole city at 1 m; lower levels draw the rest as 8 m clay).
+--level fixes the Render size (?level=; default 1, the whole city at 1 m; lower levels draw the rest as 8 m clay).
 """
 import argparse
 import json
@@ -25,7 +25,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from screenshot import CHROMIUM, CHROMIUM_ARGS, ROOT, SET_LEVEL, is_up, start_server, wait_idle
+from screenshot import CHROMIUM, CHROMIUM_ARGS, ROOT, is_up, start_server, wait_idle
 
 MEASURE = """async (seconds) => {
   const t = window.__three, r = t.renderer;
@@ -53,13 +53,10 @@ def profile(url, views, seconds, phone, level):
         for view in views:
             for variant, patch in (("baseline", None), ("no shadows", NO_SHADOWS), ("no post", NO_POST)):
                 page = ctx.new_page()
-                page.goto(f"{url}?view={view}&date=6-15&hour=11")
+                # a phone keeps the viewer's own budget (0.75 M triangles at most)
+                page.goto(f"{url}?view={view}&date=6-15&hour=11" + ("" if phone else f"&level={level:g}"))
                 page.wait_for_function("window.__ready === true", timeout=300_000)
                 wait_idle(page, 300)
-                if not phone:  # a phone keeps the viewer's own budget (0.75 M triangles at most)
-                    page.evaluate(SET_LEVEL, level)
-                    page.wait_for_timeout(1000)
-                    wait_idle(page, 300)
                 if patch:
                     page.evaluate(patch)
                 page.wait_for_timeout(1500)
@@ -78,7 +75,7 @@ def main():
     ap.add_argument("--views", default="overview,sol,top")
     ap.add_argument("--seconds", type=float, default=8)
     ap.add_argument("--phone", action="store_true")
-    ap.add_argument("--level", type=float, default=1.0, help="Render size slider, 0-1 (ignored with --phone)")
+    ap.add_argument("--level", type=float, default=1.0, help="Render size, 0-1 (ignored with --phone)")
     ap.add_argument("--url", default="http://localhost:5173/")
     ap.add_argument("--out", default=str(ROOT / "docs" / "profile.json"))
     args = ap.parse_args()

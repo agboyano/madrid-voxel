@@ -6,7 +6,7 @@ import { chromium } from 'playwright-core';
 const [out = '/tmp', level = '0.1'] = process.argv.slice(2);
 const browser = await chromium.launch({
   headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium',
-  args: ['--use-angle=gl', '--ignore-gpu-blocklist', '--enable-gpu'],
+  args: ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist'],
 });
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 const errs = [];
@@ -14,13 +14,8 @@ page.on('pageerror', (e) => errs.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 const idle = () => page.waitForFunction(() => window.__streamer.inflight === 0 && window.__streamer.queue.length === 0, null, { timeout: 60000 })
   .catch(() => console.log('streamer still busy, going on'));
-await page.goto('http://localhost:5173/?hour=12');
+await page.goto(`http://localhost:5173/?hour=12&level=${level}`);
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 180000 });
-await page.evaluate((l) => { // the Render size slider, as scripts/screenshot.py sets it
-  const input = [...document.querySelectorAll('label')].find((e) => e.textContent.trim() === 'Render size')?.querySelector('input');
-  input.value = l;
-  input.dispatchEvent(new Event('input'));
-}, level);
 await page.waitForFunction(() => !document.body.classList.contains('loading'), null, { timeout: 300000 });
 await idle();
 await page.evaluate(() => window.__three.nav.setWalk());
