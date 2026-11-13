@@ -1,5 +1,5 @@
 import { PlaceSearch } from './search';
-import { dateOf } from './sun';
+import { dateOf, daysInYear } from './sun';
 import { $, el } from './util';
 
 const hhmm = (h: number) => { const m = Math.round(h * 60); return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
@@ -76,7 +76,7 @@ export class Bar {
   }) {
     this.el.id = 'bar';
     this.search = new PlaceSearch(this.el, 'Search Madrid…');
-    this.date = new Slider(this.el, { min: 1, max: 365, step: 1, marks: days, near: 3, log: false, show: dayMonth, onInput: onDay, onChange: onDayEnd });
+    this.date = new Slider(this.el, { min: 1, max: daysInYear(), step: 1, marks: days, near: 3, log: false, show: dayMonth, onInput: onDay, onChange: onDayEnd });
     this.time = new Slider(this.el, { min: 4, max: 23.5, step: 1 / 60, marks: {}, near: 1 / 3, log: false, show: hhmm, onInput: onHour });
     this.sky = choices('sky', 'Weather', weathers, this.el);
     this.sky.addEventListener('click', (e) => { const b = (e.target as HTMLElement).closest('button'); if (b) onWeather(b.dataset.v!); });

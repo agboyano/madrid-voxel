@@ -1500,3 +1500,22 @@ Adopted from dtla-voxel `6fd3b9d`, in `Daylight.fitSun`:
   16:20): the post's shadow now starts at its base. No acne showed at noon, at golden hour, in the overview
   (`shadow-after-overview-golden.png`) or with the phone's 2048 map (`shadow-after-street-golden-phone.png`).
 
+## Sun: true north, elevation and Madrid's calendar (2026-11-13)
+
+Adapted from dtla-voxel `cf1c7e1` (`web/src/sun.ts`, `daylight.ts`, `main.ts`, `bar.ts`):
+
+- **True north.** The sun's bearing turned only by the grid's rotation (`meta.theta_deg`, -6°). UTM grid north is not
+  true north: at the map's centre (zone 30, 0.69° west of its meridian) the convergence is -0.45°.
+  `trueNorthRotation` subtracts it, giving -5.55°, the same as projecting a point 1 km due north with pyproj and
+  `aoi.to_grid`. It reads `meta.crs` and accepts `EPSG:258zz` and `EPSG:326zz`/`327zz`.
+- **Elevation.** The light no longer stays at 2.5° or more while the sun sets; it uses the true elevation down to -2°
+  (below that the fixed moon fill takes over, as before). The sky's sun direction is always the true sun.
+- **Sky light.** The environment map was rebuilt only when the elevation changed; it now also follows the azimuth
+  (steps of 0.6°) and the north rotation.
+- **Calendar.** "Today" is the date in Madrid (`Intl`, `Europe/Madrid`), not on the visitor's computer, and the year
+  has 365 or 366 days. Summer time starts at 02:00 on the last Sunday of March and ends at 03:00 on the last Sunday
+  of October; the repeated hour counts as CET.
+- **Check:** 13 November's solar noon comes out at 12:59 CET, and the highest sun on 21 June at 73.0°.
+  `docs/img/north-before-palace-sunset.png` and `north-after-palace-sunset.png` (13 November, 17:45): a slightly
+  lower, dimmer light, and no other change.
+

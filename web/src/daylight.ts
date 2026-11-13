@@ -90,7 +90,7 @@ export class Daylight {
 
   redrawShadow() { this.sun.shadow.needsUpdate = true; }
 
-  // the grid is turned (scripts/aoi.py): compass bearings turn by theta in the scene
+  // the grid is turned (scripts/aoi.py) and UTM grid north is not true north: compass bearings turn by theta in the scene
   set theta(t: number) { this.northTheta = t; this.apply(this.hour); }
 
   private skyDir(az: number, el: number) {
@@ -103,7 +103,8 @@ export class Daylight {
     const { el, az } = sunAt(this.day, hour), elDeg = el * 180 / Math.PI, w = this.weather, cloud = w.cloud;
     const night = this.night = 1 - smooth(-7, 1, elDeg), day = 1 - night;
     const deep = smooth(-9, -17, elDeg), golden = (1 - smooth(8, 34, elDeg)) * (1 - cloud);
-    const dir = elDeg > -2 ? this.skyDir(az, Math.max(el, 2.5 * Math.PI / 180)) : new THREE.Vector3(0.45, 0.75, 0.5).normalize(); // the moon, high in the SE
+    // the sun at its true elevation (it was held at 2.5° or more), and the moon as a fixed fill, high in the SE
+    const trueSun = this.skyDir(az, el), dir = elDeg > -2 ? trueSun : new THREE.Vector3(0.45, 0.75, 0.5).normalize();
     const sun = this.sun, hemi = this.hemi, light = elDeg > -2 ? dir.clone().lerp(new THREE.Vector3(0, 1, 0), 0.8 * cloud).normalize() : dir;
     const T = beam(elDeg), lumT = T[0] * 0.2126 + T[1] * 0.7152 + T[2] * 0.0722, sinEl = Math.max(0, Math.sin(el));
     const sky = Math.max(0.22 * sinEl * (1 - lumT), 0.025 * smooth(-7, 2, elDeg)), sunH = lumT * sinEl;
@@ -120,7 +121,7 @@ export class Daylight {
       hemi.groundColor.lerp(new THREE.Color(0x6e6a66).lerp(new THREE.Color(0x2a2420), night), cloud);
       hemi.intensity = lerp(hemi.intensity, lerp(1.6 * smooth(-4, 6, elDeg) * (0.3 + 0.7 * sinEl) ** 0.4, 1.15, night), cloud);
     }
-    this.sky.set({ elDeg, sunDir: dir, trueSun: this.skyDir(az, el), golden, night, deep, cloud });
+    this.sky.set({ elDeg, sunDir: trueSun, trueSun, golden, night, deep, cloud });
     this.lightDir.copy(light);
     this.shadowKey = '';
     if (this.uniforms) {
@@ -133,7 +134,8 @@ export class Daylight {
     if (this.bloom) this.bloom.intensity = lerp(0.15, 0.9, night);
     if (this.ao) Object.assign(this.ao, { intensity: lerp(2.2, 3.4, cloud * day), aoRadius: lerp(6, 9, cloud * day) });
     this.scene.fog = new THREE.Fog(this.sky.horizon.clone(), 2500, 7000);
-    const key = `${(elDeg / 0.6).toFixed(0)},${cloud.toFixed(1)}`;
+    // the sky's light turns with the sun as well as rising with it (dtla-voxel cf1c7e1)
+    const key = `${(elDeg / 0.6).toFixed(0)},${(az * 180 / Math.PI / 0.6).toFixed(0)},${this.northTheta},${cloud.toFixed(1)}`;
     if (key !== this.envKey) {
       this.env?.dispose();
       this.env = this.pmrem.fromScene(this.sky.envScene(), 0, 1, 10000);

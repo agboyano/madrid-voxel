@@ -54,6 +54,7 @@ export interface Meta {
   views: Record<string, View>;
   sources: { osm: string };
   lonlat?: [number, number];
+  crs?: string;
 }
 
 export interface FloodInfo {

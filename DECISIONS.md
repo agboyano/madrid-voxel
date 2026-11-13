@@ -378,3 +378,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Why:** Warsaw's normal offset grew to 3 m at low sun, which detached golden-hour shadows from their casters.
 - **Rejected:** keeping a fixed floor of 0.5 m: it was the floor itself that showed as a gap at street level.
 
+## 2026-11-13: The sun follows true north and Madrid's calendar
+
+- **Decision:** the sun's bearing includes the UTM meridian convergence (-0.45°), its light uses the true elevation, the sky's light follows the azimuth, and the date is Madrid's (dtla-voxel `cf1c7e1`).
+- **Why:** small but free corrections. Shadows pointed half a degree off, the sunset light stayed 2.5° up after the sun had gone down, and a visitor in another time zone could see "today" as the wrong day.
+- **Rejected:** a full ellipsoidal convergence formula: the spherical one agrees with pyproj to within 0.0001° here.
+

@@ -19,7 +19,7 @@ import { StreetLife } from './sim/life';
 import type { Kind, TrafficData } from './sim/types';
 import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
-import { dateOf, dayOfYear, hourAt, setSite, solarNoon } from './sun';
+import { dateOf, dayOfYear, hourAt, madridDate, setSite, SOLAR_YEAR, solarNoon, trueNorthRotation } from './sun';
 import { $, clamp, coarsePointer, ease, el, fetchJson, lerp } from './util';
 import { floodlight } from './sky';
 import { Card } from './card';
@@ -32,7 +32,7 @@ declare global {
   interface Window { __ready?: boolean; __three?: object; __life?: StreetLife; __streamer?: TileStreamer }
 }
 
-const TODAY = dayOfYear(new Date());
+const TODAY = dayOfYear(madridDate());
 const DAYS = { midsummer: 172, midwinter: 355, today: TODAY };
 
 startStats();
@@ -283,9 +283,9 @@ async function boot() {
   daylight.uniforms = uniforms;
   daylight.bloom = post.bloom;
   daylight.ao = post.n8.configuration;
-  daylight.theta = (meta.theta_deg || 0) * Math.PI / 180;
+  daylight.theta = meta.lonlat && meta.crs ? trueNorthRotation(meta.theta_deg || 0, meta.lonlat, meta.crs) : (meta.theta_deg || 0) * Math.PI / 180;
   const md = qs.get('date')?.split('-').map(Number);
-  setDay(md ? dayOfYear(new Date(new Date().getFullYear(), md[0] - 1, md[1])) : TODAY);
+  setDay(md ? dayOfYear(new Date(SOLAR_YEAR, md[0] - 1, md[1])) : TODAY);
   setWeather((qs.get('weather') ?? '') in WEATHERS ? qs.get('weather')! : 'typical', true);
   setHour(qs.get('hour') ? +qs.get('hour')! : timesOf(daylight.day)['golden hour']);
   city = await installCity({ streamer, uniforms, meta, scene, focus, camera, caption, budget });
