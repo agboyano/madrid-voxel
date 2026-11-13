@@ -12,6 +12,17 @@ export interface ColumnSource {
 type Point = { x: number; y: number; z: number };
 const AROUND = [[3, 0], [-3, 0], [0, 3], [0, -3]] as const;
 
+// whether column i of a tile holds a voxel at cell height zc
+function inRuns(n: ColumnData, i: number, zc: number) {
+  const R = n.runs;
+  for (let k = n.off[i], e = n.off[i + 1]; k < e; k++) {
+    const z0 = R[k * 3];
+    if (zc < z0) return false;
+    if (zc < z0 + R[k * 3 + 1]) return true;
+  }
+  return false;
+}
+
 // Voxel queries over whatever is loaded, each cell answered by the finest loaded tile covering it.
 // Arguments are data coordinates: x east, r (row) south, z up, in metres; three.js has them as (x, z, r).
 export class World {
@@ -76,14 +87,17 @@ export class World {
   solid(x: number, r: number, z: number) {
     const c = this.column(x, r);
     if (!c) return z < 0;
-    const n = c, i = this.columnIndex, zc = Math.floor(z / n.s), R = n.runs;
-    if (zc < 0) return true;
-    for (let k = n.off[i], e = n.off[i + 1]; k < e; k++) {
-      const z0 = R[k * 3];
-      if (zc < z0) return false;
-      if (zc < z0 + R[k * 3 + 1]) return true;
-    }
-    return false;
+    const zc = Math.floor(z / c.s);
+    return zc < 0 || inRuns(c, this.columnIndex, zc);
+  }
+
+  // a tree crown or grass at (x, r, z): the 1 m foliage tiles, kept by stream.ts. Only what the eye meets (raycast with
+  // leaves); walking goes through them, as it always has
+  leafy(x: number, r: number, z: number) {
+    if (!this.inside(x, r)) return false;
+    const fine = this.src.levels[this.src.levels.length - 1], L = this.src.N * fine;
+    const n = this.src.columns(`f/${Math.floor(x / L)}_${Math.floor(r / L)}`);
+    return !!n && z >= 0 && inRuns(n, Math.floor((x - n.x0) / n.s) + 1 + n.S * (Math.floor((r - n.y0) / n.s) + 1), Math.floor(z / n.s));
   }
 
   top(x: number, r: number) {
@@ -149,8 +163,8 @@ export class World {
       && !this.blocked(x, r + 1, g, g + 3) && !this.blocked(x, r - 1, g, g + 3);
   }
 
-  // distance along d (unit, three.js axes) to the first solid voxel; sets hitAxis
-  raycast(o: Point | THREE.Vector3, d: Point | THREE.Vector3, maxDist = 4000) {
+  // distance along d (unit, three.js axes) to the first solid voxel, or with leaves also the first tree crown; sets hitAxis
+  raycast(o: Point | THREE.Vector3, d: Point | THREE.Vector3, maxDist = 4000, leaves = false) {
     let x = Math.floor(o.x), y = Math.floor(o.y), z = Math.floor(o.z);
     const sx = Math.sign(d.x), sy = Math.sign(d.y), sz = Math.sign(d.z);
     const tdx = sx ? Math.abs(1 / d.x) : Infinity, tdy = sy ? Math.abs(1 / d.y) : Infinity, tdz = sz ? Math.abs(1 / d.z) : Infinity;
@@ -160,7 +174,7 @@ export class World {
     let t = 0;
     for (let i = 0; i < 20000 && t < maxDist; i++) {
       if (y < 0) { this.hitAxis = 1; return t; }
-      if (y < 420 && this.solid(x, z, y)) return t;
+      if (y < 420 && (this.solid(x, z, y) || (leaves && this.leafy(x, z, y)))) return t;
       if (y > 420 && sy >= 0) return Infinity;
       if (tx < ty && tx < tz) { t = tx; x += sx; tx += tdx; this.hitAxis = 0; }
       else if (ty < tz) { t = ty; y += sy; ty += tdy; this.hitAxis = 1; }

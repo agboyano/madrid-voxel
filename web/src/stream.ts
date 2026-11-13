@@ -169,7 +169,8 @@ export class TileStreamer implements ColumnSource {
       // the base tile's column data is still here: hand over a copy instead of fetching it again
       const b = this.nodes.get(this.key(1, n.tx, n.ty))?.data;
       const under: RawColumns | string = b ? { counts: b.counts.slice(), runs: b.runs.slice() } : file(`1/${n.tx}_${n.ty}`);
-      return { msg: { ...base, url: file(`1f/${n.tx}_${n.ty}`), under, keep: false, dataOnly: false, bld: null },
+      // its columns stay (keep) for World.leafy: flying and picking meet the tree crowns
+      return { msg: { ...base, url: file(`1f/${n.tx}_${n.ty}`), under, keep: true, dataOnly: false, bld: null },
         transfer: typeof under === 'string' ? [] : [under.counts.buffer, under.runs.buffer] };
     }
     const bld = !dataOnly && n.s === 1 ? this.buildingIds(x0, y0) : null;

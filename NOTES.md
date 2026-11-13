@@ -1623,3 +1623,18 @@ Adapted from dtla-voxel `9eeb73e` (`scripts/horizon.py`, `web/src/sky.ts`):
   `horizon-nnw-off.png` without it.
 - **Possible later:** snow on the crest in winter (Guadarrama is usually white from December to March).
 
+## Flying into tree crowns (2026-11-13)
+
+Flying low with W in the Retiro, the view filled with huge cubes that made no sense: the camera was inside a tree
+crown, its 1 m leaf voxels a metre or two away (`docs/img/fly-trees-before.png`). The flight casts a ray ahead and stops
+6 m short of what it meets, but `World` held only the base tiles: trees and grass live in the foliage tiles (`1f`),
+whose columns were not kept. A ray 15 m up through 300 m of the Retiro's woods met nothing.
+
+- The foliage tiles' columns are now kept (`stream.ts`, `keep: true`), and `World.leafy()` reads them.
+- `World.raycast(..., leaves = true)` stops at crowns. The flight ahead, the focus after turning (`retarget`) and the
+  screen ray of clicks and the wheel use it, so the camera stops short of a tree and, as with a building, lands under
+  it (`docs/img/fly-trees-after.png`).
+- Walking, label occlusion, rides and the spot finder still ignore foliage, as before: walking under and through
+  crowns is unchanged.
+- It was not the block choice: around the camera every block was real and every 1 m and foliage tile in.
+

@@ -223,7 +223,7 @@ export class Nav {
     if (!this.world) return null;
     const r = new THREE.Raycaster();
     r.setFromCamera(new THREE.Vector2(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1), this.camera);
-    const t = this.world.raycast(r.ray.origin, r.ray.direction, maxDist);
+    const t = this.world.raycast(r.ray.origin, r.ray.direction, maxDist, true);
     if (!isFinite(t)) return null;
     return { p: r.ray.origin.clone().addScaledVector(r.ray.direction, t), axis: this.world.hitAxis, dir: r.ray.direction };
   }
@@ -296,7 +296,7 @@ export class Nav {
   private retarget() {
     const w = this.world;
     if (!w || this.mode !== 'orbit') return;
-    const c = this.camera.position, d = this.dir().normalize(), t = w.raycast(c, d, 3000);
+    const c = this.camera.position, d = this.dir().normalize(), t = w.raycast(c, d, 3000, true);
     let len = isFinite(t) ? Math.max(5, t) : Math.min(this.dir().length(), 800);
     const onMap = (L: number) => { const x = c.x + d.x * L, z = c.z + d.z * L; return w.inside(x - 61, z - 61) && w.inside(x + 61, z + 61); };
     while (len > 5 && !onMap(len)) len *= 0.85;
@@ -457,7 +457,7 @@ export class Nav {
     if (!go) return;
     const len0 = this.dir().length(), look = this.dir().normalize();
     let step = go * speed * dt;
-    const ahead = w.raycast(cam, look, 4000);
+    const ahead = w.raycast(cam, look, 4000, true); // tree crowns too: flying stops short of them
     if (go > 0 && ahead < 8) { this.setWalk(); return; }
     if (go > 0) step = Math.min(step, ahead - 6);
     if (step * look.y > 0 && h + step * look.y > 3600) return;
