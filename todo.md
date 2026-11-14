@@ -40,9 +40,17 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 - **Construction sites** were not reviewed one by one at full scale (OSM `landuse=construction`, buildings finished after the 2024 flight).
 - **Vegetation masks and deck heights** are still computed in `voxelize.py` between 3D writes. Move them into `layers.py` to complete the 2D/3D split.
 - **`VOXEL_SIZE`:** the viewer does not read `meta.voxel` yet. The "1 m assumptions" section of `NOTES.md` lists what would have to change for another voxel size.
-- **Desktop performance on integrated GPUs:** post-processing is about half the frame time (5.4 fps for the whole map at full render size on an Intel UHD 620). A lighter post-processing level for weak GPUs would help.
+- **Desktop performance on integrated GPUs (Intel UHD 620),** where the adaptive render level settles at 0.15–0.3. The 5.4 fps first written here was the whole map at full render size, before the work below, and has not been measured again. Done since (`DECISIONS.md`, 2026-11-13 and 14):
+  - **Post-processing:** N8AO is off below level 0.4, fades out between 3.5 and 5.5 km of camera distance, and no longer renders the scene twice more for transparent materials (`docs/n8ao-evaluation.md`).
+  - **Sun's shadow map:** redrawn far less often while moving, in flights and in hour drags (`docs/renderer-evaluation-plan.md`).
+  - **Street life:** only the instances in use are sent to the GPU, and the population is 0.7 on desktop and 0.5 on phones (`docs/sim-evaluation-plan.md`).
+  - **Still open:** a far-field occlusion term (technique 3 of `docs/renderer-evaluation-plan.md`); the cheaper agents' shadow map and 20 Hz logic (C3 and C8 of `docs/sim-evaluation-plan.md`), not evaluated.
 - **Touch and gamepad controls on real devices.** They were tested in headless Chromium with an emulated phone and a fake gamepad (`NOTES.md`, "Viewer: touch and gamepad controls"). The stick now works on a real phone in portrait and landscape. Still to check: the other mobile browser (iOS Safari or Android Chrome, whichever was not tested), and whether the pad shows over plain HTTP on the local network (a real Xbox controller works).
-- **`web/tools/*.mjs`** (Node harnesses inherited from Warsaw) still hold Warsaw camera poses and macOS (Metal) flags. The Python `scripts/screenshot.py`, `profile.py` and `cost1m.py` replace the ones used here.
+- **`web/tools/*.mjs`** (59 Node harnesses, mostly inherited from Warsaw):
+  - **21 run here:** they use `launch.mjs`, the system Chromium on ANGLE's Vulkan backend, among them `simcost`, `slowframes`, `passes`, `probe` and the traffic tools.
+  - **30 still launch Chrome with macOS flags** (`channel: 'chrome'` or Metal) and do not start on this machine as they are, such as `bench`, `qa`, `shots`, `mem` and `navtest`.
+  - **10 still name Warsaw's views** (`zlota`, `pkin`, `station`, …): `abdiff`, `bench`, `ctltest`, `gpu1m`, `keytest`, `lodfade`, `lodflip`, `mem`, `mergekey` and `navtest`. Madrid's are `overview`, `top`, `sol`, `street`, `palace`, `plazamayor`, `granvia`, `cibeles` and `prado`.
+  - Switch a tool to `launch()` and Madrid's views when it is needed again. The Python `scripts/screenshot.py`, `profile.py` and `cost1m.py` cover screenshots and profiling.
 - **Published site:** once published, check it after each data change. The workflow deploys `web/dist` on every push to `main`.
 
 ## Future (PLAN.md Phase 7)
