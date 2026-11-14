@@ -440,3 +440,93 @@ Almost all of it exists already. `cost1m.py` meshes the 805 tiles in 57 s and gi
 | 1. Adaptive levels | Large against fixed 1 m in far views [D]; against the current clay, a quality gain at middle distance, unmeasured [S] | 4 days to evaluate; 3–5 weeks to adopt | High: no popping mitigation; breaks buildings, blocks, foliage and collisions; +71 % data [V] | **Evaluate later**, stages A and B only |
 | 2. Coarser shadows | Lower peaks when shadows are redrawn (83 ms today); nothing at rest | 1 day baseline; 2 days experiment | Medium: coarse shadows at 8 m, solid bare trees | **Evaluate now** the baseline; the experiment only if it clears the bar |
 | 3. AO out of the merge key | 20–29 % less geometry in dtla-voxel [V]; probably less here [S]; little fps gain on integrated GPUs [S] | Half a day for the count; 1 day for the prototype; up to 2 weeks if AO must be shaded per fragment | Medium: lost relief on devices without N8AO | **Evaluate now** the count; the rest only if it clears the bar |
+
+---
+
+## Baseline results (2026-11-14)
+
+Measured on the development laptop: Intel UHD 620 through ANGLE on Vulkan and Mesa, headless Chromium, 1600 × 1000 at device pixel ratio 1, 11:00. `EXT_disjoint_timer_query_webgl2` is available here, so GPU time is measured per pass with timer queries.
+
+**Tools.**
+- `web/tools/passes.mjs`: triangles, draw calls and GPU time per composer pass, with the sun's and the twin's shadow maps split out of the scene pass.
+- `web/tools/mergekey.mjs`: the offline merge-key count.
+- `web/tools/launch.mjs`: the shared launcher. `probe`, `redraws`, `inventory`, `gpu1m`, `jank`, `abdiff` and `framerec` now use it, with the system Chromium on Vulkan.
+- The raw JSON is in `data/baseline/` (not versioned).
+
+Each figure is the median of 12 frames after 4 warm-up frames. "Adapted" is the level the viewer settled at by itself after 45 s.
+
+### What is loaded
+
+| | Buildings | Foliage | Trunks and limbs | Clay |
+| --- | --- | --- | --- | --- |
+| Whole city at 1 m, June | 18.67 M | 23.68 M | 0.47 M | — |
+| Whole city at 1 m, January | 18.67 M | 23.68 M | 5.05 M | — |
+| Adapted level, any view | 1.0–2.5 M | 0.2–3.0 M | 0.02–0.44 M | 0.80 M |
+
+This explains the 42–47 M triangles per frame of the overview at level 1, an open question in the plan above: the foliage alone is 23.7 M, more than the buildings, and `scripts/cost1m.py` counts only the buildings. N8AO draws no geometry, and the twin's shadow map draws about 0.1 M.
+
+The winter limbs add 4.6 M triangles at level 1, about 10 % of the overview.
+
+### GPU time per pass, adapted level (ms)
+
+| View, date | Level | Scene triangles | Scene | Twin shadow | N8AO | Bloom, tilt-shift, tone | Sun map redraw |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| overview, Jun | 0.14 | 4.1 M | 40.2 | 1.1 | off | 2.3 | 14.6 (3.9 M) |
+| overview, Jan | 0.28 | 5.0 M | 49.9 | 1.3 | off | 3.8 | 20.1 (4.9 M) |
+| prado, Jun | 0.21 | 2.0 M | 29.7 | 1.1 | off | 2.7 | 19.0 (3.4 M) |
+| prado, Jan | 0.25 | 2.6 M | 36.2 | 1.1 | off | 3.3 | 34.6 (4.9 M) |
+| sol, Jun | 0.43 | 2.0 M | 30.9 | 1.2 | 9.3 | 6.0 | 24.5 (3.1 M) |
+| street, Jun | 0.39 | 2.2 M | 20.9 | 0.9 | off | 3.5 | 20.5 (2.0 M) |
+
+At the level a visitor on this laptop actually gets, the scene pass costs 17–50 ms for only 2–5 M triangles: it is bound by fragments (the surface shader), not by triangles.
+
+A sun-map redraw costs 15–37 ms, about as much as the rest of the frame.
+
+### GPU time per pass, whole city at 1 m (ms)
+
+| View, date | Scene triangles | Scene | N8AO | Post | Sun map redraw |
+| --- | --- | --- | --- | --- | --- |
+| overview, Jun | 42.8 M | 271 | 16.0 | 13.5 | 177 (42.8 M) |
+| overview, Jan | 47.4 M | 312 | 15.0 | 13.1 | 217 (47.4 M) |
+| top, Jun | 1.7 M | 40 | 16.6 | 10.6 | 179 (42.8 M) |
+| prado, Jun | 4.9 M | 66 | 16.6 | 12.2 | 69 (15.7 M) |
+| cibeles, Jun | 8.2 M | 91 | 16.7 | 12.9 | 73 (16.1 M) |
+| sol, Jun | 2.0 M | 38 | 16.4 | 10.9 | 25 (3.7 M) |
+| street, Jun | 13.3 M | 97 | 16.9 | 7.9 | 21 (1.9 M) |
+
+At level 1 the scene pass follows the triangle count. The sun map takes in the whole city whenever the view is far or high (`top`: 1.7 M triangles in view, 42.8 M in the shadow map).
+
+### Sun-map redraws (`web/tools/redraws.mjs`, adapted level, 21 June)
+
+| Activity | Redraws |
+| --- | --- |
+| Loading | 43 in 16.3 s |
+| After loading, still | 0 in 25 s |
+| Orbiting | 51 in 15.5 s (the 5 s of mouse moves took 15.5 s) |
+| Zooming | 2 in 8.5 s |
+| Panning | 0 in 7.8 s |
+
+While orbiting the map is redrawn about three times a second. The likely cause is that the blocks the budget makes real change as the view turns, which changes the set of casters (`web/src/main.ts:370-379`). This has not been checked.
+
+### Merge key (`web/tools/mergekey.mjs`, all 805 base and 805 foliage tiles)
+
+| Key | Buildings | Foliage | City |
+| --- | --- | --- | --- |
+| As it is | 18.67 M | 23.68 M | 42.35 M |
+| Without AO | 12.17 M (−34.8 %) | 19.93 M (−15.8 %) | 32.10 M (−24.2 %) |
+| Without ground height | −0.1 % | −0.1 % | −0.1 % |
+| Without building id | −0.5 % | 0.0 % | −0.2 % |
+| Without all three | −35.5 % | −16.1 % | −24.6 % |
+
+The face area per direction is identical in every variant. The plan's assumption that ground height and building id would keep splitting quads was wrong: AO is almost the whole effect.
+
+### What the baseline says about each technique
+
+- **Technique 3 passes stage A** (−24.2 % over the whole city, against the 20 % required).
+  - The saving is in triangles and GPU memory.
+  - At the adapted level on this laptop the scene pass is fragment-bound and N8AO is off. Option a (N8AO only) would leave these devices with no AO, and is unlikely to speed them up.
+  - Stage B decides it.
+- **Technique 2 clears its abandonment bar** (the threshold was 6 redraws per minute; orbiting gives about 200).
+  - A redraw costs as much as a frame.
+  - Before coarser shadow geometry, it is worth checking why orbiting redraws at all. If it is the caster set changing with the budget, holding the shadow casters steady while the camera turns could remove most redraws without touching the geometry.
+- **Technique 1** is not yet measured. The baseline shows that at the adapted level only 2–5 M triangles are drawn, and that the cost is per fragment. That weakens the speed argument and leaves the quality argument: 2–4 m instead of 8 m clay at middle distance.

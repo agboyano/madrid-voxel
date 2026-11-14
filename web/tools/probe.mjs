@@ -1,10 +1,10 @@
 // Where a frame's time goes: GPU time (timer queries) and CPU time of one composer.render, the triangles and draw calls,
 // for the full frame and with one part removed at a time, at a few render sizes and pixel ratios.
 // usage: node tools/probe.mjs http://localhost:5188 [view] [--swift] [--vp=1440x900]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const args = process.argv.slice(2), flags = args.filter((a) => a.startsWith('--')), [base, view = ''] = args.filter((a) => !a.startsWith('--'));
 const swift = flags.includes('--swift'), [w, h] = (flags.find((f) => f.startsWith('--vp='))?.slice(5) ?? '1440x900').split('x').map(Number);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: swift ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch({ swift });
 const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
 page.on('pageerror', (e) => console.log('pageerror', e.message));
 await page.addInitScript(() => {

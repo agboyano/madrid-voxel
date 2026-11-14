@@ -1,8 +1,8 @@
 // Triangles loaded, by kind (1 m buildings, 1 m foliage, 8 m clay, traffic), at the whole city and at a few render sizes.
 // usage: node tools/inventory.mjs http://localhost:5188
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [base] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 await page.goto(`${base}/?date=06-21&hour=16&weather=clear`);
 await page.waitForFunction(() => window.__three && window.__ready && !document.body.classList.contains('loading'), null, { timeout: 900000, polling: 500 });

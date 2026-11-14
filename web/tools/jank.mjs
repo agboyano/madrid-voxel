@@ -1,7 +1,7 @@
 // Frame-time percentiles while flying between views (streaming stutter check). usage: node tools/jank.mjs <url> [label]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [url = 'http://localhost:5173/', label = ''] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto(url);
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 300000 });

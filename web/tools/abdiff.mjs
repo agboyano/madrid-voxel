@@ -1,7 +1,7 @@
 // Same views from two servers (e.g. main in a worktree on :5174, this branch on :5173), frozen and screenshot, then a
 // literal pixel diff (tools/abdiff.py). Randomness is seeded, the clock stops once the city is in, traffic is removed
 // unless --life. usage: node tools/abdiff.mjs out/ http://localhost:5174 http://localhost:5173 [views] [--life] [--vp=1440x900x2]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import { mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
@@ -9,7 +9,7 @@ const args = process.argv.slice(2), flags = args.filter((a) => a.startsWith('--'
 const life = flags.includes('--life'), [w, h, dpr] = (flags.find((f) => f.startsWith('--vp='))?.slice(5) ?? '1440x900x2').split('x').map(Number);
 const query = flags.find((f) => f.startsWith('--q='))?.slice(4) ?? 'date=06-21&hour=16&weather=clear';
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 
 async function shot(base, view, file) {
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: dpr });

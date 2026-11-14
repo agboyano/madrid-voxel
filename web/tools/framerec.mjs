@@ -2,12 +2,12 @@
 // 480 x 300 copy of the canvas and which tiles became visible / hidden in it. Frame-to-frame change is then small
 // for camera motion and jumps where the picture swaps (tools/framerec.py finds and shows those).
 // usage: node tools/framerec.mjs <outdir> [spots "home,1,2"] [wheel ms between notches, default 120] [notches 25]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out = 'out/framerec', spots = 'home', gap = '120', notches = '25'] = process.argv.slice(2);
 const port = process.env.PORT || 5173;
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto(`http://localhost:${port}/?${process.env.Q || ''}`);
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 300000 });
