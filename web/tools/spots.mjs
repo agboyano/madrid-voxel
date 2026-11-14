@@ -1,7 +1,7 @@
 // screenshots of hotspots after the sim has run: node tools/spots.mjs "x,y,label;x,y,label" [warmup s]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [spots, warm = 40] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
 await page.goto('http://localhost:5173/?hour=16&ui=0&tilt=0');
 await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 120000 });

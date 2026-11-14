@@ -1,10 +1,10 @@
 // PROTOTYPE: the Home view at 2x resolution for each treatment of what lies outside the real area.
 // usage: node tools/ghosthome.mjs <outdir> name=query ...
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out, ...vs] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 for (const v of vs) {
   const [name, q] = v.split('=', 2).length === 2 ? [v.slice(0, v.indexOf('=')), v.slice(v.indexOf('=') + 1)] : [v, ''];
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });

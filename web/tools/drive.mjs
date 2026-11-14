@@ -7,13 +7,13 @@
 //   {a:"tap",x,y}  {a:"touchdrag",x,y,x2,y2,ms?}  {a:"pinch",x,y,from,to,ms?}  (two fingers, distance from->to)
 //   {a:"twist",x,y,deg,ms?}  (two fingers rotate)   {a:"twodrag",x,y,dx,dy,ms?}  (two fingers move together)
 //   {a:"wait",ms}   top-level {"wait":ms} after the batch (default 700)
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import http from 'node:http';
 import fs from 'node:fs';
 const [port = 9301, url = 'http://localhost:5173/', out = 'drive', w = 1280, h = 800, touch] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const isTouch = touch === 'touch';
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const ctx = await browser.newContext({ viewport: { width: +w, height: +h }, hasTouch: isTouch, isMobile: isTouch, deviceScaleFactor: 1 });
 const page = await ctx.newPage();
 const cdp = await ctx.newCDPSession(page);

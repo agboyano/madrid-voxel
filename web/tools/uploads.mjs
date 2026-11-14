@@ -1,12 +1,9 @@
 // Do GPU uploads cost frames? Flies between the named views at a fixed level, recording each frame's time and the bytes it
 // handed to gl.bufferData, and whether it redrew the city's shadow map, then compares the groups.
 // usage: node tools/uploads.mjs [level]   (dev server on :5173; $CHROMIUM picks the browser)
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [level = '0.5'] = process.argv.slice(2);
-const browser = await chromium.launch({
-  headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium',
-  args: ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist'],
-});
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto(`http://localhost:5173/?hour=12&level=${level}`);
 await page.waitForFunction(() => window.__ready === true && !document.body.classList.contains('loading'), null, { timeout: 300000 });

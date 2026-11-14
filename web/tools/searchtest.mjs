@@ -1,7 +1,7 @@
 // Search box: type, screenshot the suggestions, pick one, screenshot the result. usage: node tools/searchtest.mjs outdir query...
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [out = '/tmp', ...qs] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));

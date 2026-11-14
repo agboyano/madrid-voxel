@@ -1,8 +1,8 @@
 // usage: node tools/bench.mjs <outdir>  — CPU per browser process over 10 s + screenshots of fixed views
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const out = process.argv[2] || 'bench'; fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const bcdp = await browser.newBrowserCDPSession();
 const cdp = await page.context().newCDPSession(page);
@@ -31,9 +31,9 @@ const d = (k) => +((m1[k] - m0[k]) / (f1 - f0) * 1000).toFixed(2);
 res.main_thread_ms_per_frame = { task: d('TaskDuration'), script: d('ScriptDuration'), layout: d('LayoutDuration'), style: d('RecalcStyleDuration') };
 res.draw_calls = await page.evaluate(async () => { const i = window.__three.renderer.info; await new Promise(requestAnimationFrame); i.autoReset = false; i.reset(); await new Promise(requestAnimationFrame); const c = i.render.calls; i.autoReset = true; return c; });
 // --- screenshots: static city (life + fountains hidden, clock frozen) and with life
-for (const v of ['overview', 'pkin', 'station', 'skyline']) {
+for (const v of ['overview', 'sol', 'cibeles', 'palace']) {
   await load(`view=${v}`);
-  await page.evaluate(() => { window.__life.group.visible = false; window.__three.P.fountains = false; });
+  await page.evaluate(() => { window.__life.group.visible = false; window.__three.setFountains(false); });
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/${v}-static.png` });
   await page.evaluate(() => { window.__life.group.visible = true; });

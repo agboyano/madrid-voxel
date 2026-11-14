@@ -14,6 +14,8 @@ export class Fountains {
     scene.add(this.mesh);
   }
 
+  set visible(on: boolean) { this.mesh.visible = on; } // the measurement tools' static views (window.__three.setFountains)
+
   update(t: number, night: number) {
     this.mat.emissiveIntensity = night * 0.9;
     const m = new THREE.Matrix4(), s = new THREE.Vector3(), q = new THREE.Quaternion(), p = new THREE.Vector3();

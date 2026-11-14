@@ -1,11 +1,11 @@
 // Street-life QA: per-frame metrics on rendered car/tram/person positions + screenshot sequences.
 // usage: node tools/qa.mjs [seconds=60] [outdir=../data/qa]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 
 const [secs = 60, outdir = '../data/qa'] = process.argv.slice(2);
 fs.mkdirSync(outdir, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
@@ -14,7 +14,9 @@ await page.waitForFunction(() => window.__ready === true && window.__life, null,
 
 // install the probe: runs every animation frame inside the page
 await page.evaluate(async () => {
-  const mask = new Uint8Array(await new Response((await fetch('data/qa_roadmask.bin.gz')).body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  // the dev server sends the .gz with Content-Encoding: gzip, so it may arrive already inflated
+  const raw = new Uint8Array(await (await fetch('data/qa_roadmask.bin.gz')).arrayBuffer());
+  const mask = raw[0] === 0x1f && raw[1] === 0x8b ? new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()) : raw;
   const W = (await (await fetch('data/meta.json')).json()).W;
   const Q = (window.__qa = { frames: 0, ev: {}, samples: {}, last: new Map(), lastT: new Map() });
   const bump = (k, sample) => { Q.ev[k] = (Q.ev[k] || 0) + 1; if (sample && (!Q.samples[k] || Q.samples[k].length < 12)) (Q.samples[k] ||= []).push(sample); };

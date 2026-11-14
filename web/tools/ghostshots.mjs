@@ -1,11 +1,11 @@
 // PROTOTYPE: screenshots of the ghost styles (proto.js) from the Home view and closer to the edge of the real square.
 // usage: node tools/ghostshots.mjs <outdir> [styles "1,2,3"] [extra query]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out = 'out/ghost', styles = '1,2,3,4,5', extra = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
-const POSES = { home: null, top: { t: [1100, 20, 1400], dir: [0.15, 0.9, 0.42], d: 4200 }, night: 'night' };
+const browser = await launch();
+const POSES = { home: null, top: { t: [2200, 70, 1425], dir: [0.15, 0.9, 0.42], d: 4200 }, night: 'night' };
 for (const st of styles.split(',')) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.on('pageerror', (e) => console.log('pageerror', e.message));

@@ -2,16 +2,16 @@
 // streamer to its normal error budget (coarser tiles come in), and screenshot ~every 100 ms; then back to full
 // detail. tools/lodfade.py scores the frame-to-frame change: one big step is a flip, small ones a dissolve.
 // usage: node tools/lodfade.mjs <outdir> [query, e.g. "fade=0"]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out = 'out/lodfade', q = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const CASES = { // distances where the default budget draws the view mostly at 2 m (tools/lodflip.mjs)
-  pkin: { t: [749, 110, 1229], dir: [0.55, 0.35, 0.76], d: 1450 },
-  varso: { t: [300, 120, 1330], dir: [-0.6, 0.4, 0.7], d: 1600 },
-  bridge: { t: [2916, 25, 834], dir: [0.2, 0.3, 0.93], d: 1450 },
+  palace: { t: [475, 105, 1426], dir: [0.55, 0.35, 0.76], d: 1450 },
+  granvia: { t: [1903, 110, 1304], dir: [-0.6, 0.4, 0.7], d: 1600 },
+  cibeles: { t: [2240, 72, 1210], dir: [0.2, 0.3, 0.93], d: 1450 },
 };
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto(`http://localhost:5173/?ui=0&hour=14${q ? '&' + q : ''}`);
 await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 300000 });
@@ -30,7 +30,7 @@ const log = {};
 for (const [name, c] of Object.entries(CASES)) {
   await page.evaluate(([t, dir, d]) => {
     const T = window.__three, n = Math.hypot(...dir);
-    window.__life.group.visible = false; T.P.fountains = false; T.nav.cancelFly?.();
+    window.__life.group.visible = false; T.setFountains(false); T.nav.cancelFly?.();
     T.controls.target.set(...t);
     T.camera.position.set(t[0] + dir[0] / n * d, t[1] + dir[1] / n * d, t[2] + dir[2] / n * d);
     T.controls.update();

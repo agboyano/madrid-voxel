@@ -1,6 +1,6 @@
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const url = process.argv[2];
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-precise-memory-info'] });
+const browser = await launch({ args: ['--enable-precise-memory-info'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, screen: { width: 390, height: 844 } });
 const page = await ctx.newPage();
 await page.addInitScript(() => {

@@ -1,8 +1,8 @@
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const out = 'out/shots'; fs.mkdirSync(out, { recursive: true });
 const S = JSON.parse(process.argv[2]); const hour = process.argv[3] || 17.5;
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto(`http://localhost:5173/?ui=0&tilt=0&hour=${hour}${process.env.Q ? "&" + process.env.Q : ""}`);
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 300000 });

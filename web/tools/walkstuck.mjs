@@ -2,12 +2,9 @@
 // At a low render level the city is mostly 8 m clay; a query that lands on clay must not make
 // later queries near the walker (inside the same 8 m tile) read clay instead of its 1 m tile.
 // usage: node tools/walkstuck.mjs [outdir] [level]   (dev server on :5173; $CHROMIUM picks the browser)
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [out = '/tmp', level = '0.1'] = process.argv.slice(2);
-const browser = await chromium.launch({
-  headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium',
-  args: ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist'],
-});
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));

@@ -1,8 +1,8 @@
 // The loading as a visitor sees it: a screenshot and the state (caption, budget, fps) every 2 s, over a throttled
 // network. usage: node tools/film.mjs http://localhost:5173 out/ [Mbps=20] [seconds=40]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [base, out, mbps = '20', secs = '40'] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 const cdp = await page.context().newCDPSession(page);
 await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 30, downloadThroughput: (+mbps * 1e6) / 8, uploadThroughput: 1e6 });

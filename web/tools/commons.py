@@ -1,6 +1,6 @@
 # list Commons files of a category (and a level of subcategories) with camera coords / heading / focal length
 import sys, json, requests
-UA = {"User-Agent": "warsaw-voxel-research/0.1 (piotr.migdal@quesma.com)"}
+UA = {"User-Agent": "madrid-voxel/0.1 (https://github.com/agboyano/madrid-voxel)"}
 API = "https://commons.wikimedia.org/w/api.php"
 def files(cat, limit=400):
     out, cont = [], {}

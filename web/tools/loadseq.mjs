@@ -1,10 +1,10 @@
 // PROTOTYPE: screenshots as fast as possible while the whole city loads, for each way of getting there.
 // usage: node tools/loadseq.mjs <outdir> [runs]   -> <outdir>/<path><run>-<ms>.jpg   (paths: direct, menu, phone)
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out, runs = 1] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 async function rec(name, vp, go, dur) {
   const page = await browser.newPage({ viewport: vp, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.log(name, 'pageerror', e.message));

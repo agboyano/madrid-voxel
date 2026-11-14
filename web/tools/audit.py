@@ -8,10 +8,9 @@ import numpy as np
 from PIL import Image
 SP = os.environ["OUT"]
 meta = json.load(open("web/public/data/meta.json"))
-AREAS = {"Plac Centralny", "Park Świętokrzyski", "Ogród Saski", "Plac Konstytucji", "Wisła", "Bulwary Wiślane"}
-HALF = {"PGE Narodowy": 190, "Pałac Kultury i Nauki": 140, "Most Świętokrzyski": 260, "Most Poniatowskiego": 300,
-        "Warszawa Centralna": 120, "Złote Tarasy": 120, "Sejm": 130, "Politechnika Warszawska": 120, "BUW": 110,
-        "Centrum Nauki Kopernik": 110, "Teatr Wielki": 110, "Pałac Saski": 90, "Elektrownia Powiśle": 110}
+AREAS = {"Parque del Retiro", "Casa de Campo", "Madrid Río", "Campo del Moro"}  # too large for one crop
+# half the crop's side (m) where the label's radius R does not frame the landmark: the long palaces and the museum
+HALF = {"Palacio Real": 110, "Museo del Prado": 120, "Palacio de Cibeles": 80, "Plaza Mayor": 80, "Puerta del Sol": 80}
 sid = lambda n: re.sub(r"[^a-z0-9]", "", n.lower())[:14]
 labs = [l for l in meta["labels"] if l["name"] not in AREAS and (len(sys.argv) < 2 or sys.argv[1] == "--sheet" or l["name"] in sys.argv[1:])]
 
@@ -31,11 +30,13 @@ if len(sys.argv) > 1 and sys.argv[1] == "--sheet":
     sys.exit()
 
 os.makedirs(f"{SP}/ortho", exist_ok=True)
-orto = np.load("data/prep.npz", mmap_mode="r")["orto"]
+sys.path.insert(0, "scripts")
+from aoi import AREA
+orto = np.load(AREA / "prep.npz", mmap_mode="r")["orto"]  # 5 px per grid metre
 shots = []
 for l in labs:
     i, x, y, g, z = sid(l["name"]), l["x"], l["y"], l["g"], l["z"]
-    H = HALF.get(l["name"], 70)
+    H = HALF.get(l["name"]) or max(40, round(1.3 * (l.get("R") or 0))) or 70
     a = np.asarray(orto[max(0, (y - H) * 5):(y + H) * 5, max(0, (x - H) * 5):(x + H) * 5])
     Image.fromarray(a).resize((700, 700)).save(f"{SP}/ortho/{i}.png")
     vf = 6.0; h = H / math.tan(math.radians(vf / 2))

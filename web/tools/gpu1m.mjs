@@ -1,8 +1,8 @@
 // Frame time with the whole city drawn at 1 m (every level-1 tile shown, streamer frozen), from given views,
 // against the normal streamed picture. Headless rAF is paced at 60 Hz, so frame intervals over 16.7 ms mean the
-// GPU/CPU could not keep up; a 1-pixel readback each frame waits for the GPU to finish it. usage: node tools/gpu1m.mjs [views "overview,pkin"]
+// GPU/CPU could not keep up; a 1-pixel readback each frame waits for the GPU to finish it. usage: node tools/gpu1m.mjs [views "overview,sol"]
 import { launch } from './launch.mjs';
-const [views = 'overview,pkin,skyline'] = process.argv.slice(2);
+const [views = 'overview,sol,cibeles'] = process.argv.slice(2);
 const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto('http://localhost:5173/?ui=0');

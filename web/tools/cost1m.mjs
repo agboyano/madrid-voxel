@@ -1,9 +1,9 @@
 // What full 1 m detail costs: mesh every level-1 tile once (triangles, GPU bytes, column-data bytes, mesh ms) and
 // write the table; tools/costviews.mjs uses it to price views and squares. usage: node tools/cost1m.mjs <out.json>
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out = 'out/cost1m.json'] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.goto('http://localhost:5173/?ui=0');
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 300000 });

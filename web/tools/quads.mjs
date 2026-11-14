@@ -1,8 +1,8 @@
 // What the foliage and building quads are: by facing (top, side, bottom), by size (1x1 cells or merged), by height.
 // usage: node tools/quads.mjs http://localhost:5188
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [base] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 await page.route('**/src/stream.ts*', async (route) => {
   const r = await route.fetch();

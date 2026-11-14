@@ -2,12 +2,12 @@
 // in toward the screen point and back out, a screenshot every ~100 ms. Look at the frames, not just a metric.
 // Spots: 'home' (after the opening flight) or a seed for a random place (same seed, same place on every build).
 // usage: PORT=5173 node tools/zoomrec.mjs <outdir> [spots, e.g. "home,1,2,3"] [query]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out = 'out/zoomrec', spots = 'home', q = ''] = process.argv.slice(2);
 const port = process.env.PORT || 5173;
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 page.on('pageerror', (e) => console.log('pageerror:', e.message));
 await page.goto(`http://localhost:${port}/${q ? '?' + q : ''}`);

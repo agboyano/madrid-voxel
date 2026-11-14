@@ -1,26 +1,26 @@
 // Level-of-detail flips: zoom the same views through many distances and render each step twice, with the normal
 // detail budget and with full detail (?err=0.25). Whatever differs is what the coarse tiles change on screen,
 // and it jumps when a tile switches level. Traffic, people and fountains off; tools/lodflip.py scores the pairs.
-// usage: node tools/lodflip.mjs <outdir> [query for the tested build, e.g. "err=1"] [views, e.g. "pkin,varso"]
-import { chromium } from 'playwright-core';
+// usage: node tools/lodflip.mjs <outdir> [query for the tested build, e.g. "err=1"] [views, e.g. "palace,granvia"]
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out = 'out/lodflip', q = '', only = ''] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 // target (scene x, y, z) and the direction from it to the camera
 const VIEWS = {
-  pkin: { t: [749, 110, 1229], dir: [0.55, 0.35, 0.76] },
-  varso: { t: [300, 120, 1330], dir: [-0.6, 0.4, 0.7] },
-  stadium: { t: [3579, 30, 1342], dir: [-0.7, 0.45, 0.55] },
-  bridge: { t: [2916, 25, 834], dir: [0.2, 0.3, 0.93] },
-  kopernik: { t: [2580, 20, 696], dir: [-0.5, 0.55, 0.67] },
+  palace: { t: [475, 105, 1426], dir: [0.55, 0.35, 0.76] },
+  granvia: { t: [1903, 110, 1304], dir: [-0.6, 0.4, 0.7] },
+  prado: { t: [2412, 64, 1802], dir: [-0.7, 0.45, 0.55] },
+  cibeles: { t: [2240, 72, 1210], dir: [0.2, 0.3, 0.93] },
+  alcala: { t: [2614, 95, 1102], dir: [-0.5, 0.55, 0.67] },
 };
 const DIST = Array.from({ length: 22 }, (_, i) => Math.round(250 * 1.13 ** i)); // 250 m .. ~3.4 km
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const open = async (query) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto(`http://localhost:5173/?ui=0&hour=14${query ? '&' + query : ''}`);
   await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 300000 });
-  await page.evaluate(() => { window.__life.group.visible = false; window.__three.P.fountains = false; window.__three.P.labels = false; });
+  await page.evaluate(() => { window.__life.group.visible = false; window.__three.setFountains(false); document.querySelector('#labels').style.display = 'none'; });
   return page;
 };
 const pages = { test: await open(q), ref: await open('err=0.25') };

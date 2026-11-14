@@ -5,7 +5,7 @@ import { launch } from './launch.mjs';
 import { mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const args = process.argv.slice(2), flags = args.filter((a) => a.startsWith('--')), [out, A, B, views = 'overview,pkin,skyline,station,vistula,stadium,zlota,city'] = args.filter((a) => !a.startsWith('--'));
+const args = process.argv.slice(2), flags = args.filter((a) => a.startsWith('--')), [out, A, B, views = 'overview,top,sol,street,palace,plazamayor,granvia,cibeles,prado'] = args.filter((a) => !a.startsWith('--'));
 const life = flags.includes('--life'), [w, h, dpr] = (flags.find((f) => f.startsWith('--vp='))?.slice(5) ?? '1440x900x2').split('x').map(Number);
 const query = flags.find((f) => f.startsWith('--q='))?.slice(4) ?? 'date=06-21&hour=16&weather=clear';
 mkdirSync(out, { recursive: true });

@@ -1,7 +1,7 @@
 // usage: node shot.mjs out.png [query] [w] [h]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [out = 'shot.png', q = '', w = 1600, h = 1000] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: +w, height: +h } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('[console]', m.type(), m.text().slice(0, 300)); });
 page.on('requestfailed', (r) => console.log('[reqfail]', r.url(), r.failure()?.errorText));

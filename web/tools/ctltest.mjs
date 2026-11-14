@@ -1,26 +1,28 @@
-// Smoke test of the casual controls: drag-pan, ride a tram (hover tip, view switch, next, hop off), click-to-walk, look-drag, fly up, pegman drop.
+// Smoke test of the casual controls: drag-pan, ride a car (hover tip, view switch, next, hop off), click-to-walk, look-drag, fly up, pegman drop.
 // usage: node tools/ctltest.mjs [outdir]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [out = '/tmp/ctl'] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errs = []; page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
-await page.goto('http://localhost:5173/?view=station&hour=13');
+await page.goto('http://localhost:5173/?view=sol&hour=13');
 await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 180000 });
 await page.waitForTimeout(2000);
-const st = () => page.evaluate(() => { const { camera: c, controls: t, nav } = window.__three; return { pos: c.position.toArray().map((v) => +v.toFixed(1)), tgt: t.target.toArray().map((v) => +v.toFixed(1)), mode: nav.mode, ride: nav.ride && nav.ride.label, hint: document.querySelector('#hud .hint').textContent.slice(0, 40), who: document.querySelector('#hud .who').textContent }; });
+const st = () => page.evaluate(() => { const { camera: c, controls: t, nav } = window.__three; return { pos: c.position.toArray().map((v) => +v.toFixed(1)), tgt: t.target.toArray().map((v) => +v.toFixed(1)), mode: nav.mode, ride: nav.ride && nav.ride.label, hint: document.querySelector('#hud .hint')?.textContent.slice(0, 40) ?? '', who: document.querySelector('#hud .who')?.textContent ?? '' }; });
 const log = async (s) => console.log(s.padEnd(18), JSON.stringify(await st()));
 const shot = (n) => page.screenshot({ path: `${out}-${n}.png` });
 await log('start');
 await page.mouse.move(640, 500); await page.mouse.down(); await page.mouse.move(540, 450, { steps: 10 }); await page.mouse.up(); await page.waitForTimeout(400);
 await log('drag-pan');
-// find a visible tram on screen
+// find a moving car on screen
 const tp = await page.evaluate(() => { const { camera } = window.__three; const L = window.__life; const v = new (camera.position.constructor)();
-  for (const [tr, x, z, , y] of L.tramSections) { v.set(x, y + 1.6, z).project(camera); const sx = (v.x + 1) / 2 * innerWidth, sy = (1 - v.y) / 2 * innerHeight; if (v.z < 1 && sx > 50 && sx < 900 && sy > 80 && sy < 700) return [sx, sy]; } return null; });
-console.log('tram on screen at', tp);
+  for (const c of L.cars) { if (!c.rp || c.v < 2) continue; v.set(c.rp.x, c.rp.y + 0.8, c.rp.z).project(camera); const sx = (v.x + 1) / 2 * innerWidth, sy = (1 - v.y) / 2 * innerHeight;
+    if (v.z < 1 && sx > 50 && sx < innerWidth - 50 && sy > 50 && sy < innerHeight - 150) return [sx, sy]; }
+  return null; });
+console.log('car on screen at', tp);
 if (tp) {
   await page.mouse.move(tp[0], tp[1]); await page.waitForTimeout(300);
-  console.log('tooltip:', await page.textContent('#hud .tip'), 'cursor:', await page.evaluate(() => document.querySelector('canvas').style.cursor));
+  console.log('tooltip:', await page.evaluate(() => document.querySelector('#hud .tip')?.textContent ?? null), 'cursor:', await page.evaluate(() => document.querySelector('canvas').style.cursor));
   await shot('1-hover');
   await page.mouse.click(tp[0], tp[1]); await page.waitForTimeout(2500);
   await log('ride'); await shot('2-ride-eyes');
@@ -32,7 +34,7 @@ if (tp) {
 }
 if ((await st()).mode !== 'orbit') { await page.keyboard.press('Escape'); await page.waitForTimeout(2200); }
 await log('esc -> sky'); await shot('5b-sky');
-await page.evaluate(() => window.__three.flyTo({ pos: [520, 182, 1720], target: [560, 40, 1560], ms: 10 })); await page.waitForTimeout(500);
+await page.evaluate(() => window.__three.flyTo({ pos: [1090, 160, 1880], target: [1090, 70, 1763], ms: 10 })); await page.waitForTimeout(500);
 await page.keyboard.press('KeyG'); await page.waitForTimeout(1800);
 await log('walk'); await shot('6-walk');
 await page.mouse.move(640, 600); await page.waitForTimeout(300);

@@ -1,10 +1,10 @@
 // Records a whole-city load: every ~100 ms the caption (text, box and text rectangles, bar width) and the stage,
 // plus a screenshot every ~700 ms. usage: node tools/loadwatch.mjs <outdir> [w h]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 import fs from 'node:fs';
 const [out, w = 1280, h = 800] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: +w, height: +h } });
 page.on('pageerror', (e) => console.log('pageerror', e.message));
 page.on('console', (m) => { if (m.type() === 'error' || m.text().includes('whole city')) console.log('console', m.text().slice(0, 200)); });

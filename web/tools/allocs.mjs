@@ -1,12 +1,9 @@
 // Where the frame loop allocates: Chrome's sampling heap profiler over a few seconds of a still view and of walking,
 // with the bytes per second of each function (garbage collected or not), so the top garbage makers stand out.
 // usage: node tools/allocs.mjs [level] [seconds]   (dev server on :5173; $CHROMIUM picks the browser)
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [level = '0.3', seconds = '6'] = process.argv.slice(2);
-const browser = await chromium.launch({
-  headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium',
-  args: ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist'],
-});
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 await page.goto(`http://localhost:5173/?view=granvia&hour=12&level=${level}`);

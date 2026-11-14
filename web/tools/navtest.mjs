@@ -1,13 +1,13 @@
 // Exercise navigation: arrow turn, right-drag look, double-click fly, walk mode with collisions.
 // usage: node tools/navtest.mjs [outdir]
-import { chromium } from 'playwright-core';
+import { launch } from './launch.mjs';
 const [out = '/tmp'] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
-await page.goto('http://localhost:5173/?view=pkin&hour=15');
+await page.goto('http://localhost:5173/?view=sol&hour=15');
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
 await page.keyboard.press('KeyH');
 const cam = () => page.evaluate(() => { const { camera: c, controls: t, nav } = window.__three; return { pos: c.position.toArray().map((v) => +v.toFixed(1)), tgt: t.target.toArray().map((v) => +v.toFixed(1)), mode: nav.mode }; });

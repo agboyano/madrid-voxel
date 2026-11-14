@@ -410,7 +410,7 @@ renderer.setAnimationLoop((now) => {
 });
 
 window.__three = { camera, controls, nav, bar, scene, renderer, flyTo, setHour, setDay, setWeather, map, daylight, post, budget, level: () => level, city: () => city,
-  setLife: (on: boolean) => { lifeOn = on; }, simLog: () => simLog };
+  setLife: (on: boolean) => { lifeOn = on; }, simLog: () => simLog, setFountains: (on: boolean) => { if (fountains) fountains.visible = on; } };
 
 // what the city's shadow map shows: which tiles are drawn, and what folds, hides or thins them in its depth pass
 let stillKey = '';
