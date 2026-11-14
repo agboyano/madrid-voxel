@@ -43,7 +43,7 @@ So half resolution is the baseline, not a pending improvement. The dtla-voxel fi
   - `?n8full=1` uses full resolution;
   - `?n8up=0` turns off depth-aware upsampling.
 - **Image:** `scripts/screenshot.py` at 1600 × 1000, 15 June 13:00, clear and cloudy, six views. The pedestrians move between captures and add a little noise to every pair.
-- **Views and camera distance to the focus:** `street` 97 m, `sol` 251 m, `prado` 425 m, `cibeles` 485 m, `top` 832 m, `overview` 6.1 km. Three extra cameras sit on the overview's line at 1.5, 2.5 and 4 km.
+- **Views and camera distance to the focus:** `street` 97 m, `sol` 251 m, `prado` 425 m, `cibeles` 485 m, `top` 832 m, `overview` 5.9 km (the viewer holds the camera nearer than `meta.json`). Three extra cameras sit on the overview's line at 1.5, 2.5 and 4 km.
 
 ## 2. What share of the frame N8AO costs
 
@@ -103,7 +103,7 @@ What N8AO adds to the image: the current setting against `?n8=off`, level 0.5 [M
 | 1.5 km | overview line | 7.1 | 15.1 |
 | 2.5 km | overview line | 4.4 | 10.7 |
 | 4 km | overview line | 2.1 | 6.1 |
-| 6.1 km | overview | 0.7 | 3.4 |
+| 5.9 km | overview | 0.7 | 3.4 |
 
 - **N8AO is not a fine contact term here: it is a large share of the image's tone.** Turning it off lightens the city by 6–20/255. The effect is largest under cloud, where `daylight.ts` raises its intensity and radius.
 - **It fades with distance, because its radius is in world metres.** 6 m covers about 15 pixels at 830 m and about 2 at 6 km [A, from the 28° field of view]. It stays clearly visible up to about 2.5 km and drops under the 3/255 threshold only near 6 km.
@@ -153,3 +153,25 @@ At level 0.3, `?ao=merge` with N8AO forced on, against the per-vertex occlusion 
 So the answer is: **grade it by distance, keep the device grading as it is, and fix the tone jump the device grading causes.**
 
 Not measured, and left empty above: a real phone, a desktop with a dedicated GPU, `Performance` plus no upsampling together, and the tone-matching fix.
+
+## Adopted (2026-11-14)
+
+Two changes to the defaults (`DECISIONS.md`, 2026-11-14):
+
+- **Fade with camera distance** (`web/src/post.ts` `AO_FADE`, `setDistance`). The intensity falls from full at 3.5 km to zero at 5.5 km, and the pass is skipped beyond that. A first try at 4–6 km left the overview, at 5.93 km, at 3 % intensity, and a pass at almost no intensity still costs all of it. `?n8fade=0` turns the fade off.
+  - **Time** (level 0.5, A-B-B-A, `data/baseline/n8fade_*.json`): overview 98.2 → 88.1 ms (−10 %); `top` unchanged (61.5 ms, under 3.5 km).
+  - **Image** (overview at level 0.5, fade against no fade): 0.7/255 clear, 3.4/255 cloudy with 0.7 % of pixels over 16. That is just over the 3/255 mean in the cloudy case, and under the pixel rule.
+- **Tone kept when the level turns N8AO off** (`web/src/daylight.ts` `aoTone`, `aoOff`). Below level 0.4 the sky's light and the environment are dimmed by 0.7 in clear weather and 0.75 overcast, interpolated by cloud. The factors were chosen from a sweep (0.85 to 0.4) against N8AO forced on. `?aotone=clear,cloudy` overrides them.
+  - **Result** at level 0.3, against N8AO on (mean signed / mean absolute ΔL):
+
+    | View | Clear, before → after | Cloudy, before → after |
+    | --- | --- | --- |
+    | street | +5.1 / 5.4 → −2.4 / 6.1 | +11.8 / 12.6 → −3.2 / 10.6 |
+    | sol | +10.3 / 10.3 → +5.6 / 7.4 | +18.6 / 18.6 → +2.5 / 12.5 |
+    | prado | +8.5 / 8.6 → +3.2 / 6.3 | +19.5 / 19.5 → +5.2 / 10.4 |
+    | cibeles | +6.2 / 6.5 → −0.2 / 5.3 | +15.7 / 15.8 → +0.4 / 9.5 |
+    | top | +7.3 / 7.5 → +3.4 / 5.4 | +14.8 / 15.0 → +1.0 / 8.2 |
+
+  - The step in overall tone at level 0.4 shrinks from 5–20/255 to 0–6/255. The absolute difference falls by a quarter to a half: what remains is the contact darkening, which a uniform factor cannot give. Street level in clear weather comes out slightly darker than the reference.
+  - See `docs/img/n8ao-tone-prado-cloudy-l03-n8on.png` (N8AO on), `-before.png` (level 0.3 until now) and `n8ao-tone-prado-cloudy-l03.png` (level 0.3 now).
+- **Not adopted:** cheaper quality modes and no upsampling (under the 5 % bar).

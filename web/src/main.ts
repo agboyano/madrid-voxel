@@ -64,9 +64,13 @@ const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.5, 90
 const controls = makeControls();
 // ?n8=on|off, ?n8q=<quality mode>, ?n8full=1, ?n8up=0: N8AO variants for docs/n8ao-evaluation.md (evaluation only)
 const post = makePost(renderer, scene, camera, { force: qs.get('n8') === 'on' || qs.get('n8') === 'off' ? qs.get('n8') as 'on' | 'off' : undefined,
-  quality: qs.get('n8q') ?? undefined, fullRes: qs.get('n8full') === '1', upsampling: qs.get('n8up') === '0' ? false : undefined });
-post.setLight(level < LIGHT_POST);
+  quality: qs.get('n8q') ?? undefined, fullRes: qs.get('n8full') === '1', upsampling: qs.get('n8up') === '0' ? false : undefined,
+  fade: qs.get('n8fade') === '0' ? false : undefined });
 const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
+const aoTone = qs.get('aotone')?.split(',').map(Number);
+if (aoTone?.length === 2 && aoTone.every(Number.isFinite)) daylight.aoTone = [aoTone[0], aoTone[1]];
+const setLight = () => { post.setLight(level < LIGHT_POST); daylight.aoOff = level < LIGHT_POST && qs.get('n8') !== 'on'; };
+setLight();
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);
 const bar = new Bar({ days: DAYS, weathers: ['typical', ...Object.keys(WEATHERS)], onDay: (d) => { setDay(d); share(); trackLater('date', { day: d }); },
   onDayEnd: () => { if (weatherName === 'typical') setWeather('typical'); },
@@ -298,7 +302,7 @@ async function boot() {
   controls.target.set(...(cam ? [cam[3], cam[4], cam[5]] as const : v0.target));
   daylight.uniforms = uniforms;
   daylight.bloom = post.bloom;
-  daylight.ao = post.n8.configuration;
+  daylight.ao = post.aoBase;
   base = meta.base;
   if (qs.get('mountains') !== '0') daylight.sky.loadHorizon();
   daylight.theta = meta.lonlat && meta.crs ? trueNorthRotation(meta.theta_deg || 0, meta.lonlat, meta.crs) : (meta.theta_deg || 0) * Math.PI / 180;
@@ -338,6 +342,7 @@ renderer.setAnimationLoop((now) => {
   if (nav.mode === 'orbit') { controls.update(); nav.clamp(); keepInside(); }
   const above = camera.position.y - (world ? world.groundAt(camera.position.x, camera.position.z) : 18) + 3;
   post.setHeight(above, tiltShift, camera.position.distanceTo(controls.target));
+  post.setDistance(camera.position.distanceTo(controls.target));
   const viewDist = camera.position.distanceTo(controls.target);
   daylight.setFogFrom(viewDist);
   const t = (performance.now() - t0) / 1000;
@@ -397,7 +402,7 @@ function setLevel(l: number) {
   level = Math.max(0, Math.min(1, l));
   const px = pixelsAt(level);
   if (Math.abs(px - renderer.getPixelRatio()) > 0.01) { renderer.setPixelRatio(px); onResize(); busy = true; }
-  post.setLight(level < LIGHT_POST);
+  setLight();
   perf.show(level);
   if (!fixedLevel) try { localStorage.setItem(LEVEL_KEY, level.toFixed(3)); } catch { /* private window: start at 0.75 next time */ }
 }

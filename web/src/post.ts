@@ -39,8 +39,14 @@ class DepthBlur extends Effect {
 }
 
 // Evaluation switches for N8AO (docs/n8ao-evaluation.md), all off by default: force it on or off whatever the level,
-// a quality mode of n8ao's setQualityMode, full resolution, no depth-aware upsampling
-export interface AOOptions { force?: 'on' | 'off'; quality?: string; fullRes?: boolean; upsampling?: boolean }
+// a quality mode of n8ao's setQualityMode, full resolution, no depth-aware upsampling, no fade with distance
+export interface AOOptions { force?: 'on' | 'off'; quality?: string; fullRes?: boolean; upsampling?: boolean; fade?: boolean }
+
+// N8AO's radius is in metres, so it shrinks on screen as the camera backs off: what it adds falls from 6-20/255 of
+// luminance at 2.5 km to 3/255 at the overview's 5.9 km (docs/n8ao-evaluation.md), for a pass that costs 10-25 % of
+// the frame on an integrated GPU. It fades out over these camera distances, then is skipped (a pass at nearly zero
+// intensity still costs all of it)
+const AO_FADE = [3500, 5500];
 
 export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, ao: AOOptions = {}) {
   const tone = new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL });
@@ -64,12 +70,24 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, came
     new VignetteEffect({ offset: 0.3, darkness: 0.45 }),
     new SMAAEffect()));
   // light: for slow GPUs, no ambient occlusion and no depth blur, the two passes that read depth all over the screen
-  let light = false;
-  const setLight = (on: boolean) => { light = on; n8.enabled = ao.force ? ao.force === 'on' : !on; };
+  let light = false, fade = 1;
+  // what daylight.ts sets for the weather; the pass gets it times the fade
+  const aoBase = { intensity: 2.2, aoRadius: 6 };
+  const applyAO = () => {
+    n8.enabled = ao.force ? ao.force === 'on' : !light && fade > 0;
+    n8.configuration.intensity = aoBase.intensity * (ao.force === 'on' ? 1 : fade);
+    n8.configuration.aoRadius = aoBase.aoRadius;
+  };
+  const setLight = (on: boolean) => { light = on; applyAO(); };
+  // each frame, from the camera's distance to what it looks at (setting the same values again recompiles nothing)
+  const setDistance = (d: number) => {
+    fade = ao.fade === false ? 1 : 1 - clamp((d - AO_FADE[0]) / (AO_FADE[1] - AO_FADE[0]), 0, 1);
+    applyAO();
+  };
   // focused on what the camera looks at; the blur fades out towards the street, and eases over the whole map
   const setHeight = (h: number, enabled: boolean, focus = 500) => {
     tiltPass.enabled = enabled && !light && h > 60;
     tilt.set(focus, clamp((h - 60) / 250, 0, 1) * (1 - 0.5 * clamp((h - 1200) / 1500, 0, 1)), renderer.domElement.height);
   };
-  return { composer, n8, bloom, tone, setHeight, setLight };
+  return { composer, n8, aoBase, bloom, tone, setHeight, setLight, setDistance, get aoOn() { return n8.enabled; } };
 }

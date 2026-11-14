@@ -453,3 +453,16 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Rejected:**
   - **Coarser shadow geometry first** (technique 2 of `docs/renderer-evaluation-plan.md`): it makes each redraw cheaper but not rarer, and costs days.
   - **A shadow caster set independent of the budget:** the map shows what is drawn by construction; separating them needs a second set of meshes.
+
+## 2026-11-14: N8AO fades out with camera distance, and its absence below level 0.4 is made up in tone
+
+- **Decision:**
+  - **Distance:** N8AO's intensity fades from full at 3.5 km camera distance to zero at 5.5 km, and the pass is skipped beyond that.
+  - **Level:** below render level 0.4, where the pass is off, the sky's light and the environment are dimmed by 0.7 (clear) to 0.75 (overcast).
+- **Why** (`docs/n8ao-evaluation.md`): on the UHD 620 the pass costs 10–25 % of the frame.
+  - **Distance:** its radius is in world metres, so in the overview it adds under 3.4/255. Skipping it there saves 10 ms (10 %).
+  - **Level:** below level 0.4 the city was 5–20/255 lighter than above it, a visible step whenever the adapted level crossed 0.4. The dimming brings the step down to 0–6/255 at no cost per pixel.
+- **Rejected:**
+  - **N8AO's cheaper quality modes and no depth-aware upsampling:** 2–4 % of the frame, under the 5 % bar set before measuring.
+  - **Keeping N8AO on below level 0.4:** 1.4–6.6 ms, 5–28 % of the frame at that level.
+  - **Ending the fade at 6 km:** the overview sits at 5.93 km, where the pass would still run at 3 % intensity and full cost.

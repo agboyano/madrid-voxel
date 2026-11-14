@@ -27,6 +27,12 @@ export class Daylight {
   bloom: { intensity: number } | null = null;
   redraws = 0;
   ao: { intensity: number; aoRadius: number } | null = null;
+  // Below render level 0.4 N8AO is off (main.ts LIGHT_POST), and the city was 6-20/255 lighter than above it
+  // (docs/n8ao-evaluation.md). The sky's light and the environment are then dimmed by aoTone, [clear, overcast], to keep
+  // the overall tone; the contact darkening is not replaced. ?aotone= sets it
+  aoTone: [number, number] = [0.7, 0.75];
+  private noAO = false;
+  set aoOff(v: boolean) { if (v !== this.noAO) { this.noAO = v; this.apply(this.hour); } }
   private readonly sun = new THREE.DirectionalLight(0xffffff, 3);
   private readonly twin = new THREE.DirectionalLight(0xffffff, 0);
   private readonly gate = new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3)),
@@ -151,8 +157,8 @@ export class Daylight {
       this.envKey = key;
     }
     this.scene.environmentIntensity = lerp(lerp(0.38 * Math.min(skyRel, 2), 0.9 * smooth(-4, 6, elDeg), cloud), lerp(0.55, 0.3, deep), night);
-    const e = lerp(this.exposure, 1, night);
-    sun.intensity *= e; hemi.intensity *= e; this.scene.environmentIntensity *= e;
+    const e = lerp(this.exposure, 1, night), k = this.noAO ? lerp(this.aoTone[0], this.aoTone[1], cloud) : 1;
+    sun.intensity *= e; hemi.intensity *= e * k; this.scene.environmentIntensity *= e * k;
   }
 
   setFogFrom(dist: number) {
