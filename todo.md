@@ -14,7 +14,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   - A course of the old brick shows at the foot of the Royal Palace's courtyards.
   - `scripts/patch.py alcala palace almudena metropolis cristal monuments` redoes them in about 3 min after a full build with `LMCACHE=1`.
 - **Madrid de los Austrias:** `landmarks.HISTORIC_CORE` was traced roughly. Trace it on the orthophoto or take an official barrio boundary.
-- **Orthophoto:** the PNOA orthophoto is from July 2023 and not a true orthophoto. Evaluate the Ayuntamiento's Geoportal orthophoto (newer, possibly true ortho) in `fetch_ortho.py`.
 
 ## Seasons, weather and life
 

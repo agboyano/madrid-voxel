@@ -531,3 +531,14 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Palacio de Cristal:** the LiDAR's shape kept, in clear glass on a white iron frame every 3 m.
 - **Why:** the LiDAR and OSM read the Puerta de Alcalá as a block of flats with windows, the Cibeles fountain as an empty platform, and the palace in the core's brick palette; these are the map's best-known places.
 - **Rejected:** a full rebuild of the palace, the Almudena and the Metrópolis from elevations: their LiDAR massing is right, and colour and domes make them recognisable for much less work.
+
+## 2026-11-14: The PNOA orthophoto stays; the Ayuntamiento's 2023 and 2025 true orthophotos are not adopted
+
+- **Decision:** keep the IGN's PNOA orthophoto (July 2023, 0.25 m) for roof, vegetation and ground colours.
+- **Evaluated:** the Ayuntamiento's WMS (`https://servpub.madrid.es/georaster/ORTOFOTOS/ows`) serves two true orthophotos, `ORTOFOTO_MADRID_2023` (10 cm, flown 5–7 May 2023) and `ORTOFOTO_MADRID_2025` (its flight date not given by the service). The 2025 layer fails with a server error at some scales (0.1, 0.2 and 0.4 m per pixel) and works at others (0.05, 0.14, 0.25 and 1 m).
+- **Why** (2 × 2 km round Sol at 1 m, building cells from the build's footprints; `docs/img/ortho-compare-sol.png`, `ortho-compare-centre.png`):
+  - **Roofs in shadow** (luminance under 55): PNOA 3.9 %, Ayuntamiento 2023 13.5 %, 2025 9.6 %. The city's flights are in a lower sun, and a roof cell in shadow takes a dark colour that is not its own.
+  - **Streets in shadow:** 28.8 %, 49.3 % and 45.9 %.
+  - **What the true orthophoto would fix is small:** tile-coloured pixels falling outside the footprints, the PNOA's lean, are 1.1 % of them against 0.3 % in the 2025 image.
+  - The 2025 image also carries temporary structures (stalls in Puerta del Sol), and the 2023 one is darker overall (median luminance 90 against 129).
+- **Rejected:** mixing sources (true-ortho roofs from the Ayuntamiento, the rest from PNOA): two dates and two exposures on one map, for the 0.8 % of misplaced roof colour.
