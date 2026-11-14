@@ -17,7 +17,13 @@ import debris
 import landmarks
 import tiles
 
-BOXES = {}  # name -> (r0, r1, c0, c1) of the 1 m grid around a landmark's curated work; none yet for Madrid
+BOXES = {  # name -> (r0, r1, c0, c1) of the 1 m grid around a landmark's curated work (landmarks.details_geometry)
+    "alcala": (1070, 1135, 2595, 2635),
+    "palace": (1405, 1695, 388, 570),
+    "almudena": (1730, 1845, 405, 555),
+    "metropolis": (1288, 1332, 1860, 1915),
+    "cristal": (1720, 1787, 3220, 3273),
+}
 OUT = Path("web/public/data")
 t0 = time.time()
 note = lambda *a: print(f"[{time.time() - t0:5.1f}s]", *a)

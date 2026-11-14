@@ -78,6 +78,24 @@ def plane(L, S, col):
 
 MONUMENTS = {}
 
+# Cibeles (Ventura Rodríguez, 1782): the goddess enthroned on a chariot drawn by two lions, in Montesclaros marble,
+# on a rock of Redueña stone in the middle of the basin; about 12.5 m long, 4.7 m wide and 5.5 m high over the rock.
+# She faces west along Calle de Alcalá, toward Puerta del Sol; phi is that bearing in the grid (Cibeles to Puerta de
+# Alcalá is (361, -108) cells, so the goddess looks along (-361, 108)).
+CIB_MARBLE, CIB_ROCK = ("#c9c3bb", STONE), ("#b5aa94", STONE)
+MONUMENTS["Fuente de Cibeles"] = dict(at=(-3.693088, 40.419335), phi=253.3, clear=6.5, parts=[
+    B(0, 0, 8, 14, 0, 1, CIB_ROCK),  # the rock in the basin
+    B(0, 0, 5, 12, 1, 2, CIB_ROCK),
+    B(0, -2.5, 3, 4, 2, 4, CIB_MARBLE),  # the chariot's body
+    B(-2, -2, 1, 3, 2, 5, CIB_MARBLE), B(2, -2, 1, 3, 2, 5, CIB_MARBLE),  # its wheels
+    B(0, -3.5, 3, 2, 4, 5, CIB_MARBLE),  # the throne
+    B(0, -3, 2, 1, 5, 7, CIB_MARBLE), B(0, -3, 1, 1, 7, 8, CIB_MARBLE),  # the goddess, seated, and her turreted head
+    B(1.5, -2.5, 1, 1, 6, 7, CIB_MARBLE),  # the sceptre arm
+    B(0, 0.5, 1, 3, 3, 4, CIB_MARBLE),  # the pole to the lions
+    B(-1.2, 3, 2, 4, 2, 4, CIB_MARBLE), B(1.2, 3, 2, 4, 2, 4, CIB_MARBLE),  # the lions' bodies
+    B(-1.2, 5, 2, 1, 3, 5, CIB_MARBLE), B(1.2, 5, 2, 1, 3, 5, CIB_MARBLE),  # their heads and manes
+])
+
 
 def attach(vol, g, rc, zmax):
     """a thin piece turned off the grid (a sword, an arm, a crossbar) can come to touch the rest only by an edge once

@@ -520,3 +520,14 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Rejected:**
   - **Grading by the adaptive render level,** as the plan first proposed: the level moves while the visitor looks, so agents would appear and vanish in view.
   - **1 on desktop and 0.7 on phones,** the user's first choice, which they then changed.
+
+## 2026-11-14: The required landmarks get curated geometry and colours
+
+- **Decision:**
+  - **Puerta de Alcalá:** its footprint is cleared and the gate rebuilt in its own frame: three round arches and two square-headed openings, engaged columns, a cornice at 14 m, the attic and the crest with the arms to 22 m, in light stone over a granite plinth.
+  - **Cibeles:** a monument of boxes (the goddess on her chariot, two lions, the rock), facing west along Calle de Alcalá.
+  - **Royal Palace:** white limestone over a granite ground floor, with window bays every 5 m, instead of the historic core's brick and render.
+  - **Metrópolis and Almudena:** walls in white stone; the domes in black slate with gilded ribs and a gilded Victory, and in blue-grey slate.
+  - **Palacio de Cristal:** the LiDAR's shape kept, in clear glass on a white iron frame every 3 m.
+- **Why:** the LiDAR and OSM read the Puerta de Alcalá as a block of flats with windows, the Cibeles fountain as an empty platform, and the palace in the core's brick palette; these are the map's best-known places.
+- **Rejected:** a full rebuild of the palace, the Almudena and the Metrópolis from elevations: their LiDAR massing is right, and colour and domes make them recognisable for much less work.

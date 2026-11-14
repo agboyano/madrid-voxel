@@ -8,11 +8,11 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
 ## Landmarks and look
 
-- **Curate the required landmarks** with `scripts/overrides.json` (wall and roof colours, facade zones) and the helpers in `landmarks.py` (`classic_rebuild`, `ortho_roof`, `_onion`, `edge_windows`) and `monuments.py`:
-  - the Royal Palace (its parts take generic brick and render: it is white stone and granite);
-  - the Metrópolis (slate dome, gilded statue);
-  - the Puerta de Alcalá and the Cibeles fountain (sculptures, as monuments);
-  - the Palacio de Cristal (glass) and the Almudena.
+- **Required landmarks, first pass done** (`landmarks.details_geometry`, `monuments.MONUMENTS`; before and after in `docs/img/lm-before-*.png` and `lm-after-*.png`): the Puerta de Alcalá rebuilt as a gate, the Cibeles group on its rock, the Royal Palace in white stone over granite, the Metrópolis and the Almudena with their domes, the Palacio de Cristal in glass and white iron. Still rough:
+  - Cibeles: the goddess's facing (west, toward Sol) is from memory, not checked against a plan; the rock is a plain box.
+  - The Puerta de Alcalá's sculptures and the Metrópolis's Victory are a few voxels each.
+  - A course of the old brick shows at the foot of the Royal Palace's courtyards.
+  - `scripts/patch.py alcala palace almudena metropolis cristal monuments` redoes them in about 3 min after a full build with `LMCACHE=1`.
 - **Madrid de los Austrias:** `landmarks.HISTORIC_CORE` was traced roughly. Trace it on the orthophoto or take an official barrio boundary.
 - **Orthophoto:** the PNOA orthophoto is from July 2023 and not a true orthophoto. Evaluate the Ayuntamiento's Geoportal orthophoto (newer, possibly true ortho) in `fetch_ortho.py`.
 

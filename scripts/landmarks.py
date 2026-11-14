@@ -424,8 +424,195 @@ def roof_override(f, pal):
 
 
 def details_geometry(vol, g, feats, pal, note):
-    """Every curated change to the landmarks' voxels (also run alone by patch.py on the cached volume). None yet."""
-    return
+    """Every curated change to the landmarks' voxels (also run alone by patch.py on the cached volume)."""
+    f = _by_id(feats, PUERTA_DE_ALCALA)
+    if f is not None:
+        puerta_de_alcala(vol, g, f["geom"], pal, note)
+    f = _by_id(feats, PALACIO_REAL)
+    if f is not None:
+        # white Colmenar limestone over a granite ground floor, not the historic core's brick and render; its
+        # windows in bays of about 5 m, on the ground floor, the main floor and the two above
+        geom = f["geom"]
+        recolour_walls(vol, g, geom, pal, "#e4ddcd", MAT_IDS["classic"], note, "Palacio Real")
+        D, W = g.shape
+        rr, cc = _cells_geom(geom.buffer(1.0), D, W)
+        granite = pal(_hex("#aaa59b"), MAT_IDS["classic"])
+        stone = pal(_hex("#e4ddcd"), MAT_IDS["classic"])
+        for r, c in zip(rr, cc):
+            col = vol[int(g[r, c]):int(g[r, c]) + 5, r, c]
+            col[col == stone] = granite
+        n = edge_windows(vol, g, geom, pal((58, 70, 68), MAT_IDS["window"]), ((2, 3), (9, 4), (16, 3), (22, 2)), 5.0)
+        note(f"Palacio Real: {n} window bays")
+    f = _by_id(feats, METROPOLIS)
+    if f is not None:
+        # white stone, and over the corner rotunda the black slate dome with gilded ribs and the gilded Victory
+        recolour_walls(vol, g, f["geom"], pal, "#ebe5d8", MAT_IDS["wall"], note, "Edificio Metrópolis")
+        top = dome(vol, g, f["geom"], pal, 31, 33, "#2c2f35", note, "Edificio Metrópolis", gold="#c9a54a", radius=9)
+        if top:
+            r, c, z = top
+            gold = pal(_hex("#c9a54a"), MAT_IDS["metal"])
+            vol[z:z + 4, r, c] = gold  # the Victory, 6 m in bronze leaf on the original; wings spread at her shoulders
+            vol[z + 3, r, c - 1] = vol[z + 3, r, c + 1] = gold
+    f = _by_id(feats, ALMUDENA)
+    if f is not None:
+        # white limestone and grey granite; the dome and its lantern in blue-grey slate
+        recolour_walls(vol, g, f["geom"], pal, "#e2ddd2", MAT_IDS["classic"], note, "Catedral de la Almudena")
+        dome(vol, g, f["geom"], pal, 44, 48, "#5c6670", note, "Catedral de la Almudena", radius=14)
+    f = _by_id(feats, PALACIO_DE_CRISTAL)
+    if f is not None:
+        palacio_de_cristal(vol, g, f["geom"], pal, note)
+
+
+PALACIO_REAL, METROPOLIS, ALMUDENA, PALACIO_DE_CRISTAL = 30399, 4655046, 75658, 23596451  # OSM relations and way
+
+
+def dome(vol, g, geom, pal, z_rel, min_top, hex_, note, name, gold=None, radius=None):
+    """The voxels of a dome: in the footprint's columns that rise to at least `min_top` m, everything from `z_rel` m
+    up, in one colour as metal (slate, lead), with its ribs in `gold` if given (every fourth cell round the dome
+    and the top voxel). Returns (row, col, z above the top) of its highest column, for a lantern or a statue."""
+    D, W = g.shape
+    rr, cc = _cells_geom(geom, D, W)
+    T = _top_rel(vol, g, rr, cc)
+    m = T >= min_top
+    if not m.any():
+        return None
+    rr, cc, T = rr[m], cc[m], T[m]
+    if radius:  # only round the highest column (other roofs of the block reach the same height)
+        k = int(np.argmax(T))
+        m = np.hypot(rr - rr[k], cc - cc[k]) <= radius
+        rr, cc, T = rr[m], cc[m], T[m]
+    slate = pal(_hex(hex_), MAT_IDS["metal"])
+    rib = pal(_hex(gold), MAT_IDS["metal"]) if gold else slate
+    cy, cx = rr.mean(), cc.mean()
+    for r, c in zip(rr, cc):
+        col = vol[:, r, c]
+        z0 = int(g[r, c]) + z_rel
+        nz = np.nonzero(col[z0:])[0] + z0
+        ang = int(math.degrees(math.atan2(r - cy, c - cx)) // 22.5)
+        col[nz] = rib if ang % 4 == 0 else slate
+    k = int(np.argmax(T))
+    r, c = int(rr[k]), int(cc[k])
+    z = int(g[r, c]) + int(T[k])
+    vol[z - 1, r, c] = rib
+    note(f"{name}: dome over {len(rr)} columns, top {int(T[k])} m")
+    return r, c, z
+
+
+def palacio_de_cristal(vol, g, geom, pal, note):
+    """The Palacio de Cristal (Velázquez Bosco, 1887): glass on a white iron frame, a glass dome over the centre.
+    The LiDAR's surface is kept; its voxels turn to clear glass, with the frame in white iron every 3 m along both
+    axes and at every 4th m of height."""
+    D, W = g.shape
+    rr, cc = _cells_geom(geom, D, W)
+    glass = pal(_hex("#c8dce2"), MAT_IDS["glass"])
+    iron = pal(_hex("#eeeeea"), MAT_IDS["metal"])
+    (cx, cy), (ux, uy), (vx, vy), _, _ = _frame(geom)
+    n = 0
+    for r, c in zip(rr, cc):
+        col = vol[:, r, c]
+        gz = int(g[r, c])
+        nz = np.nonzero(col[gz + 1:])[0] + gz + 1
+        if not len(nz):
+            continue
+        a, b = (c + 0.5 - cx) * ux + (r + 0.5 - cy) * uy, (c + 0.5 - cx) * vx + (r + 0.5 - cy) * vy
+        frame = int(a) % 3 == 0 or int(b) % 3 == 0
+        for z in nz:
+            if mats_of(pal, col[z]) not in (3, 8):  # not the crowns over it
+                col[z] = iron if frame or (z - gz) % 4 == 0 else glass
+        n += 1
+    note(f"Palacio de Cristal: {n} columns in glass and iron")
+
+
+def _frame(geom):
+    """A footprint's own frame from its minimum rotated rectangle: centre (x, y), unit vector along the long side,
+    unit vector across, length and depth, in cells."""
+    xs, ys = geom.minimum_rotated_rectangle.exterior.coords.xy
+    p = list(zip(xs, ys))[:3]
+    e = [(p[1][0] - p[0][0], p[1][1] - p[0][1]), (p[2][0] - p[1][0], p[2][1] - p[1][1])]
+    n = [math.hypot(*v) for v in e]
+    k = 0 if n[0] >= n[1] else 1
+    u = (e[k][0] / n[k], e[k][1] / n[k])
+    c = geom.minimum_rotated_rectangle.centroid
+    return (c.x, c.y), u, (-u[1], u[0]), n[k], n[1 - k]
+
+
+PUERTA_DE_ALCALA = 174805987  # OSM way
+
+
+def puerta_de_alcala(vol, g, geom, pal, note):
+    """The Puerta de Alcalá (Sabatini, 1778): granite and Colmenar limestone, about 44 m long and 22 m high at the
+    crest. Five openings: three round arches in the middle, the central one the largest, and a square-headed
+    opening at each end; engaged columns between them; a cornice at 14 m, an attic over the whole length and the
+    crest with the royal arms over the central arch, flanked by sculpture groups. The LiDAR and OSM read it as a
+    block of flats, so its footprint is cleared and the gate rebuilt in its own frame, scaled to the footprint's
+    length (photographs and Sabatini's elevation, measured in proportion)."""
+    (cx, cy), (ux, uy), (vx, vy), L, Dp = _frame(geom)
+    s = L / 44.0  # proportions from the 44 m elevation
+    D, W = g.shape
+    rr, cc = _cells_geom(geom.buffer(1.5), D, W)
+    zb = int(np.median(g[rr, cc]))
+    stone = pal(_hex("#d9d1c1"), MAT_IDS["classic"])
+    granite = pal(_hex("#a9a49a"), MAT_IDS["classic"])
+    arms = pal(_hex("#cfc6b4"), 0)
+    for r, c in zip(rr, cc):
+        vol[g[r, c]:zb + 40, r, c] = 0
+    half = Dp / 2 - 1  # OSM's outline takes in the columns and the steps
+    arches = [(0.0, 3.0 * s, 8.0 * s), (-9.5 * s, 2.25 * s, 7.0 * s), (9.5 * s, 2.25 * s, 7.0 * s)]  # centre, half-width, springing
+    doors = [(-17.0 * s, 1.75 * s, 7.0 * s), (17.0 * s, 1.75 * s, 7.0 * s)]  # centre, half-width, head
+    columns = [a * s for a in (-13.5, -12.0, -5.5, -4.0, 4.0, 5.5, 12.0, 13.5)]
+    n = 0
+    r0, r1 = int(cy - L / 2 - 4), int(cy + L / 2 + 5)
+    c0, c1 = int(cx - L / 2 - 4), int(cx + L / 2 + 5)
+    for r in range(max(r0, 0), min(r1, D)):
+        for c in range(max(c0, 0), min(c1, W)):
+            dx, dy = c + 0.5 - cx, r + 0.5 - cy
+            a, b = dx * ux + dy * uy, dx * vx + dy * vy  # along, across
+            if abs(a) > L / 2 + 1 or abs(b) > half + 1:
+                continue
+            col = vol[:, r, c]
+            gz = int(g[r, c])
+            out = abs(b) > half  # the course of cells proud of the faces
+            if out:
+                # engaged columns on both faces, and the cornice and plinth courses
+                if any(abs(a - k) < 0.5 for k in columns):
+                    col[gz:zb + int(13 * s)] = stone
+                if abs(a) <= L / 2:
+                    col[zb + int(13 * s):zb + int(14 * s) + 1] = stone
+                    col[gz:zb + 1] = granite
+                continue
+            if abs(a) > L / 2:
+                if abs(b) <= half:  # the cornice runs round the ends too
+                    col[zb + int(13 * s):zb + int(14 * s) + 1] = stone
+                continue
+            top = 14.0 * s
+            if abs(a) < L / 2 - 1:
+                top = 17.0 * s  # the attic
+            if abs(a) < 7.0 * s:
+                top = 19.0 * s  # the crest's base
+            if abs(a) < 3.0 * s:
+                top = 21.9 * s  # the arms
+            col[gz:zb + int(round(top))] = stone
+            col[gz:zb + 1] = granite
+            if abs(a) < 3.0 * s and abs(b) > half - 1:
+                col[zb + int(19 * s):zb + int(round(top))] = arms
+            for ac, hw, spring in arches:
+                du = a - ac
+                if abs(du) < hw:
+                    head = spring + math.sqrt(hw * hw - du * du)
+                    col[gz:zb + int(round(head))] = 0
+            for dc_, hw, head in doors:
+                if abs(a - dc_) < hw:
+                    col[gz:zb + int(round(head))] = 0
+            n += 1
+    # the sculpture groups on the attic either side of the crest (trophies and children, read as small stone figures)
+    for sgn in (-1, 1):
+        for k, dz in ((8.0, 2), (9.0, 3), (10.0, 2)):
+            a = sgn * k * s
+            for bb in (-half + 1.5, half - 1.5):
+                x, y = cx + ux * a + vx * bb, cy + uy * a + vy * bb
+                r, c = int(y), int(x)
+                vol[zb + int(17 * s):zb + int(17 * s) + dz, r, c] = arms
+    note(f"Puerta de Alcalá rebuilt: {n} columns, {L:.0f} x {Dp:.0f} m")
 
 
 MON_TOP = np.zeros((_D, _W), np.int32)  # top of the monuments (monuments.build), for label heights
