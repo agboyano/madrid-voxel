@@ -28,9 +28,15 @@ for (const view of views.split(',')) for (const hour of hours.split(',')) {
     T.setLife(on);
     await new Promise((r) => setTimeout(r, WARM));
     const attrs = []; L.group.traverse((o) => { if (o.isInstancedMesh) { attrs.push([o, o.instanceMatrix, 64]); if (o.instanceColor) attrs.push([o, o.instanceColor, 12]); } });
+    // bytes sent: the update ranges flagged (three sends only those), or the whole buffer when none was set
+    const ranged = attrs.map(() => 0);
+    attrs.forEach(([, a], i) => { const f = a.addUpdateRange.bind(a); a.addUpdateRange = (start, count) => { ranged[i] += count * 4; return f(start, count); }; });
     let v0 = attrs.map(([, a]) => a.version), flagged = 0, used = 0, n = 0, run = true;
     const tick = () => { // after the app's own callback each frame: what it flagged, and what it uses
-      attrs.forEach(([m, a, b], i) => { if (a.version !== v0[i]) { flagged += a.array.byteLength; used += m.count * b; v0[i] = a.version; } });
+      attrs.forEach(([m, a, b], i) => {
+        if (a.version !== v0[i]) { flagged += ranged[i] || a.array.byteLength; used += m.count * b; v0[i] = a.version; }
+        ranged[i] = 0;
+      });
       n++; if (run) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);

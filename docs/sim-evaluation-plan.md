@@ -17,7 +17,7 @@ Paths prefixed `dtla:` are in `../dtla-voxel`. Paths prefixed `three:` are under
 
 **Hardware caveat.** All of dtla-voxel's figures come from one desktop: i7-9700K, GTX 1080 Ti through ANGLE/D3D11, headless Chromium, 1600 × 1000 [D] `dtla:docs/rendering-profile.html:90`. It never measured an integrated GPU or a phone [D] `dtla:docs/features/voxel-rendering-streaming.md:265`. Its viewer has no simulation. Its figures are a direction, not a forecast.
 
-**Status (2026-11-14).** C4 adopted. Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
+**Status (2026-11-14).** C4, C1 and C2 adopted (Phase 1 done; next, Phase 2 from C3). Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
 
 **Summary of the conclusion** (before Phase 0)
 
@@ -280,7 +280,21 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 - **Image:** pairs of screenshots compared with `abdiff`, with a mean difference under 3/255 and under 1 % of pixels over 16/255.
 - **Traffic**, for anything that touches vehicle logic: three seeded runs of 15 minutes at 17:00 with `flow`, `stuck` and `simlong`. Exits per minute and mean speed must stay within ±5 % of the baseline. Cars stopped for more than 60 s must not rise. The stuck count must not grow between the first and the last 5 minutes, which would mean gridlock building up.
 
-#### C1. Upload only what is used and what changed
+#### C1. Upload only what is used and what changed (adopted, with C2)
+
+**Result (2026-11-14).** C1 and C2 went in together and were measured together against the old path (`?uprange=0&sigcache=0`), A-B-B-A across page loads, `street` and `cibeles` at 17:00, simulation on (`data/baseline/phase1_*`):
+
+| | CPU ×1, street / cibeles | CPU ×4, street / cibeles |
+| --- | --- | --- |
+| Bytes sent per frame | 1 353 → 327 / 1 353 → 396 KB | same |
+| Drawing (instance writes) | 2.40 → 2.05 / 2.50 → 2.20 ms | 12.8 → 11.4 / 13.9 → 12.1 ms |
+| Main thread | 5.9 → 5.2 (−12 %) / 7.8 → 7.3 (−7 %) | 29.5 → 27.6 (−6 %) / 43.5 → 39.2 (−10 %) |
+| Mean frame interval | 23.2 → 23.2 / 41.2 → 41.1 ms | 34.0 → 31.9 (−6 %) / 51.0 → 47.0 (−8 %) |
+
+- **C1's bar is met:** main thread −10 % at 4× in `cibeles`, and the frame −6 to −8 %.
+- **C2's share was not isolated.** Its own bar (drawing −15 %) is met only in `street` with C1 included.
+- **Without throttling the frame does not change.** The GPU sets it here.
+- **Correctness.** A mirror of each instance buffer, updated only by the ranges sent, matched the CPU array over every drawn instance in every frame: 2 788 frames, over a full 64 s signal cycle and a 400 m zone change. Every car body and shirt colour matched its agent. So the image cannot differ, and no screenshot pair was needed.
 
 - **Evidence.**
   - `setCount` flags every buffer every frame (`web/src/sim/meshes.ts:74-80`) [V].
@@ -300,7 +314,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 - **Interactions.** It multiplies the saving of C5 and C7.
 - **Abandon** if the 4×-throttled saving is under 2 % in every scene. Even then keep it if it is still under 20 lines, since it costs nothing at run time.
 
-#### C2. Signals only at phase changes; constant colours written once
+#### C2. Signals only at phase changes; constant colours written once (adopted, with C1)
 
 - **Evidence.**
   - `drawSignals` composes 1 157 matrices and sets 1 157 colours every frame, though the lamps change only at the boundaries of a 64 s cycle (`life.ts:758-770`, `:14`) [V].
@@ -548,7 +562,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 | Phase | Work | Effort | Checkpoint: measure again, then decide |
 | --- | --- | --- | --- |
 | 0 (done) | Instrumentation: `?life=0`, `?pop=`, `?perf=sim`, `simcost.mjs`, traffic tools on `launch.mjs`, seeding, p99, CPU throttling | 1–1.5 days | The baseline protocol in full. **Stop here if** `?life=0` saves under 5 % of the frame in every scene, both without throttling and at 4×: the simulation is not worth optimising, apart from C4. |
-| 1 | C4, C1, C2 (cheap, invisible) | 1–1.5 days | The same protocol. Keep each candidate that passes its bar. |
+| 1 (done) | C4, C1, C2 (cheap, invisible) | 1–1.5 days | The same protocol. Keep each candidate that passes its bar. |
 | 2 | C3, C5, C7, then C8 (graded or visible; C5 and C7 shown to the user) | 3–4 days | The same protocol, at 4× throttling too. **Continue to Phase 3 only if** the main thread at 4× still exceeds 25 ms in a peak scene. |
 | 3 | C9 (with C10), C6 | 3–4 days | The same protocol plus the 10 000-step state hash. |
 | 4 | C11, only if Phase 3 leaves the main thread at 4× over 20 ms, or a real phone shows the logic as the bottleneck | 1–2 weeks | — |
@@ -564,8 +578,8 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 | # | Candidate | From | Expected gain | Effort | Risk | Changes what is seen | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | C4 | N8AO transparency renders off | code | 1.8 ms, 3.7–5.0 % where N8AO runs (measured) | an hour | low | no (checked) | **adopted** |
-| C1 | Upload only what is used | code + three | 0.8–1.1 MB less per frame; under 5 % alone | half a day | low | no | **evaluate now** |
-| C2 | Signals at phase changes, constant colours once | code | 0.1–0.3 ms CPU, 88 KB per frame | half a day | low | no | **evaluate now** |
+| C1 | Upload only what is used | code + three | 1.0 MB less per frame; with C2, frame −6 to −8 % at 4× CPU (measured) | half a day | low | no (checked) | **adopted** |
+| C2 | Signals at phase changes, constant colours once | code | measured with C1 | half a day | low | no (checked) | **adopted** |
 | C3 | Cheaper twin map | code + dtla | up to 1.2 ms, 2–4 % | 1 day | low to medium | agents' shadow resolution | **evaluate now**, after C4 |
 | C5 | Less simulation far away | code + dtla | overview 3–4 % GPU, 7 ms CPU | 1 day | medium | yes, in far views | evaluate after Phase 1 |
 | C7 | One quality profile for the simulation | dtla | about −40 % sim CPU at 0.5 population | 1 day | low to medium | yes, density | evaluate after Phase 1 |

@@ -17,6 +17,7 @@ import { Perf } from './perf';
 import { makePost } from './post';
 import type { SearchItem } from './search';
 import { StreetLife } from './sim/life';
+import { UPLOAD } from './sim/meshes';
 import type { Kind, TrafficData } from './sim/types';
 import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
@@ -75,6 +76,8 @@ if (qs.get('lightstep')) daylight.lightStep = +qs.get('lightstep')!;
 // time and the simulation's share of it (window.__simLog, web/tools/simcost.mjs; the fps line shows the means)
 let lifeOn = qs.get('life') !== '0';
 const POP = qs.get('pop') ? +qs.get('pop')! : 1;
+UPLOAD.ranges = qs.get('uprange') !== '0';
+UPLOAD.cache = qs.get('sigcache') !== '0';
 interface SimFrame { t: number; main: number; step: number; steps: number; render: number }
 const simLog: SimFrame[] | null = qs.get('perf') === 'sim' ? [] : null, simTiming = { stepMs: 0, steps: 0, renderMs: 0 };
 let simShown = 0;

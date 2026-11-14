@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { hash } from '../util';
+import { setCount } from './meshes';
 import { at, prepPath, pt, type Path, type PathData } from './path';
 
 // Trains on the open-air railway (scripts/traffic.py: the OSM route=train relations, one path per track, each route
@@ -122,11 +123,7 @@ export class Trains {
         n++;
       }
     }
-    for (const mesh of [this.body, this.band, this.stripe, this.win]) {
-      mesh.count = n;
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    }
+    setCount(n, this.body, this.band, this.stripe, this.win);
     this.winMat.emissiveIntensity = night * 1.6;
   }
 }

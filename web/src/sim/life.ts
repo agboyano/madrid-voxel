@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { hash, pushTo, smooth } from '../util';
 import type { World } from '../world';
 import { findCrossings } from './crossings';
-import { LifeMeshes, MAX_BIKES, MAX_CARS, MAX_PEOPLE, MAX_TRAM_SECTIONS, setCount } from './meshes';
+import { flagRange, LifeMeshes, MAX_BIKES, MAX_CARS, MAX_PEOPLE, MAX_TRAM_SECTIONS, setCount, setCountOf, Slots, UPLOAD } from './meshes';
 import { at, cellKey, landingLane, prepPath, pt, Turn, turnOf, type Pt } from './path';
 import { Trains } from './trains';
 import type { Agent, Car, Controller, Kind, PedEdge, Person, Pose, Rideable, Road, TrafficData, Tram, TramPath, TramStop } from './types';
@@ -88,6 +88,10 @@ export class StreetLife {
   private readonly carGrid = new Map<number, Car[]>();
   private trammed = false; // a tram in tramGrid this tick
   private tramSections: [Tram, number, number, number, number][] = [];
+  // who each instance slot's colour was written for (car bodies, shirts), and each signal head's lit lamp
+  private readonly bodies = new Slots();
+  private readonly shirts = new Slots();
+  private lit = new Uint8Array(0);
   private idSeq = 1;
   private readonly tmp = pt();
   // scratch points for each tick's geometry, and carObstacle's second answer (the speed of what it keeps behind)
@@ -101,6 +105,7 @@ export class StreetLife {
     this.peds = data.peds.map((e, i) => Object.assign(prepPath(e), { i }));
     this.ctrls = data.ctrls.map((c, i) => ({ ...c, off: hash(i + 1) * CYCLE }));
     this.heads = data.heads ?? [];
+    this.lit = new Uint8Array(this.heads.length).fill(255);
     this.roads.forEach((e, i) => { pushTo(this.outs, e.a, i); pushTo(this.ins, e.b, i); });
     this.peds.forEach((e, i) => { pushTo(this.padj, e.a, [i, 0]); pushTo(this.padj, e.b, [i, 1]); });
     for (const [fr, via, to, type] of data.restr ?? []) pushTo(this.restr, `${fr}:${via}`, { to, type });
@@ -664,7 +669,9 @@ export class StreetLife {
     this.drawTrams(back, night);
     this.trains.render(0, night);
     const n = this.drawPeople(dt, lead) + this.drawRiders(dt, lead, this.people.length);
-    setCount(n, this.M.legs, this.M.torso);
+    setCount(n, this.M.legs);
+    setCountOf(this.M.torso, n, false);
+    this.shirts.flag(this.M.torso);
     this.drawSignals();
   }
 
@@ -681,10 +688,12 @@ export class StreetLife {
       c.rp = (c.rp ?? new THREE.Vector3()).set((A.x + B.x) / 2, Math.max(A.z, B.z), (A.y + B.y) / 2);
       m.compose(c.rp, q.setFromAxisAngle(up, c.rh), sc.set(1, c.bus ? 1.75 : 1, c.bus ? c.len / 4.4 : 1));
       for (const mesh of parts) mesh.setMatrixAt(i, m);
-      M.body.setColorAt(i, c.col);
+      this.bodies.set(M.body, i, c, c.col);
       M.tail.setColorAt(i, tail.copy(c.brake ? tailOn : tailOff).multiplyScalar(c.brake ? 1 : 0.4 + 1.2 * night));
     });
-    setCount(this.cars.length, M.body, M.dark, M.head, M.tail);
+    setCount(this.cars.length, M.dark, M.head, M.tail);
+    setCountOf(M.body, this.cars.length, false);
+    this.bodies.flag(M.body);
     M.headMat.color.setRGB(0.85 + 2.2 * night, 0.82 + 2.0 * night, 0.72 + 1.6 * night);
   }
 
@@ -735,7 +744,7 @@ export class StreetLife {
       pos.y += 0.05 * Math.abs(bob);
       m.compose(pos, q.setFromAxisAngle(up, p.rh!), one);
       M.legs.setMatrixAt(i, m); M.torso.setMatrixAt(i, m);
-      M.torso.setColorAt(i, p.col);
+      this.shirts.set(M.torso, i, p, p.col);
     });
     return this.people.length;
   }
@@ -759,7 +768,7 @@ export class StreetLife {
       pos.copy(p.rp); pos.y += 0.45;
       m.compose(pos, q, sit);
       M.legs.setMatrixAt(i0 + i, m); M.torso.setMatrixAt(i0 + i, m);
-      M.torso.setColorAt(i0 + i, p.col);
+      this.shirts.set(M.torso, i0 + i, p, p.col);
     });
     setCount(this.riders.length, M.bike);
     return this.riders.length;
@@ -769,14 +778,24 @@ export class StreetLife {
     const M = this.M, m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
     const pos = new THREE.Vector3(), col = new THREE.Color();
     const LAMP = { R: [2.2, 0.12, 0.08, 3.95], Y: [2.2, 1.3, 0.1, 3.6], G: [0.1, 2.0, 0.6, 3.25] };
+    // a head changes only at its phase boundaries: only those are written and sent (UPLOAD.cache)
+    const lit = this.lit, cache = UPLOAD.cache;
+    let lo = Infinity, hi = -1;
     this.heads.forEach((h, i) => { // indexed, not destructured: no iterator per head and frame
-      const x = h[0], row = h[1], gz = h[2], L = LAMP[signal(this.ctrls[h[4]], this.t, h[5])], a = h[3] + Math.PI;
+      const ph = signal(this.ctrls[h[4]], this.t, h[5]), code = ph === 'R' ? 0 : ph === 'Y' ? 1 : 2;
+      if (cache && lit[i] === code) return;
+      lit[i] = code;
+      if (i < lo) lo = i;
+      if (i > hi) hi = i;
+      const x = h[0], row = h[1], gz = h[2], L = LAMP[ph], a = h[3] + Math.PI;
       const r = L[0], g = L[1], b = L[2], hy = L[3];
       m.compose(pos.set(x + Math.sin(a) * 0.19, gz + hy, row + Math.cos(a) * 0.19), q.setFromAxisAngle(up, a), one);
       M.lamp.setMatrixAt(i, m);
       M.lamp.setColorAt(i, col.setRGB(r, g, b));
     });
-    setCount(this.heads.length, M.lamp);
+    M.lamp.count = this.heads.length;
+    if (!cache) setCount(this.heads.length, M.lamp);
+    else if (hi >= lo) { flagRange(M.lamp.instanceMatrix, lo, hi - lo + 1); flagRange(M.lamp.instanceColor!, lo, hi - lo + 1); }
   }
 
   // ------------------------------------------------------------------ following

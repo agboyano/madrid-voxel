@@ -71,10 +71,47 @@ export class LifeMeshes {
   }
 }
 
+// What reaches the GPU each frame (docs/sim-evaluation-plan.md). ranges (C1): only the instances in use, where three
+// would otherwise send each buffer's whole capacity, 1.35 MB a frame for 0.1-0.5 MB in use; ?uprange=0 sends it all.
+// cache (C2): signal lamps written when their phase changes, and the colours that never change (car bodies, shirts)
+// only when an instance slot gets a new agent; ?sigcache=0 writes them every frame. Both set once by main.ts
+export const UPLOAD = { ranges: true, cache: true };
+
+// flags instances [start, start + count) of a buffer for upload
+export function flagRange(a: THREE.BufferAttribute, start: number, count: number) {
+  if (!UPLOAD.ranges) { a.needsUpdate = true; return; }
+  if (count <= 0) return;
+  a.addUpdateRange(start * a.itemSize, count * a.itemSize);
+  a.needsUpdate = true;
+}
+
+// n instances drawn, their matrices (and, unless kept, colours) sent; nothing is sent while there are none
 export function setCount(n: number, ...meshes: THREE.InstancedMesh[]) {
-  for (const m of meshes) {
-    m.count = n;
-    m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  for (const m of meshes) setCountOf(m, n, true);
+}
+export function setCountOf(m: THREE.InstancedMesh, n: number, colour: boolean) {
+  m.count = n;
+  flagRange(m.instanceMatrix, 0, n);
+  if (m.instanceColor && (colour || !UPLOAD.cache)) flagRange(m.instanceColor, 0, n);
+}
+
+// a colour that stays with its agent: written only when slot i holds an agent it did not hold last frame. Returns
+// whether it wrote; the caller flags the slots written (Slots.flag)
+export class Slots {
+  private owner: unknown[] = [];
+  private lo = Infinity;
+  private hi = -1;
+  set(m: THREE.InstancedMesh, i: number, who: unknown, col: THREE.Color) {
+    if (UPLOAD.cache && this.owner[i] === who) return;
+    this.owner[i] = who;
+    m.setColorAt(i, col);
+    if (i < this.lo) this.lo = i;
+    if (i > this.hi) this.hi = i;
+  }
+  flag(m: THREE.InstancedMesh) {
+    if (!m.instanceColor) return;
+    if (!UPLOAD.cache) return; // setCountOf sent them all
+    if (this.hi >= this.lo) flagRange(m.instanceColor, this.lo, this.hi - this.lo + 1);
+    this.lo = Infinity; this.hi = -1;
   }
 }
