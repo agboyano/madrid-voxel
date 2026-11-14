@@ -542,3 +542,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **What the true orthophoto would fix is small:** tile-coloured pixels falling outside the footprints, the PNOA's lean, are 1.1 % of them against 0.3 % in the 2025 image.
   - The 2025 image also carries temporary structures (stalls in Puerta del Sol), and the 2023 one is darker overall (median luminance 90 against 129).
 - **Rejected:** mixing sources (true-ortho roofs from the Ayuntamiento, the rest from PNOA): two dates and two exposures on one map, for the 0.8 % of misplaced roof colour.
+
+## 2026-11-14: Madrid de los Austrias traced along its streets
+
+- **Decision:** the historic core (`landmarks.historic_core`, its brick and render palette and tiled roofs) is the block of the street network bounded by Calle de Bailén, Calle Mayor, Plaza Mayor, Calle de Toledo, Plaza de la Cebada, Plaza de los Carros and Calle de la Redondilla, taken from the OSM centrelines at build time, with Plaza Mayor itself. Each street joins the next where they come closest.
+- **Why:** the rough outline drawn by hand ran up to 80 m north of Calle Mayor and up to 140 m east of Calle de Toledo, and gave the core's palette to blocks round Calle de Atocha and San Ginés. The new outline is 22 ha against 32 ha; 21 ha are common to both (`docs/img/core-before-*.png`, `core-after-*.png`).
+- **Rejected:** the barrio of Palacio, the official unit (OSM relation 8816051): it also takes in the Royal Palace, Ópera and the streets up to Plaza de España. Madrid de los Austrias has no official boundary.

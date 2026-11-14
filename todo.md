@@ -13,7 +13,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   - The Puerta de Alcalá's sculptures and the Metrópolis's Victory are a few voxels each.
   - A course of the old brick shows at the foot of the Royal Palace's courtyards.
   - `scripts/patch.py alcala palace almudena metropolis cristal monuments` redoes them in about 3 min after a full build with `LMCACHE=1`.
-- **Madrid de los Austrias:** `landmarks.HISTORIC_CORE` was traced roughly. Trace it on the orthophoto or take an official barrio boundary.
 
 ## Seasons, weather and life
 

@@ -26,16 +26,40 @@ LABELS = {}
 EXTRA_LABELS = {}
 # roofs to smooth (a membrane or a lattice the LiDAR reads as noise): OSM id -> description
 SMOOTH_ROOFS = {}
-# Madrid's historic core, for its own wall palette (palette.AUSTRIAS_WALLS) and tiled roofs: Madrid de los Austrias,
-# between Calle de Bailen, Calle Mayor, the east side of Plaza Mayor, Calle de Toledo, Plaza de la Cebada and Calle de
-# Segovia; traced roughly, EPSG:25830 (x, y)
-HISTORIC_CORE = [(439458, 4474153), (439764, 4474195), (440061, 4474204), (440187, 4474036), (440083, 4473815), (439972, 4473705), (439717, 4473651), (439422, 4473820)]
+# Madrid's historic core, for its own wall palette (palette.AUSTRIAS_WALLS) and tiled roofs: Madrid de los Austrias.
+# It has no official boundary (it lies in the barrio of Palacio, which also takes in the Royal Palace, Ópera and Plaza
+# de España); the usual description runs along these streets, clockwise from the north-west, and the outline follows
+# their OSM centrelines, each joined to the next where they come closest.
+HISTORIC_CORE_STREETS = ["Calle de Bailén", "Calle Mayor", "Plaza Mayor", "Calle de Toledo", "Plaza de la Cebada",
+                         "Plaza de los Carros", "Calle de la Redondilla"]
+HISTORIC_CORE_SEED = (439728, 4474088)  # EPSG:25830, Plaza de la Villa: the face of the street network it lies in
+_CORE = None
 
 
 def historic_core():
-    if not HISTORIC_CORE:
-        return Polygon()
-    return Polygon([tuple(float(v) for v in to_grid(x, y)) for x, y in HISTORIC_CORE])
+    """The hole of the street lines, drawn 2 m wide, that holds the seed, with Plaza Mayor (which its own outline
+    closes off) and grown back to the centrelines."""
+    global _CORE
+    if _CORE is None:
+        from shapely.ops import nearest_points, unary_union
+        from shapely.geometry import LineString
+        from osm import OSM
+        lines = OSM().lines
+        G = [unary_union([g for _, t, g in lines if t.get("name") == n and t.get("highway")]) for n in HISTORIC_CORE_STREETS]
+        if any(g.is_empty for g in G):
+            missing = [n for n, g in zip(HISTORIC_CORE_STREETS, G) if g.is_empty]
+            raise SystemExit(f"historic_core: no OSM street named {missing}")
+        links = [LineString(nearest_points(a, b)) for a, b in zip(G, G[1:] + G[:1])]
+        band = unary_union(G + [l for l in links if l.length > 0]).buffer(1.0)
+        holes = [Polygon(r) for p in getattr(band, "geoms", [band]) for r in p.interiors]
+        seed = Point(*to_grid(*HISTORIC_CORE_SEED))
+        core = [h for h in holes if h.contains(seed)]
+        if not core:
+            raise SystemExit("historic_core: the streets do not close round the seed")
+        hull = G[HISTORIC_CORE_STREETS.index("Plaza Mayor")].convex_hull.buffer(2)
+        # grown 1 m back to the centrelines, and 2 m more and back to join Plaza Mayor across Calle Mayor's band
+        _CORE = unary_union(core + [h for h in holes if h.within(hull)]).buffer(3.0).buffer(-2.0)
+    return _CORE
 
 
 def label(osm_name, facts, x, y, z):
