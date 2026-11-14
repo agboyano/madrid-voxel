@@ -8,6 +8,8 @@ export class Perf {
   rects: Rect[] = [];
   manual = false;
   ceiling = 1;
+  // a second line under the fps, for measurements (main.ts ?perf=sim)
+  note = '';
   private level = 1;
   private readonly box = el('div', '', '<div class="fps"></div><label class="row"><span>Render size</span><input type="range" min="0" max="1" step="0.001"></label>');
   private readonly fps = $('.fps', this.box);
@@ -35,7 +37,8 @@ export class Perf {
     if (now - this.t0 < 500) return;
     if (this.t0) {
       const lowered = this.manual && this.level < this.ceiling - 0.005 ? `<span class="mark">· size lowered to ${Math.round(this.level * 100)} %</span>` : '';
-      this.fps.innerHTML = `${Math.round((this.n * 1000) / (now - this.t0))} fps<span class="mark">${(triangles / 1e6).toFixed(1)} M triangles</span>${lowered}`;
+      const note = this.note ? `<div class="note">${this.note}</div>` : '';
+      this.fps.innerHTML = `${Math.round((this.n * 1000) / (now - this.t0))} fps<span class="mark">${(triangles / 1e6).toFixed(1)} M triangles</span>${lowered}${note}`;
     }
     this.n = 0;
     this.t0 = now;

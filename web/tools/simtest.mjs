@@ -1,8 +1,9 @@
 // runs the page, lets the simulation run, reports stats + screenshot of a signalled junction
-import { chromium } from 'playwright-core';
+import { launch, seedRandom } from './launch.mjs';
 const [out = '../data/debug/sim.png', q = 'hour=17&ui=0&tilt=0', wait = 20000] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+await seedRandom(page);
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });

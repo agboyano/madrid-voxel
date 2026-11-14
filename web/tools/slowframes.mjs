@@ -80,15 +80,16 @@ for (const l of [...new Set(frames.map((f) => f.label))].filter(Boolean)) {
   const slow = (lim) => { const s = idx.filter((i) => frames[i].dt > lim); return [s.length, s.filter(near).length]; };
   const [s100, c100] = slow(100), [s2, c2] = slow(2 * med);
   const levels = fs_.map((f) => f.level);
-  rows.push({ l, n: fs_.length, secs, med, p95: [...fs_.map((f) => f.dt)].sort((a, b) => a - b)[Math.floor(fs_.length * 0.95)],
+  const sorted = fs_.map((f) => f.dt).sort((a, b) => a - b), pq = (p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+  rows.push({ l, n: fs_.length, secs, med, p95: pq(0.95), p99: pq(0.99),
     redraws, perMin: redraws / secs * 60, causes, s100, c100, s2, c2, chance: idx.filter(near).length / idx.length,
     redrawDt: median(idx.filter(near).map((i) => frames[i].dt)), otherDt: median(idx.filter((i) => !near(i)).map((i) => frames[i].dt)),
     level: `${Math.min(...levels).toFixed(2)}-${Math.max(...levels).toFixed(2)}` });
 }
 console.log(query || '(adaptive level)');
-console.log('activity  frames    s  median  p95  | redraws /min  causes               | >100 ms  with redraw | >2x median  with redraw | chance | dt redraw/other | level');
+console.log('activity  frames    s  median  p95  p99  | redraws /min  causes               | >100 ms  with redraw | >2x median  with redraw | chance | dt redraw/other | level');
 for (const r of rows) {
-  console.log(r.l.padEnd(8), String(r.n).padStart(7), r.secs.toFixed(1).padStart(5), r.med.toFixed(0).padStart(6), r.p95.toFixed(0).padStart(5), ' |',
+  console.log(r.l.padEnd(8), String(r.n).padStart(7), r.secs.toFixed(1).padStart(5), r.med.toFixed(0).padStart(6), r.p95.toFixed(0).padStart(5), r.p99.toFixed(0).padStart(4), ' |',
     String(r.redraws).padStart(7), r.perMin.toFixed(0).padStart(4), ' ', Object.entries(r.causes).map(([k, v]) => `${k} ${v}`).join(', ').padEnd(20), '|',
     String(r.s100).padStart(7), `${r.c100} (${pct(r.c100, r.s100)})`.padStart(12), ' |', String(r.s2).padStart(10), `${r.c2} (${pct(r.c2, r.s2)})`.padStart(12), ' |',
     pct(r.chance * 1000, 1000).padStart(6), ' |', `${r.redrawDt.toFixed(0)} / ${r.otherDt.toFixed(0)} ms`.padStart(15), ' |', r.level);

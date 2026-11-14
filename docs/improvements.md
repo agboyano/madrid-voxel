@@ -144,6 +144,7 @@ Timings come from the development laptop, an Intel UHD 620 with Chromium on Vulk
   - `shadowswap.mjs`: what a stale shadow map looks like.
   - `slowframes.mjs`: each frame's interval and whether the sun's map was redrawn in it, to tell which slow frames the redraws cause.
   - `flyshadow.mjs`: the sun's frame held over a flight against one fitted to the camera.
+  - `simcost.mjs`: the street life on and off in A-B-B-A order, with main-thread, logic and drawing time, optionally with the CPU throttled; the traffic tools (`simtest`, `flow`, `stuck`, `roots`, `chains`, `simlong`) seed `Math.random`.
   - `lodcost.mjs`, `lodselect.mjs`, `lodshare.mjs`, with `scripts/eval_lod_tiles.py`: dtla-voxel's 2 and 4 m levels and its selection, counted offline against what the viewer draws.
   - `mergekey.mjs`: what each field of the mesher's merge key costs in quads.
   - `uploads.mjs`, `allocs.mjs`, `ctxloss.mjs`, `walkstuck.mjs`.
@@ -175,6 +176,9 @@ URL parameters for A/B measurements. None is on by default, and none is meant fo
 | `n8up=0` | N8AO without depth-aware upsampling | on | `web/src/post.ts` |
 | `n8fade=0` | no fade of N8AO with camera distance | fades 3.5–5.5 km | `web/src/post.ts` |
 | `n8transp=auto` | n8ao's own detection of transparent materials, which renders the scene twice more per frame | off | `web/src/post.ts` |
+| `life=0` | no street life: agents neither stepped nor drawn | on | `web/src/main.ts` |
+| `pop=<k>` | scales the agents the hour asks for | 1 | `web/src/sim/life.ts` |
+| `perf=sim` | logs each frame's main-thread time and the simulation's share of it, shown under the fps | off | `web/src/main.ts` |
 | `aotone=clear,cloudy` | how much the sky's light is dimmed when N8AO is off below level 0.4 (`1,1`: not at all) | `0.7,0.75` | `web/src/daylight.ts` |
 
 ## What Warsaw had that Madrid dropped or does not use

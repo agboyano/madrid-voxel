@@ -1,17 +1,18 @@
 // Flow over time + root causes of stuck cars, following car.by (who blocks me) to the end of each chain.
-// usage: node tools/roots.mjs [secs=180] [sim=''] [hour=17]
-import { chromium } from 'playwright-core';
-const [secs = 180, sim = '', hour = 17] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+// usage: node tools/roots.mjs [secs=180] [hour=17]
+import { launch, seedRandom } from './launch.mjs';
+const [secs = 180, hour = 17] = process.argv.slice(2);
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 400, height: 300 } });
-await page.goto(`http://localhost:5173/?hour=${hour}&ui=0&sim=${sim}`);
+await seedRandom(page);
+await page.goto(`http://localhost:5173/?hour=${hour}&ui=0`);
 await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 120000 });
 await page.evaluate(() => { setInterval(() => { for (const c of window.__life.cars) c.stuckT = c.v < 0.3 ? (c.stuckT || 0) + 1 : 0; }, 1000); });
 for (let t = 30; t <= +secs; t += 30) {
   await page.waitForTimeout(30000);
   console.log(JSON.stringify(await page.evaluate(() => {
     const L = window.__life, v = L.cars.map((c) => c.v);
-    return { t: Math.round(L.t), cars: L.cars.length, meanV: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2), stuck60: L.cars.filter((c) => c.stuckT > 60).length, assertive: L.nAssert || 0, breaks: L.nBreak || 0 };
+    return { t: Math.round(L.t), cars: L.cars.length, meanV: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2), stuck60: L.cars.filter((c) => c.stuckT > 60).length };
   })));
 }
 console.log(JSON.stringify(await page.evaluate(() => {

@@ -70,6 +70,14 @@ const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
 const aoTone = qs.get('aotone')?.split(',').map(Number);
 if (aoTone?.length === 2 && aoTone.every(Number.isFinite)) daylight.aoTone = [aoTone[0], aoTone[1]];
 if (qs.get('lightstep')) daylight.lightStep = +qs.get('lightstep')!;
+// Measuring the street life (docs/sim-evaluation-plan.md, phase 0): ?life=0 neither steps nor draws it (the agents'
+// shadow map is still redrawn, empty), ?pop= scales the agents the hour asks for, ?perf=sim logs each frame's main-thread
+// time and the simulation's share of it (window.__simLog, web/tools/simcost.mjs; the fps line shows the means)
+let lifeOn = qs.get('life') !== '0';
+const POP = qs.get('pop') ? +qs.get('pop')! : 1;
+interface SimFrame { t: number; main: number; step: number; steps: number; render: number }
+const simLog: SimFrame[] | null = qs.get('perf') === 'sim' ? [] : null, simTiming = { stepMs: 0, steps: 0, renderMs: 0 };
+let simShown = 0;
 const setLight = () => { post.setLight(level < LIGHT_POST); daylight.aoOff = level < LIGHT_POST && qs.get('n8') !== 'on'; };
 setLight();
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);
@@ -325,6 +333,8 @@ async function boot() {
   fetchJson<TrafficData>(dataUrl('traffic.json')).then((td) => {
     life = nav.life = new StreetLife(scene, td);
     life.world = world;
+    life.population = POP;
+    if (simLog) life.timing = simTiming;
     window.__life = life;
   });
   $('#loading').classList.add('hidden');
@@ -336,6 +346,8 @@ let lastT = performance.now();
 const frames: number[] = [];
 const t0 = lastT;
 renderer.setAnimationLoop((now) => {
+  const c0 = simLog ? performance.now() : 0;
+  if (simLog) Object.assign(simTiming, { stepMs: 0, steps: 0, renderMs: 0 });
   fly?.(now);
   stepWeather(now);
   const dt = Math.min(0.1, (now - lastT) / 1000);
@@ -356,7 +368,7 @@ renderer.setAnimationLoop((now) => {
   precip.update(t, camera.position, daylight.weather, daylight.night);
   if (city?.complete) document.body.classList.remove('loading');
   if (life) {
-    life.group.visible = !city || city.complete;
+    life.group.visible = lifeOn && (!city || city.complete);
     if (life.group.visible) { life.day = daylight.day; life.update(dt, daylight.hour, daylight.night, focus()); }
   }
   daylight.sky.mesh.position.copy(camera.position);
@@ -371,13 +383,23 @@ renderer.setAnimationLoop((now) => {
   renderer.info.reset();
   post.composer.render();
   if (daylight.redraws !== redraws) busy = true;
+  if (simLog) {
+    simLog.push({ t: now, main: performance.now() - c0, step: simTiming.stepMs, steps: simTiming.steps, render: simTiming.renderMs });
+    if (simLog.length > 8000) { simLog.splice(0, 4000); simShown = Math.max(0, simShown - 4000); }
+    if (now - (simLog[simShown]?.t ?? now) >= 500) {
+      const w = simLog.slice(simShown), m = (k: 'main' | 'step' | 'render') => (w.reduce((a, f) => a + f[k], 0) / w.length).toFixed(1);
+      perf.note = `main ${m('main')} ms · sim logic ${m('step')} · drawing ${m('render')}`;
+      simShown = simLog.length;
+    }
+  }
   perf.frame(now, document.hidden, renderer.info.render.triangles);
   report(now);
   barRect ??= bar.rect;
   labels?.update(camera, world, barRect, [...(hud?.rects ?? []), ...(touch?.rects ?? []), ...perf.rects]);
 });
 
-window.__three = { camera, controls, nav, bar, scene, renderer, flyTo, setHour, setDay, setWeather, map, daylight, post, budget, level: () => level, city: () => city };
+window.__three = { camera, controls, nav, bar, scene, renderer, flyTo, setHour, setDay, setWeather, map, daylight, post, budget, level: () => level, city: () => city,
+  setLife: (on: boolean) => { lifeOn = on; }, simLog: () => simLog };
 
 // what the city's shadow map shows: which tiles are drawn, and what folds, hides or thins them in its depth pass
 let stillKey = '';

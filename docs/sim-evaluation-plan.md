@@ -17,12 +17,14 @@ Paths prefixed `dtla:` are in `../dtla-voxel`. Paths prefixed `three:` are under
 
 **Hardware caveat.** All of dtla-voxel's figures come from one desktop: i7-9700K, GTX 1080 Ti through ANGLE/D3D11, headless Chromium, 1600 × 1000 [D] `dtla:docs/rendering-profile.html:90`. It never measured an integrated GPU or a phone [D] `dtla:docs/features/voxel-rendering-streaming.md:265`. Its viewer has no simulation. Its figures are a direction, not a forecast.
 
-**Summary of the conclusion**
+**Status (2026-11-14).** C4 adopted. Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
 
-- **The simulation is a small share of the frame on the development laptop** (Intel UHD 620, fragment-bound).
+**Summary of the conclusion** (before Phase 0)
+
+- **The simulation is a small share of the GPU's frame on the development laptop** (Intel UHD 620, fragment-bound).
   - Hiding every agent saves 1.6–4.6 ms of GPU, 2–8 % of the frame.
   - The logic and the instance writes take 1.4–7.4 ms of main-thread CPU per frame.
-  - The GPU, not the CPU, sets the frame time here [S, from the frame intervals below], so CPU savings show only on a device with a weaker CPU.
+  - The GPU, not the CPU, sets the frame time here [S, from the frame intervals below], so CPU savings show only on a device with a weaker CPU. **Phase 0 showed this wrong:** the main thread's share shows in the frame even without throttling.
 - **Two findings are bigger than any change to the simulation itself:**
   - With N8AO on, the transparent fountain and precipitation materials make N8AO render the scene twice more every frame [V]. That costs 1.8 ms of GPU, 3.7–5.0 % of the frame (measured below).
   - The agents' shadow map (the sun's "twin") is cleared and redrawn every frame at the city map's full 4096² size, whatever the agents' number [V]. That costs 0.9–1.2 ms, almost all of it fixed.
@@ -230,6 +232,46 @@ Each at no throttling and at 4× CPU throttling, and `?life=0` against default.
 - **CPU-only changes** are judged at 4× throttling, where the main thread can set the frame time.
 - **Changes that save GC** are judged on p99 and GC time instead, with a bar of −30 %.
 
+### Phase 0 results (2026-11-14)
+
+**What was added** (all off unless asked for):
+
+- `?life=0` neither steps nor draws the agents. The twin's map is still redrawn, empty. `window.__three.setLife()` does the same at run time, for A-B-B-A in one page.
+- `?pop=<k>` scales the agents the hour asks for (cars, people, riders).
+- `?perf=sim` logs each frame's main-thread time (from the start of the rAF callback to the end of `composer.render`) and the simulation's logic (steps and trains) and drawing (instance writes) in `window.__simLog`, and shows the means under the fps (`docs/img/sim-perf-hud.png`).
+- `web/tools/simcost.mjs`: per view and hour, the simulation on and off in A-B-B-A order, each sample 8 s after 2 s of warm-up. It records:
+  - the mean, p95 and p99 frame interval;
+  - main-thread, logic and drawing time;
+  - steps per frame;
+  - bytes flagged against bytes used.
+
+  `--cpu=N` throttles the CPU through CDP.
+- The traffic tools (`simtest`, `simlong`, `stuck`, `flow`, `roots`, `chains`) and `longtasks` now use `launch.mjs`. They seed `Math.random` with `seedRandom` (`web/tools/launch.mjs`), and dead fields and parameters are removed. `longtasks` flies with `flyTo` and rides a car instead of a tram.
+- `slowframes.mjs` reports the p99.
+- **Seeding narrows but does not remove the run-to-run spread.** Two 60 s `flow.mjs` runs gave 154 and 154 exits a minute in the second half, but 132 against 128 in the first, since other per-frame code draws from the same `Math.random`. The ±5 % traffic bar stays, to be checked against three runs before any logic change.
+
+**Results** (level 0.3, 1600 × 1000, 21 June, clear; `data/baseline/simcost_cpu1.log`, `simcost_cpu4.log`). "Saving" is the mean frame interval with the simulation off against on, each the mean of the two A-B-B-A samples:
+
+| View, hour | Agents (cars / people) | CPU ×1: saving | main thread on / off | logic / drawing | CPU ×4: saving | main thread on / off | logic / drawing |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| street 17:00 | 487 / 1 537 | **13.0 %** | 5.8 / 1.1 ms | 1.7 / 2.3 | **43.0 %** | 30.3 / 5.4 | 10.5 / 13.1 |
+| sol 17:00 | 487 / 1 538 | **10.0 %** | 5.8 / 1.1 | 1.9 / 2.2 | **26.8 %** | 30.9 / 4.9 | 10.1 / 11.4 |
+| cibeles 17:00 | 705 / 1 583 | **8.2 %** | 7.8 / 1.3 | 3.6 / 2.4 | **20.7 %** | 41.1 / 5.8 | 20.0 / 13.0 |
+| overview 17:00 | 680 / 1 558 | **5.2 %** | 9.4 / 1.9 | 4.6 / 2.5 | 3.8 % | 47.6 / 8.5 | 24.0 / 12.2 |
+| street 3:00 | 102 / 138 | 4.6 % | 3.1 / 1.2 | 0.5 / 0.7 | 5.0 % | 14.5 / 5.2 | 2.2 / 3.5 |
+| sol 3:00 | 102 / 138 | 4.5 % | 3.0 / 1.1 | 0.7 / 0.7 | 0.6 % | 13.8 / 4.9 | 2.8 / 3.3 |
+| cibeles 3:00 | 147 / 142 | 3.1 % | 3.5 / 1.3 | 1.0 / 0.7 | 0.3 % | 17.1 / 5.7 | 4.5 / 3.6 |
+| overview 3:00 | 142 / 140 | 0.7 % | 4.7 / 2.0 | 1.5 / 0.8 | −1.0 % | 22.2 / 9.0 | 6.5 / 3.7 |
+
+**What it says.**
+
+- **The simulation's cost reaches the frame even without throttling.** On this laptop the browser keeps the CPU and the GPU in step closely enough that 4.7–7.5 ms more main-thread work lengthens the frame by 3–4 ms in street views.
+- **At 4× throttling the main thread sets the frame in every view but the overview.** The simulation then takes 21–43 % of it at peak. The overview stays bound by the GPU (54 ms frames), which hides its 39 ms of main-thread work.
+- **Drawing is as large as the logic.** The instance writes take 2.2–2.5 ms at peak (11–13 ms at 4×) against 1.7–4.6 ms of logic. That raises C1, C2 and C6, which work on the drawing.
+- **The main-thread time with the simulation on exceeds its logic plus drawing by about 1 ms.** That is the shadow traversal and the uploads inside `composer.render`.
+- **The cost is mostly per agent, not fixed.** At 3:00, with a fifth of the agents, logic and drawing fall to 1.2–2.3 ms (7–10 ms at 4×). That supports C5 and C7.
+- **The checkpoint passes.** Phase 1 next: C1, C2 (C4 is done).
+
 ### Candidates
 
 Each candidate below gives the same fields: evidence, expected gain, the change, an experiment that a switch turns on and off, an acceptance criterion fixed now, validation, risk and effort, interactions, and when to abandon it.
@@ -311,7 +353,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
   - **C5:** C5's far view would turn the twin off entirely.
 - **Abandon** if (a) and (c) together save under 0.5 ms; then (b) only for image quality, judged by eye.
 
-#### C4. N8AO's transparency renders off
+#### C4. N8AO's transparency renders off (adopted)
 
 **Adopted (2026-11-14, `DECISIONS.md`).** With N8AO forced on, one scene render per frame instead of three, and 28.6 fps against 26.9 in `sol` at 17:00 (single runs). Image pairs (`docs/img/n8transp-*-auto.png` and `-off.png`): the fountain differs by 0.06/255, rain by 1.13/255 and snow by 0.14/255, each under the difference between two captures of the old behaviour (0.08, 1.20 and 0.15/255), which is the particles moving. `?n8transp=auto` restores n8ao's detection.
 
@@ -505,7 +547,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 
 | Phase | Work | Effort | Checkpoint: measure again, then decide |
 | --- | --- | --- | --- |
-| 0 | Instrumentation: `?life=0`, `?pop=`, `?perf=sim`, `simcost.mjs`, traffic tools on `launch.mjs`, seeding, p99, CPU throttling | 1–1.5 days | The baseline protocol in full. **Stop here if** `?life=0` saves under 5 % of the frame in every scene, both without throttling and at 4×: the simulation is not worth optimising, apart from C4. |
+| 0 (done) | Instrumentation: `?life=0`, `?pop=`, `?perf=sim`, `simcost.mjs`, traffic tools on `launch.mjs`, seeding, p99, CPU throttling | 1–1.5 days | The baseline protocol in full. **Stop here if** `?life=0` saves under 5 % of the frame in every scene, both without throttling and at 4×: the simulation is not worth optimising, apart from C4. |
 | 1 | C4, C1, C2 (cheap, invisible) | 1–1.5 days | The same protocol. Keep each candidate that passes its bar. |
 | 2 | C3, C5, C7, then C8 (graded or visible; C5 and C7 shown to the user) | 3–4 days | The same protocol, at 4× throttling too. **Continue to Phase 3 only if** the main thread at 4× still exceeds 25 ms in a peak scene. |
 | 3 | C9 (with C10), C6 | 3–4 days | The same protocol plus the 10 000-step state hash. |
@@ -521,7 +563,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 
 | # | Candidate | From | Expected gain | Effort | Risk | Changes what is seen | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| C4 | N8AO transparency renders off | code | 1.8 ms, 3.7–5.0 % where N8AO runs (measured) | an hour | low | maybe at fountains and in rain | **evaluate now** |
+| C4 | N8AO transparency renders off | code | 1.8 ms, 3.7–5.0 % where N8AO runs (measured) | an hour | low | no (checked) | **adopted** |
 | C1 | Upload only what is used | code + three | 0.8–1.1 MB less per frame; under 5 % alone | half a day | low | no | **evaluate now** |
 | C2 | Signals at phase changes, constant colours once | code | 0.1–0.3 ms CPU, 88 KB per frame | half a day | low | no | **evaluate now** |
 | C3 | Cheaper twin map | code + dtla | up to 1.2 ms, 2–4 % | 1 day | low to medium | agents' shadow resolution | **evaluate now**, after C4 |

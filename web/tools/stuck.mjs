@@ -1,6 +1,8 @@
-import { chromium } from 'playwright-core';
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+// Cars stopped for more than 40 s after [secs] at 17:00, by cause and by road. usage: node tools/stuck.mjs [secs=100]
+import { launch, seedRandom } from './launch.mjs';
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 600, height: 400 } });
+await seedRandom(page);
 await page.goto('http://localhost:5173/?hour=17&ui=0');
 await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 120000 });
 await page.evaluate(() => { setInterval(() => { for (const c of window.__life.cars) c.stuckT = c.v < 0.3 ? (c.stuckT || 0) + 1 : 0; }, 1000); });

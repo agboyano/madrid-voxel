@@ -7,3 +7,9 @@ export const launch = ({ swift = false } = {}) => chromium.launch({
   executablePath: process.env.CHROMIUM || '/usr/bin/chromium',
   args: swift ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist'],
 });
+
+// The same random numbers on every run (the street life draws on Math.random): two runs of one build then give the
+// same traffic, so a change in the traffic statistics comes from the code, not from chance
+export const seedRandom = (page, seed = 1234567) => page.addInitScript((seed) => {
+  let s = seed; Math.random = () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
+}, seed);

@@ -55,6 +55,11 @@ export class StreetLife {
   people: Person[] = [];
   riders: Person[] = [];
   day = 180;
+  // scales the agents the hour asks for (cars, people, riders; not trains or signals): ?pop= (main.ts)
+  population = 1;
+  // set to an object (main.ts ?perf=sim) to have each update's logic and drawing time written into it: the steps and
+  // the trains' advance, then the instance writes
+  timing: { stepMs: number; steps: number; renderMs: number } | null = null;
   private t = 0;
   private acc = 0;
   private readonly M: LifeMeshes;
@@ -120,18 +125,23 @@ export class StreetLife {
     if (!A || (A.x - focus.x) ** 2 + (A.z - focus.z) ** 2 > 120 * 120) this.setActive(focus.x, focus.z);
     const hh = ((hour % 24) + 24) % 24;
     const bell = (c: number, w: number) => Math.exp(-(((hh - c) / w) ** 2));
+    const k = this.population;
     const density = {
-      cars: Math.min(1, 0.18 + 0.55 * bell(8, 2.2) + 0.5 * bell(17, 2.6) + 0.45 * bell(13, 5)),
-      peds: Math.min(1, 0.08 + 0.4 * bell(8.5, 1.8) + 0.85 * bell(16, 4.5) + 0.25 * bell(21, 2)),
+      cars: k * Math.min(1, 0.18 + 0.55 * bell(8, 2.2) + 0.5 * bell(17, 2.6) + 0.45 * bell(13, 5)),
+      peds: k * Math.min(1, 0.08 + 0.4 * bell(8.5, 1.8) + 0.85 * bell(16, 4.5) + 0.25 * bell(21, 2)),
       trams: hh > 0.5 && hh < 5 ? 0 : 1,
       // the counters' day: the commute to work and home, a lunch hump, little at night; a fifth of July's in January
-      bikes: (0.03 + 0.85 * bell(8, 1.4) + 1.0 * bell(17, 2.0) + 0.35 * bell(13, 3))
+      bikes: k * (0.03 + 0.85 * bell(8, 1.4) + 1.0 * bell(17, 2.0) + 0.35 * bell(13, 3))
         * (0.2 + 0.4 * (1 - Math.cos(2 * Math.PI * (this.day - 15) / 365))),
     };
+    const T = this.timing, t0 = T ? performance.now() : 0;
+    let n = 0;
     this.acc += dt;
-    while (this.acc >= STEP) { this.step(STEP, density); this.acc -= STEP; }
+    while (this.acc >= STEP) { this.step(STEP, density); this.acc -= STEP; n++; }
     this.trains.update(dt, hh);
+    const t1 = T ? performance.now() : 0;
     this.render(dt, night, this.acc);
+    if (T) { T.stepMs = t1 - t0; T.steps = n; T.renderMs = performance.now() - t1; }
   }
 
   // ------------------------------------------------------------------ the area around the camera

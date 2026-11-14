@@ -1,8 +1,10 @@
-import { chromium } from 'playwright-core';
-const [secs = 240, hour = 17, sim = ''] = process.argv.slice(2);
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--ignore-gpu-blocklist'] });
+// Exits per minute, mean speed and cars stopped for 60 s or more, every 30 s. usage: node tools/flow.mjs [secs=240] [hour=17]
+import { launch, seedRandom } from './launch.mjs';
+const [secs = 240, hour = 17] = process.argv.slice(2);
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 400, height: 300 } });
-await page.goto(`http://localhost:5173/?hour=${hour}&ui=0&sim=${sim}`);
+await seedRandom(page);
+await page.goto(`http://localhost:5173/?hour=${hour}&ui=0`);
 await page.waitForFunction(() => window.__ready === true && window.__life, null, { timeout: 120000 });
 await page.evaluate(() => {
   const L = window.__life; L.exits = 0;
@@ -13,7 +15,7 @@ await page.evaluate(() => {
 let lastExit = 0;
 for (let t = 30; t <= +secs; t += 30) {
   await page.waitForTimeout(30000);
-  const r = await page.evaluate(() => { const L = window.__life, v = L.cars.map((c) => c.v); return { t: Math.round(L.t), cars: L.cars.length, meanV: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2), stuck60: L.cars.filter((c) => c.stuckT > 60).length, exits: L.exits, assertive: L.nAssert || 0 }; });
+  const r = await page.evaluate(() => { const L = window.__life, v = L.cars.map((c) => c.v); return { t: Math.round(L.t), cars: L.cars.length, meanV: +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2), stuck60: L.cars.filter((c) => c.stuckT > 60).length, exits: L.exits }; });
   console.log(JSON.stringify({ ...r, exitsPerMin: (r.exits - lastExit) * 2 })); lastExit = r.exits;
 }
 await browser.close();
