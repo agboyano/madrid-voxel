@@ -36,7 +36,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 ## Pipeline and viewer
 
 - **Construction sites** were not reviewed one by one at full scale (OSM `landuse=construction`, buildings finished after the 2024 flight).
-- **Vegetation masks and deck heights** are still computed in `voxelize.py` between 3D writes. Move them into `layers.py` to complete the 2D/3D split.
 - **`VOXEL_SIZE` other than 1 m:** the viewer reads `meta.voxel` and refuses data built at another size (`web/src/main.ts`, `boot`; `docs/img/voxel-size-refused.png`). Drawing them is a separate project, as `PLAN.md` says for 0.5 m: the "1 m assumptions" section of `NOTES.md` lists what would have to change (tile format, mesher, ground bytes, terrain steps).
 - **Desktop performance on integrated GPUs (Intel UHD 620),** where the adaptive render level settles at 0.15–0.3. The 5.4 fps first written here was the whole map at full render size, before the work below, and has not been measured again. Done since (`DECISIONS.md`, 2026-11-13 and 14):
   - **Post-processing:** N8AO is off below level 0.4, fades out between 3.5 and 5.5 km of camera distance, and no longer renders the scene twice more for transparent materials (`docs/n8ao-evaluation.md`).

@@ -410,12 +410,17 @@ def _name(f):
     return f["tags"].get("name") or (f.get("parent") or {}).get("tags", {}).get("name")
 
 
+def small_tree_size(h, height=None):
+    """A young tree's (clear trunk, height) in cells, as small_tree draws it, without drawing it."""
+    H = int(height or 7 + h % 3)
+    return max(3, int(H * 0.42)), H
+
+
 def small_tree(vol, g, r, c, h, leaves, trunk, height=None):
     """A young street tree as planted 2025-26 (Plac Centralny, Złota): photos show a clear trunk to ~4 m and a
     narrow, airy crown on top (docs/warsaw/visual_ref.md, Złota 2026 photos). Returns (clear trunk, height) in cells."""
-    H = int(height or 7 + h % 3)
+    tr, H = small_tree_size(h, height)
     z0 = int(g[r, c])
-    tr = max(3, int(H * 0.42))
     vol[z0:z0 + tr, r, c] = trunk
     leaf = leaves[1 + (h >> 8) % 4]
     leaf2 = leaves[(1 + (h >> 8) % 4 + 2) % len(leaves)]
