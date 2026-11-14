@@ -40,7 +40,7 @@ URL parameters:
 - `level=0..1`: fixes the render size so it no longer adapts (for screenshots and profiling).
 - `ui=0` hides the interface, `tilt=0` turns off the tilt-shift blur, and `mountains=0` hides the Sierra.
 
-The address bar keeps the date, hour and weather as you change them, so it can be shared as it is. The evaluation switches (`trunks`, `trunkmin`, `stillmove`, `ao`, `aotone`, `n8`, `n8q`, `n8full`, `n8up`, `n8fade`) are listed in [docs/improvements.md](docs/improvements.md#evaluation-switches).
+The address bar keeps the date, hour and weather as you change them, so it can be shared as it is. The evaluation switches (`trunks`, `trunkmin`, `stillmove`, `flyhold`, `lightstep`, `ao`, `aotone`, `n8`, `n8q`, `n8full`, `n8up`, `n8fade`) are listed in [docs/improvements.md](docs/improvements.md#evaluation-switches).
 
 The generated data is in the repository (`web/public/data`, 32 MB), so the viewer runs without building anything.
 

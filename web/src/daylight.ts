@@ -46,6 +46,13 @@ export class Daylight {
   private env: THREE.WebGLRenderTarget | null = null;
   private envKey = '';
   private shadowKey = '';
+  // A new light direction (the hour, the date, the weather) refits the sun's frame and redraws it, so a drag of the hour
+  // slider redrew it every frame (40-75 ms longer each on the UHD 620, docs/renderer-evaluation-plan.md). While the light
+  // keeps moving it refits at most every lightStep ms; the sun lights the city from its frame, so light and shadows step
+  // together, and the last step lands at most lightStep ms after the drag stops. ?lightstep= sets it (0: as before)
+  lightStep = 120;
+  private lightKey = '';
+  private lightAt = -Infinity;
   private northTheta = 0;
 
   constructor(renderer: THREE.WebGLRenderer, private readonly scene: THREE.Scene, shadowSize = 8192) {
@@ -137,7 +144,6 @@ export class Daylight {
     }
     this.sky.set({ elDeg, sunDir: trueSun, trueSun, golden, night, deep, cloud });
     this.lightDir.copy(light);
-    this.shadowKey = '';
     if (this.uniforms) {
       this.uniforms.uNight.value = night;
       this.uniforms.uHorizon.value.copy(this.sky.horizon).convertSRGBToLinear();
@@ -169,17 +175,24 @@ export class Daylight {
     fog.far = fog.near + 4500 * k;
   }
 
-  fitShadow(focus: THREE.Vector3, camera: THREE.Camera, viewDist: number, map: THREE.Box3) {
+  // how far the sun's frame must reach for a camera at eye looking at target
+  reach(eye: THREE.Vector3, target: THREE.Vector3, map: THREE.Box3) {
+    return eye.distanceTo(target) + Math.max(0, eye.y - (map.min.y + 80));
+  }
+
+  // hold: the frame to keep instead of following the camera (main.ts flyTo: both ends of a flight)
+  fitShadow(focus: THREE.Vector3, camera: THREE.Camera, map: THREE.Box3, now: number, hold: { focus: THREE.Vector3; dist: number } | null = null) {
     if (map.isEmpty()) return;
-    const sun = this.sun, f = focus;
-    const dist = viewDist + Math.max(0, camera.position.y - (map.min.y + 80));
+    const sun = this.sun, f = hold?.focus ?? focus;
+    const dist = hold?.dist ?? this.reach(camera.position, focus, map);
     // refit in steps (a tenth in size, a sixteenth across), not every frame the view moves: each refit redraws the city
     const top = Math.max(map.max.x, map.max.z) * 0.75, R = clamp(dist * 1.15, 300, top);
     const Rq = Math.min(top, 1.1 ** Math.ceil(Math.log(R) / Math.log(1.1))), g = Rq / 16;
     const c = new THREE.Vector3(Math.round(f.x / g) * g, 0, Math.round(f.z / g) * g), Rf = Rq + 0.75 * g, texel = (2 * Rf) / sun.shadow.mapSize.x;
     const L = this.lightDir;
-    const key = `${c.x},${c.z},${Rq.toFixed(1)},${L.x.toFixed(4)},${L.y.toFixed(4)}`;
-    if (key !== this.shadowKey) {
+    const key = `${c.x},${c.z},${Rq.toFixed(1)}`, light = `${L.x.toFixed(4)},${L.y.toFixed(4)}`;
+    if (key !== this.shadowKey || (light !== this.lightKey && now - this.lightAt >= this.lightStep)) {
+      if (light !== this.lightKey) { this.lightKey = light; this.lightAt = now; }
       this.shadowKey = key;
       this.fitSun(c, Rf, texel, map);
     }

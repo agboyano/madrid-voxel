@@ -466,3 +466,13 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **N8AO's cheaper quality modes and no depth-aware upsampling:** 2–4 % of the frame, under the 5 % bar set before measuring.
   - **Keeping N8AO on below level 0.4:** 1.4–6.6 ms, 5–28 % of the frame at that level.
   - **Ending the fade at 6 km:** the overview sits at 5.93 km, where the pass would still run at 3 % intensity and full cost.
+
+## 2026-11-14: The sun's frame is held during flights, and follows the light at most every 120 ms
+
+- **Decision:**
+  - **Flights:** during a flight between views (`flyTo`), the sun's shadow frame covers both ends of the flight and stays put; it follows the camera again for the last fifth of the flight. `?flyhold=0` turns it off.
+  - **Light:** a new light direction (the hour, the date, the weather) refits the frame at most every 120 ms while it keeps changing, and the last change lands at most 120 ms after it stops. `?lightstep=` sets the interval (0 gives the old behaviour).
+- **Why** (`docs/renderer-evaluation-plan.md`, technique 2): after the swap limit, the redraws left were refits, and they came in flights (the focus crossed a sixteenth of the frame in a frame or two, so it refitted nearly every frame) and hour drags (every step moved the light). Refits in a flight fell from 108 to 28, redraws in an hour drag from about 90 to 55, and 3–8 % more frames are drawn. Mid-flight shadows are a little softer for under half a second (`docs/img/fly-shadow-sol-75-*.png`); during a drag, light and shadows step about 8 times a second instead of gliding.
+- **Rejected:**
+  - **Coarser shadow geometry (technique 2's experiment):** with no light refits at all, an hour drag draws only 11–15 % more frames than with this fix, and its slow frames stay. A redraw 40 % cheaper would give under half of that.
+  - **No refits at all during a flight:** at the end of a flight into a street the frame would be a city wide, and the landing would refit anyway.

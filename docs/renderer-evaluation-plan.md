@@ -27,6 +27,8 @@ Paths prefixed `dtla:` are in dtla-voxel; the others are in this repository. The
 | 2. Coarser shadows | Measure how often the shadow map is redrawn now. The experiment can use the existing 8 m clay, without waiting for technique 1. |
 | 1. Adaptive levels | Evaluate later, in stages. It has been turned down twice here, and dtla-voxel's evidence is not enough to reopen it without a measurement of our own. |
 
+**Status (2026-11-14):** technique 3 option a dropped, a far-field occlusion term still open; technique 2 closed after three cheaper fixes to the redraws, its experiment not worth running; technique 1 not started. Results in the dated sections at the end.
+
 ---
 
 ## Preliminary: this renderer in one page
@@ -647,3 +649,34 @@ The same frames split by whether a redraw was near (share over 100 ms, mean inte
 - **Flights:** during a `flyTo`, fit the sun's frame once to cover both ends of the flight (or the path, up to the size the frame allows), and refit when it lands. Shadows mid-flight would be coarser, for 1.6 s.
 - **Hour drags:** redraw at most every 100–150 ms while the slider moves, and once when it stops. The shadows would step instead of gliding.
 - **Technique 2** makes each of these redraws cheaper rather than rarer. Its experiment is worth running only if the slow frames in flights and drags are still there after these two.
+
+## Technique 2: the two cheaper fixes, and the verdict (2026-11-14)
+
+Adopted (`DECISIONS.md`, 2026-11-14):
+
+- **Flights:** during a `flyTo` the sun's frame is held over both ends of the flight, and follows the camera again for the last fifth. `?flyhold=0` turns it off.
+- **Hour drags:** a new light direction refits the frame at most every 120 ms while the light keeps moving; the last step lands at most 120 ms after it stops. `?lightstep=0` gives the old behaviour.
+
+`slowframes.mjs` at level 0.3, A-B-B-A (A: `flyhold=0&lightstep=0`, B: the fixes), plus one run with the light never refitting during the drag (`lightstep=1000000`), as the upper bound of what fewer or cheaper redraws can give there. Raw output in `data/baseline/holds-*.log`.
+
+| Activity | Measure | A (before), two runs | B (fixes), two runs | No light refits |
+| --- | --- | --- | --- | --- |
+| Fly (8 views, 20.9 s) | sun-map redraws (refits) | 128 (108), 128 (108) | 47 (27), 46 (29) | |
+| | frames drawn | 434, 419 | 457, 436 | |
+| | frames over 100 ms | 24, 36 | 27, 34 | |
+| | of them near a redraw | 79 %, 78 % | 44 %, 44 % | |
+| Hour drag (11 s) | sun-map redraws | 96, 89 | 57, 52 | 6 (swaps) |
+| | frames drawn | 126, 129 | 135, 139 | 155 |
+| | frames over 100 ms | 41, 45 | 49, 41 | 45 |
+
+Rotating and panning are unchanged, as they should be.
+
+**Image.** `web/tools/flyshadow.mjs` freezes a flight from `overview` to `sol` (slowed to 8 s) and captures the held frame, then the frame fitted to the camera from the same pose. At 40 % of the flight both are the same: the frame is already at its largest size there. At 75 % (camera 1 km up) the held frame is 8.8 km wide against 6.6 km; shadows are a little softer, as the blur is in texels (mean difference 4.6/255, 8.6 % of pixels over 16/255; `docs/img/fly-shadow-sol-75-held.png`, `-followed.png`), for under half a second before the frame follows the camera again.
+
+**What it says**
+
+- The fixes do what they were for: refits in a flight fall by 74 % and redraws in an hour drag by 40 %, and 3–8 % more frames are drawn in both.
+- **They do not remove the slow frames, and neither would technique 2.** Frames over 100 ms are as many after the fixes, and as many again with no light refits at all during the drag (45). The slow frames in flights and drags come from elsewhere: in flights, most likely the tiles streamed in as the view changes; in drags, not from `setHour` itself (0.5 ms of CPU per call, the sky's light 0.5 ms each time it is regenerated, no shader compiled).
+- **Upper bound for technique 2.** With no light refits the drag draws 11–15 % more frames than with the fix. Making each redraw 40 % cheaper, its own acceptance bar, would give under half of that, in drags only, and nothing in hand navigation, where redraws no longer coincide with slow frames.
+
+**Verdict: technique 2's experiment (`?shadowlod=8`) is not worth running.** What remains of the redraw cost after the swap limit and these two fixes is under the 5 % of the frame that this evaluation asks of a change. The slow frames left in flights and hour drags are a separate question, for a profile of streaming and uploads, not for the shadow pass.

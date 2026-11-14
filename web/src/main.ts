@@ -69,6 +69,7 @@ const post = makePost(renderer, scene, camera, { force: qs.get('n8') === 'on' ||
 const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
 const aoTone = qs.get('aotone')?.split(',').map(Number);
 if (aoTone?.length === 2 && aoTone.every(Number.isFinite)) daylight.aoTone = [aoTone[0], aoTone[1]];
+if (qs.get('lightstep')) daylight.lightStep = +qs.get('lightstep')!;
 const setLight = () => { post.setLight(level < LIGHT_POST); daylight.aoOff = level < LIGHT_POST && qs.get('n8') !== 'on'; };
 setLight();
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);
@@ -212,10 +213,12 @@ function share() {
 function flyTo(v: Pick<View, 'pos' | 'target' | 'ms'>) {
   const p0 = camera.position.clone(), q0 = controls.target.clone(), t0 = performance.now();
   const p1 = new THREE.Vector3(...v.pos), q1 = new THREE.Vector3(...v.target);
+  flyShadow = FLY_HOLD ? { focus: q0.clone().lerp(q1, 0.5), dist: Math.max(daylight.reach(p0, q0, map), daylight.reach(p1, q1, map)) + q0.distanceTo(q1) / 2 / 1.15 } : null;
   fly = (now) => {
     const t = Math.min(1, (now - t0) / (v.ms ?? 1600)), e = ease(t);
     camera.position.lerpVectors(p0, p1, e);
     controls.target.lerpVectors(q0, q1, e);
+    if (t >= 0.8) flyShadow = null;
     if (t >= 1) fly = null;
   };
 }
@@ -359,7 +362,7 @@ renderer.setAnimationLoop((now) => {
   daylight.sky.mesh.position.copy(camera.position);
   daylight.sky.eye = camera.position.y + base;
   streamer?.update(camera);
-  daylight.fitShadow(focus(), camera, viewDist, map);
+  daylight.fitShadow(focus(), camera, map, now, fly ? flyShadow : null);
   const redraws = daylight.redraws;
   if (!camera.matrixWorld.equals(lastPose)) { lastPose.copy(camera.matrixWorld); movedAt = now; }
   if (stillChanged()) stillDue = true;
@@ -398,6 +401,12 @@ let busy = false, stillDue = false, redrawnAt = 0, movedAt = 0, slow = 0, calm =
 // massing, so while moving the map follows the swaps at most every STILL_MOVING ms, and once more when the camera stops.
 // Refits of the sun's frame (daylight.fitShadow) redraw at once as before. ?stillmove= sets it (300: as before)
 const STILL_MOVING = qs.get('stillmove') ? +qs.get('stillmove')! : 1500, lastPose = new THREE.Matrix4();
+// A flight between views moved the sun's frame across a sixteenth of its width in a frame or two, so it was refitted and
+// redrawn nearly every frame (20-30 ms longer each on the UHD 620, docs/renderer-evaluation-plan.md). The frame is
+// held over both ends of the flight and follows the camera again for its last fifth, when it slows down: shadows are
+// coarser for the 1.3 s of the hold. ?flyhold=0 turns it off
+const FLY_HOLD = qs.get('flyhold') !== '0';
+let flyShadow: { focus: THREE.Vector3; dist: number } | null = null;
 function setLevel(l: number) {
   level = Math.max(0, Math.min(1, l));
   const px = pixelsAt(level);

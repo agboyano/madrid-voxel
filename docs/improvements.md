@@ -20,7 +20,7 @@ Timings come from the development laptop, an Intel UHD 620 with Chromium on Vulk
 | Seasons | Central European dates | dates from Mediterranean-climate regions, Madrid's own autumn colours, lawns from Sentinel-2 |
 | Labels | name search, pageviews and about 150 hand picks | only through OSM's `wikidata` tag, chosen by rule; cards with facts written at build time |
 | Streaming | blocks by distance to the focus, grey clay | blocks in view first, coloured clay, the adapted level remembered, no bare ground while trees load |
-| Lighting | shadow redraws every 300 ms of block swaps, N8AO on or off by level | redraws limited while moving, sun at true north, N8AO fading with distance and its absence made up in tone |
+| Lighting | shadow redraws every 300 ms of block swaps, N8AO on or off by level | redraws limited while moving, held during flights and spaced while the hour is dragged, sun at true north, N8AO fading with distance and its absence made up in tone |
 | Input | mouse and keyboard | adds touch controls and a gamepad |
 | Delivery | data revalidated by the browser | content-hashed data files, cached for good |
 | Build | 26 GB peak, 55 MB of data, part of it run by hand | 15.9 GB peak, 32 MB of data, one timed script |
@@ -111,7 +111,8 @@ Timings come from the development laptop, an Intel UHD 620 with Chromium on Vulk
   - **Biases:** sized from the shadow map's texel and scaled by the sun's elevation (dtla-voxel `6fd3b9d`). Warsaw's 0.5–3 m offset detached golden-hour shadows.
   - **Sun position:** the sun follows true north (−0.45° meridian convergence), at its true elevation, on Madrid's calendar, and the sky's light turns with it (dtla-voxel `cf1c7e1`).
   - **Redraws for block swaps:** the sun's map follows them at most every 1.5 s while the camera moves (Warsaw: every 300 ms). Rotating 47° now redraws it 5 times instead of 16–19, and a stale map differs in at most 0.10 % of pixels.
-  - Sources: D 2026-11-13 "Shadow biases from the texel", "The sun follows true north…"; D 2026-11-14 "The sun's shadow map follows block swaps…"; REP "Fewer redraws for block swaps".
+  - **Refits in flights and hour drags:** during a flight between views the sun's frame is held over both ends (refits fall from 108 to 28 in a tour of eight views), and a moving light refits it at most every 120 ms (redraws in an hour drag fall from about 90 to 55).
+  - Sources: D 2026-11-13 "Shadow biases from the texel", "The sun follows true north…"; D 2026-11-14 "The sun's shadow map follows block swaps…", "The sun's frame is held during flights…"; REP "Fewer redraws for block swaps", "Technique 2: the two cheaper fixes, and the verdict".
 - **N8AO graded.**
   - The screen-space occlusion fades out between 3.5 and 5.5 km of camera distance, where it adds almost nothing: the overview went from 98 to 88 ms at level 0.5.
   - Below level 0.4, where it is off, the sky's light is dimmed so the city keeps its tone: the step fell from 5–20/255 to 0–6/255.
@@ -141,6 +142,8 @@ Timings come from the development laptop, an Intel UHD 620 with Chromium on Vulk
   - `passes.mjs`: GPU time of each pass through timer queries, with mean, p95, canvas and GPU.
   - `redraws.mjs`: how often the sun's shadow map is redrawn, and why.
   - `shadowswap.mjs`: what a stale shadow map looks like.
+  - `slowframes.mjs`: each frame's interval and whether the sun's map was redrawn in it, to tell which slow frames the redraws cause.
+  - `flyshadow.mjs`: the sun's frame held over a flight against one fitted to the camera.
   - `mergekey.mjs`: what each field of the mesher's merge key costs in quads.
   - `uploads.mjs`, `allocs.mjs`, `ctxloss.mjs`, `walkstuck.mjs`.
   - `launch.mjs`: the shared Linux and Vulkan launcher.
@@ -162,6 +165,8 @@ URL parameters for A/B measurements. None is on by default, and none is meant fo
 | `trunks=0` | no instanced trunks and limbs | shown | `web/src/main.ts` |
 | `trunkmin=<m>` | narrowest trunk drawn | 0.25 | `web/src/trunks.ts` |
 | `stillmove=<ms>` | shortest gap between shadow redraws for block swaps while moving (300: as Warsaw) | 1500 | `web/src/main.ts` |
+| `flyhold=0` | the sun's frame follows the camera during flights between views instead of being held | held | `web/src/main.ts` |
+| `lightstep=<ms>` | shortest gap between refits of the sun's frame while the light moves (0: every change) | 120 | `web/src/daylight.ts` |
 | `ao=merge` | meshes without per-vertex occlusion (technique 3 of REP) | off | `web/src/mesher.worker.ts` |
 | `n8=on\|off` | forces N8AO on or off whatever the level | by level and distance | `web/src/post.ts` |
 | `n8q=<mode>` | N8AO quality mode (`Performance`, `Low`, `Medium`, `High`, `Ultra`) | `Medium` | `web/src/post.ts` |
@@ -203,7 +208,7 @@ What dtla-voxel does or proposes, and what Madrid did with it. Of 24 items, 6 we
 | Content-hashed data (`3e77ad7`, `version-data.mjs`) | hashed copies and `force-cache`; no Cloudflare `_headers`, plain copies kept | adapted | GitHub Pages ignores `_headers`; tabs open across a deploy | D 2026-11-13 "Content-hashed data files" |
 | `web/tools/profile.mjs`, `docs/rendering-profile.html` | own `scripts/profile.py` and `web/tools/passes.mjs`, with per-pass timer queries as in `profile.mjs` | adapted | dtla's harness needs its own instrumented viewer and Windows paths | N "Rendering"; REP |
 | Adaptive levels of detail (`tileSelection.ts`): 1/2/4/8 m tiles by projected size | the block and clay model kept, and improved (coloured clay, blocks in view first) | rejected (twice); staged evaluation planned, not run | a large viewer change for no measured need; +71 % data; no popping mitigation; at the adapted level the cost is per fragment | D 2026-11-11 "No band fill…"; D 2026-11-13 "Coloured clay…"; REP technique 1 |
-| Coarser shadow geometry (`shadowTiles.ts`): 4 m tiles cast beyond 192 m | redraws for block swaps limited instead | evaluated; a cheaper fix adopted | 85–100 % of redraws while moving came from block swaps; dtla's 31 % was the whole frame with shadows redrawn every frame | REP technique 2; D 2026-11-14 "The sun's shadow map follows block swaps…" |
+| Coarser shadow geometry (`shadowTiles.ts`): 4 m tiles cast beyond 192 m | redraws for block swaps limited, and refits in flights and hour drags spaced, instead | evaluated; cheaper fixes adopted, the experiment dropped | 85–100 % of redraws while moving came from block swaps, the rest from refits in flights and hour drags; after the fixes, what a cheaper redraw could still save is under 5 % of the frame. dtla's 31 % was the whole frame with shadows redrawn every frame | REP technique 2; D 2026-11-14 "The sun's shadow map follows block swaps…", "The sun's frame is held during flights…" |
 | AO out of the mesher's merge key (`bench-mesh-merging.mjs`: 20–29 % fewer quads on a sample) | measured on the whole city: −24.2 % triangles, frames 13–20 % faster in far views; but without per-vertex AO the far city reads flat, and N8AO cannot replace it there | evaluated; kept as `?ao=merge` only | fails the image check at level 0.3 | REP technique 3; N8 §6 |
 | N8AO at half resolution, about 1 ms on a GTX 1080 Ti | 6–18 ms here (10–25 % of the frame); fades with distance, tone kept below level 0.4; cheaper quality modes turned down | evaluated; own grading adopted | cheaper modes save 2–4 %, under the 5 % bar | N8; D 2026-11-14 "N8AO fades out…" |
 | Shadow biases from the texel, scaled by elevation (`6fd3b9d`) | adopted, with a ×3 factor on staircase walls | adopted | Warsaw's offsets detached golden-hour shadows | D 2026-11-13 "Shadow biases from the texel" |
