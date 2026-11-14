@@ -73,9 +73,11 @@ if (aoTone?.length === 2 && aoTone.every(Number.isFinite)) daylight.aoTone = [ao
 if (qs.get('lightstep')) daylight.lightStep = +qs.get('lightstep')!;
 // Measuring the street life (docs/sim-evaluation-plan.md, phase 0): ?life=0 neither steps nor draws it (the agents'
 // shadow map is still redrawn, empty), ?pop= scales the agents the hour asks for, ?perf=sim logs each frame's main-thread
-// time and the simulation's share of it (window.__simLog, web/tools/simcost.mjs; the fps line shows the means)
+// time and the simulation's share of it (window.__simLog, web/tools/simcost.mjs; the fps line shows the means).
+// Desktops get 0.7 of the population and phones 0.5, chosen once here and not from the adaptive level, so that agents
+// never appear or vanish in view: the simulation's cost is almost all proportional to it (docs/sim-evaluation-plan.md, C7)
 let lifeOn = qs.get('life') !== '0';
-const POP = qs.get('pop') ? +qs.get('pop')! : 1;
+const POP = qs.get('pop') ? +qs.get('pop')! : phone ? 0.5 : 0.7;
 UPLOAD.ranges = qs.get('uprange') !== '0';
 UPLOAD.cache = qs.get('sigcache') !== '0';
 interface SimFrame { t: number; main: number; step: number; steps: number; render: number }

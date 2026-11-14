@@ -506,3 +506,17 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Rejected:**
   - **Measuring C1 and C2 apart:** they share the drawing loop, and together they clear the bar.
   - **`DynamicDrawUsage`:** three only reads it at the buffer's first upload, and it changes nothing for later ones.
+
+## 2026-11-14: The street life runs at 0.7 of its population on desktop and 0.5 on phones
+
+- **Decision:**
+  - Desktops simulate 0.7 of the cars, people and bikes the hour asks for; phones (the same test as the shadow map's size: the screen's short side under 600 px) 0.5.
+  - It is chosen once at start-up. `?pop=<k>` still overrides it, and `?pop=1` gives the former density.
+- **Why** (`docs/sim-evaluation-plan.md`, C7): the simulation's cost is almost all proportional to its population. At 17:00 in `street`, `sol` and `cibeles`, with the CPU throttled 4× as a stand-in for a weak device:
+  - **0.5:** main thread −37 to −40 %, the simulation's own share −45 to −47 %.
+  - **0.7:** main thread −22 to −27 %, the simulation's own share −26 to −31 %.
+  - Without throttling, this laptop's GPU sets the frame and 0.7 gains only 2–3 %.
+  - The user judged the density from screenshots at 1, 0.7 and 0.5 and chose these values.
+- **Rejected:**
+  - **Grading by the adaptive render level,** as the plan first proposed: the level moves while the visitor looks, so agents would appear and vanish in view.
+  - **1 on desktop and 0.7 on phones,** the user's first choice, which they then changed.

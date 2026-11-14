@@ -177,7 +177,7 @@ URL parameters for A/B measurements. None is on by default, and none is meant fo
 | `n8fade=0` | no fade of N8AO with camera distance | fades 3.5–5.5 km | `web/src/post.ts` |
 | `n8transp=auto` | n8ao's own detection of transparent materials, which renders the scene twice more per frame | off | `web/src/post.ts` |
 | `life=0` | no street life: agents neither stepped nor drawn | on | `web/src/main.ts` |
-| `pop=<k>` | scales the agents the hour asks for | 1 | `web/src/sim/life.ts` |
+| `pop=<k>` | scales the agents the hour asks for | 0.7 on desktop, 0.5 on phones | `web/src/main.ts`, `web/src/sim/life.ts` |
 | `uprange=0` | street-life instance buffers sent whole each frame, not just the instances in use | ranges | `web/src/sim/meshes.ts` |
 | `sigcache=0` | signal lamps and constant agent colours rewritten every frame | cached | `web/src/sim/meshes.ts` |
 | `perf=sim` | logs each frame's main-thread time and the simulation's share of it, shown under the fps | off | `web/src/main.ts` |

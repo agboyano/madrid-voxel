@@ -17,7 +17,7 @@ Paths prefixed `dtla:` are in `../dtla-voxel`. Paths prefixed `three:` are under
 
 **Hardware caveat.** All of dtla-voxel's figures come from one desktop: i7-9700K, GTX 1080 Ti through ANGLE/D3D11, headless Chromium, 1600 × 1000 [D] `dtla:docs/rendering-profile.html:90`. It never measured an integrated GPU or a phone [D] `dtla:docs/features/voxel-rendering-streaming.md:265`. Its viewer has no simulation. Its figures are a direction, not a forecast.
 
-**Status (2026-11-14).** C4, C1 and C2 adopted (Phase 1 done; next, Phase 2 from C3). C7's population curve measured: at 0.5, main thread −37 to −40 % at 4× CPU, awaiting the user's visual judgement. Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
+**Status (2026-11-14).** C4, C1 and C2 adopted (Phase 1 done; next, Phase 2 from C3). C7 adopted as population alone: 0.7 on desktop, 0.5 on phones (`DECISIONS.md`). Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
 
 **Summary of the conclusion** (before Phase 0)
 
@@ -451,7 +451,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 - **Without throttling it barely shows:** 2–5 % of the frame, which the GPU sets on this laptop.
 - **Noise across page loads:** the frame with the simulation off varies by up to 10 % between loads (`sol` at 4×: 30.9, 27.7, 28.8 ms), so the frame row is a rough figure; the main-thread rows are steadier.
 - **Screenshots:** `docs/img/pop-{street,sol,cibeles}-{1,0.7,0.5}.png`, level 1, 17:00. To be judged by the user before any profile is adopted.
-- **Not adopted yet.** What remains is a product choice: whether a lower population on weak devices is acceptable, and whether to choose it once per device at start-up or from the adaptive level. A population that follows the adaptive level would make agents appear and vanish in view as the level changes.
+- **Adopted (2026-11-14), population only:** the user chose 0.7 on desktop and 0.5 on phones, set once at start-up (`web/src/main.ts`, `POP`), not from the adaptive level, which would make agents appear and vanish in view. `?pop=1` restores the former density. The twin size and logic rate stay with C3 and C8. Phone-sized capture: `docs/img/pop-phone-sol.png`.
 
 - **Evidence.**
   - Population is fixed by the hour (`life.ts:121-130`, `:387-394`) [V].
@@ -598,7 +598,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 | C2 | Signals at phase changes, constant colours once | code | measured with C1 | half a day | low | no (checked) | **adopted** |
 | C3 | Cheaper twin map | code + dtla | up to 1.2 ms, 2–4 % | 1 day | low to medium | agents' shadow resolution | **evaluate now**, after C4 |
 | C5 | Less simulation far away | code + dtla | overview 3–4 % GPU, 7 ms CPU | 1 day | medium | yes, in far views | evaluate after Phase 1 |
-| C7 | One quality profile for the simulation | dtla | −45 % sim CPU, frame −19 to −29 % at 4× CPU, at 0.5 population (measured) | 1 day | low to medium | yes, density | **curve measured**; awaiting the user's judgement |
+| C7 | One quality profile for the simulation | dtla | −45 % sim CPU, frame −19 to −29 % at 4× CPU, at 0.5 population (measured) | 1 day | low to medium | yes, density | **adopted** (population only: 0.7 desktop, 0.5 phones) |
 | C8 | Logic at 20 Hz | code | about −1 to −1.5 ms CPU at peak | half a day plus runs | medium | possibly, motion | evaluate after Phase 1 |
 | C9 | Cheaper logic structures | code + dtla | GC and p99, not median | 2–3 days | medium | no (identical hash) | evaluate later |
 | C6 | Instance-level culling | code + dtla | part of 2.3–2.5 ms CPU | 1 day | medium | no | evaluate later |
