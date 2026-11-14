@@ -99,7 +99,7 @@ def stats(lab, n):
     return out
 
 meta = {"blocks": stats(blk, nb), "buildings": stats(bld.astype(np.int32), len(blds))}
-# triangles per block at 1 m (prototype estimate): each 128 m tile's triangles (tools/cost1m.mjs) shared by columns
+# triangles per block at 1 m (prototype estimate): each 128 m tile's triangles (scripts/cost1m.py) shared by columns
 cost = AREA / "cost1m.json"  # scripts/cost1m.py
 if cost.exists():
     tt = np.zeros((math.ceil(D / 128), math.ceil(W / 128)))

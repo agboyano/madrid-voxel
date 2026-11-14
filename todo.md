@@ -43,7 +43,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
   - **Street life:** only the instances in use are sent to the GPU, and the population is 0.7 on desktop and 0.5 on phones (`docs/sim-evaluation-plan.md`).
   - **Still open:** a far-field occlusion term (technique 3 of `docs/renderer-evaluation-plan.md`); the cheaper agents' shadow map and 20 Hz logic (C3 and C8 of `docs/sim-evaluation-plan.md`), not evaluated.
 - **Touch and gamepad controls on real devices.** They were tested in headless Chromium with an emulated phone and a fake gamepad (`NOTES.md`, "Viewer: touch and gamepad controls"). The stick now works on a real phone in portrait and landscape. Still to check: the other mobile browser (iOS Safari or Android Chrome, whichever was not tested), and whether the pad shows over plain HTTP on the local network (a real Xbox controller works).
-- **`web/tools/`:** every browser tool now uses `launch.mjs` (the system Chromium on Vulkan) and Madrid's views; started one by one on 2026-11-15, all run except four left from Warsaw's viewer, kept until decided: `cost1m.mjs` (replaced by `scripts/cost1m.py`), `ctltest.mjs` (walk mode, the Fly up button and the pegman are gone), `ghostshots.mjs` (the `?ghost=` prototype is gone) and `film.json` (a Warsaw shot list no tool reads).
 - **Published site:** once published, check it after each data change. The workflow deploys `web/dist` on every push to `main`.
 
 ## Future (PLAN.md Phase 7)
