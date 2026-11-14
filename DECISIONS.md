@@ -484,3 +484,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Rejected:**
   - **Stage B and C:** 4 days and then 3–5 weeks to replace a tuned model (blocks real with their trees, hysteresis, building-by-building loading, collisions) for no cut in triangles on a GPU bound by fragments.
   - **Stage A against fixed 1 m only:** that comparison (−92 % in the overview) is dtla-voxel's and holds here too, but no visitor sees fixed 1 m.
+
+## 2026-11-14: N8AO no longer detects transparent materials
+
+- **Decision:** N8AO's automatic detection of transparent materials is turned off (`autoDetectTransparency = false` in `web/src/post.ts`). `?n8transp=auto` turns it back on.
+- **Why** (`docs/sim-evaluation-plan.md`, C4): n8ao turns `transparencyAware` on as soon as any material in the scene is transparent, visible or not. The fountains' and the precipitation's always are. It then rendered the scene twice more each frame, and the agents' shadow map with each render: 1.8 ms on the UHD 620 with N8AO on, 3.7–5.0 % of the frame (A-B-B-A). The fountains, rain and snow look the same without it: each pair differs less than two captures of the old behaviour do (`docs/img/n8transp-*.png`).
+- **Rejected:** turning it on only while rain, snow or a fountain is in view. Nothing visible needs it.

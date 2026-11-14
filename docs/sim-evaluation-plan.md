@@ -313,6 +313,8 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 
 #### C4. N8AO's transparency renders off
 
+**Adopted (2026-11-14, `DECISIONS.md`).** With N8AO forced on, one scene render per frame instead of three, and 28.6 fps against 26.9 in `sol` at 17:00 (single runs). Image pairs (`docs/img/n8transp-*-auto.png` and `-off.png`): the fountain differs by 0.06/255, rain by 1.13/255 and snow by 0.14/255, each under the difference between two captures of the old behaviour (0.08, 1.20 and 0.15/255), which is the particles moving. `?n8transp=auto` restores n8ao's detection.
+
 - **Evidence.** Measured: 3 scene renders per frame instead of 1 with N8AO on, and −1.8 ms (3.7–5.0 %) with `transparencyAware` forced false, A-B-B-A. The mechanism is in the Baseline above.
 - **Expected gain.** 1.8 ms where N8AO runs, at level 0.4 or above and nearer than 5.5 km. It also removes two of the twin's three redraws per frame.
 - **Change.**

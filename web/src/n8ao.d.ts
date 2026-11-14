@@ -10,7 +10,10 @@ declare module 'n8ao' {
       intensity: number;
       halfRes: boolean;
       depthAwareUpsampling: boolean;
+      transparencyAware: boolean;
     };
+    // on (the default), any transparent material in the scene turns transparencyAware on, visible or not
+    autoDetectTransparency: boolean;
     // 'Performance' | 'Low' | 'Medium' (the default) | 'High' | 'Ultra' | 'Neural-Low' | 'Neural-Medium' | 'Neural-High'
     setQualityMode(mode: string): void;
   }

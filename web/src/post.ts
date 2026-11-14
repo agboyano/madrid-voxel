@@ -39,8 +39,9 @@ class DepthBlur extends Effect {
 }
 
 // Evaluation switches for N8AO (docs/n8ao-evaluation.md), all off by default: force it on or off whatever the level,
-// a quality mode of n8ao's setQualityMode, full resolution, no depth-aware upsampling, no fade with distance
-export interface AOOptions { force?: 'on' | 'off'; quality?: string; fullRes?: boolean; upsampling?: boolean; fade?: boolean }
+// a quality mode of n8ao's setQualityMode, full resolution, no depth-aware upsampling, no fade with distance, and
+// n8ao's own detection of transparent materials (see below)
+export interface AOOptions { force?: 'on' | 'off'; quality?: string; fullRes?: boolean; upsampling?: boolean; fade?: boolean; transparency?: boolean }
 
 // N8AO's radius is in metres, so it shrinks on screen as the camera backs off: what it adds falls from 6-20/255 of
 // luminance at 2.5 km to 3/255 at the overview's 5.9 km (docs/n8ao-evaluation.md), for a pass that costs 10-25 % of
@@ -57,6 +58,10 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, came
   if (ao.quality) n8.setQualityMode(ao.quality);
   if (ao.fullRes) n8.configuration.halfRes = false;
   if (ao.upsampling === false) n8.configuration.depthAwareUpsampling = false;
+  // n8ao turns transparencyAware on as soon as any material in the scene is transparent, visible or not, and the
+  // fountains' and the rain's always are: it then rendered the scene twice more each frame (and the twin's shadow map
+  // with it), 1.8 ms on the UHD 620 (docs/sim-evaluation-plan.md, C4). ?n8transp=auto gives n8ao its detection back
+  if (!ao.transparency) n8.autoDetectTransparency = false;
   composer.addPass(n8);
   const bloom = new BloomEffect({ intensity: 0.2, luminanceThreshold: 0.92, luminanceSmoothing: 0.15, mipmapBlur: true, radius: 0.55 });
   const tilt = new DepthBlur();

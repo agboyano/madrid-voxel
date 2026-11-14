@@ -174,6 +174,7 @@ URL parameters for A/B measurements. None is on by default, and none is meant fo
 | `n8full=1` | N8AO at full resolution | half | `web/src/post.ts` |
 | `n8up=0` | N8AO without depth-aware upsampling | on | `web/src/post.ts` |
 | `n8fade=0` | no fade of N8AO with camera distance | fades 3.5–5.5 km | `web/src/post.ts` |
+| `n8transp=auto` | n8ao's own detection of transparent materials, which renders the scene twice more per frame | off | `web/src/post.ts` |
 | `aotone=clear,cloudy` | how much the sky's light is dimmed when N8AO is off below level 0.4 (`1,1`: not at all) | `0.7,0.75` | `web/src/daylight.ts` |
 
 ## What Warsaw had that Madrid dropped or does not use

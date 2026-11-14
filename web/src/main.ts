@@ -65,7 +65,7 @@ const controls = makeControls();
 // ?n8=on|off, ?n8q=<quality mode>, ?n8full=1, ?n8up=0: N8AO variants for docs/n8ao-evaluation.md (evaluation only)
 const post = makePost(renderer, scene, camera, { force: qs.get('n8') === 'on' || qs.get('n8') === 'off' ? qs.get('n8') as 'on' | 'off' : undefined,
   quality: qs.get('n8q') ?? undefined, fullRes: qs.get('n8full') === '1', upsampling: qs.get('n8up') === '0' ? false : undefined,
-  fade: qs.get('n8fade') === '0' ? false : undefined });
+  fade: qs.get('n8fade') === '0' ? false : undefined, transparency: qs.get('n8transp') === 'auto' });
 const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
 const aoTone = qs.get('aotone')?.split(',').map(Number);
 if (aoTone?.length === 2 && aoTone.every(Number.isFinite)) daylight.aoTone = [aoTone[0], aoTone[1]];
