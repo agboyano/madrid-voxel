@@ -17,7 +17,7 @@ Paths prefixed `dtla:` are in `../dtla-voxel`. Paths prefixed `three:` are under
 
 **Hardware caveat.** All of dtla-voxel's figures come from one desktop: i7-9700K, GTX 1080 Ti through ANGLE/D3D11, headless Chromium, 1600 × 1000 [D] `dtla:docs/rendering-profile.html:90`. It never measured an integrated GPU or a phone [D] `dtla:docs/features/voxel-rendering-streaming.md:265`. Its viewer has no simulation. Its figures are a direction, not a forecast.
 
-**Status (2026-11-14).** C4, C1 and C2 adopted (Phase 1 done; next, Phase 2 from C3). Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
+**Status (2026-11-14).** C4, C1 and C2 adopted (Phase 1 done; next, Phase 2 from C3). C7's population curve measured: at 0.5, main thread −37 to −40 % at 4× CPU, awaiting the user's visual judgement. Phase 0 done: turning the simulation off at 17:00 shortens the mean frame by 5–13 % on this laptop and 21–43 % with the CPU throttled 4× (the overview, bound by the GPU, 4–5 %). That is well over the bar, so the plan goes on to Phase 1. The first summary below, written before Phase 0, underrated the CPU's share: see "Phase 0 results".
 
 **Summary of the conclusion** (before Phase 0)
 
@@ -437,6 +437,22 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 
 #### C7. Population, twin size and logic rate in one profile
 
+**Population curve (2026-11-14), population alone.** `simcost` at 17:00, level 0.3, with `?pop=1`, `0.7` and `0.5`, one page load per population (`data/pop/`). "Simulation's share" is the main thread with the simulation on minus off, from the A-B-B-A within each load:
+
+| CPU ×4 | street | sol | cibeles |
+| --- | --- | --- | --- |
+| Cars / people | 487 / 1 537 → 341 / 1 076 → 244 / 769 | same as street | 705 / 1 583 → 493 / 1 108 → 352 / 792 |
+| Main thread, ms | 28.8 → 22.2 → 18.2 (−37 %) | 28.6 → 22.2 → 17.8 (−38 %) | 39.4 → 28.8 → 23.7 (−40 %) |
+| Simulation's share, ms | 22.9 → 16.5 → 12.7 (−45 %) | 23.5 → 17.3 → 12.8 (−46 %) | 33.3 → 23.0 → 17.7 (−47 %) |
+| Mean frame interval, ms | 33.1 → 27.3 → 23.4 (−29 %) | 37.1 → 31.2 → 26.8 (−28 %) | 46.8 → 38.6 → 38.0 (−19 %) |
+| Mean frame interval at CPU ×1, ms | 23.1 → 22.3 → 21.9 (−5 %) | 29.7 → 29.0 → 28.5 (−4 %) | 40.8 → 40.1 → 39.9 (−2 %) |
+
+- **The cost is almost all proportional to the population:** at 0.5 the simulation's share falls 45–47 %, well past the abandon line (30 %), and the main thread at 4× falls 37–40 %, past the acceptance (15 %; measured at level 0.3, not 0.15).
+- **Without throttling it barely shows:** 2–5 % of the frame, which the GPU sets on this laptop.
+- **Noise across page loads:** the frame with the simulation off varies by up to 10 % between loads (`sol` at 4×: 30.9, 27.7, 28.8 ms), so the frame row is a rough figure; the main-thread rows are steadier.
+- **Screenshots:** `docs/img/pop-{street,sol,cibeles}-{1,0.7,0.5}.png`, level 1, 17:00. To be judged by the user before any profile is adopted.
+- **Not adopted yet.** What remains is a product choice: whether a lower population on weak devices is acceptable, and whether to choose it once per device at start-up or from the adaptive level. A population that follows the adaptive level would make agents appear and vanish in view as the level changes.
+
 - **Evidence.**
   - Population is fixed by the hour (`life.ts:121-130`, `:387-394`) [V].
   - The only device setting that touches agents is the shadow map size on phones (`main.ts:69`) [V].
@@ -582,7 +598,7 @@ Each candidate below gives the same fields: evidence, expected gain, the change,
 | C2 | Signals at phase changes, constant colours once | code | measured with C1 | half a day | low | no (checked) | **adopted** |
 | C3 | Cheaper twin map | code + dtla | up to 1.2 ms, 2–4 % | 1 day | low to medium | agents' shadow resolution | **evaluate now**, after C4 |
 | C5 | Less simulation far away | code + dtla | overview 3–4 % GPU, 7 ms CPU | 1 day | medium | yes, in far views | evaluate after Phase 1 |
-| C7 | One quality profile for the simulation | dtla | about −40 % sim CPU at 0.5 population | 1 day | low to medium | yes, density | evaluate after Phase 1 |
+| C7 | One quality profile for the simulation | dtla | −45 % sim CPU, frame −19 to −29 % at 4× CPU, at 0.5 population (measured) | 1 day | low to medium | yes, density | **curve measured**; awaiting the user's judgement |
 | C8 | Logic at 20 Hz | code | about −1 to −1.5 ms CPU at peak | half a day plus runs | medium | possibly, motion | evaluate after Phase 1 |
 | C9 | Cheaper logic structures | code + dtla | GC and p99, not median | 2–3 days | medium | no (identical hash) | evaluate later |
 | C6 | Instance-level culling | code + dtla | part of 2.3–2.5 ms CPU | 1 day | medium | no | evaluate later |
