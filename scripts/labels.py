@@ -126,7 +126,8 @@ def label(qid, f, t, geom, top_at, far):
                by=", ".join(arch[:2]) + (" et al." if len(arch) > 2 else "") if arch else None,
                height=f.get("height"), style=cap((f.get("styles") or [None])[0]),
                heritage=cap((f.get("heritage") or [None])[0]), site=f.get("website"), wiki=wiki, qid=qid,
-               alt=" ".join(filter(None, {en, es, f.get("es"), t.get("alt_name")} - {name})) or None,
+               # the other names, once each, in a fixed order (a set's order changed from build to build)
+               alt=" ".join(n for n in dict.fromkeys((en, es, f.get("es"), t.get("alt_name"))) if n and n != name) or None,
                far=far, x=c, y=r, z=top_at(r, c))
     return {k: v for k, v in out.items() if v is not None}
 
