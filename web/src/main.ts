@@ -282,6 +282,7 @@ async function boot() {
     .catch((e) => console.warn('foliage', e));
   loadWindows(meta, uniforms).then((set) => { setWindows = set; }).catch((e) => console.warn('windows', e));
   streamer = new TileStreamer(meta, makeVoxelMaterial(uniforms), scene);
+  streamer.bakeAO = qs.get('ao') !== 'merge'; // ?ao=merge: no per-vertex occlusion, larger merged faces (evaluation only)
   world = nav.world = streamer.world;
   const S = streamer, minTrunk = qs.get('trunkmin') ? +qs.get('trunkmin')! : undefined; // ?trunkmin=: narrowest trunk, m
   const trunksIn = qs.get('trunks') !== '0' ? Trunks.load(meta, uniforms, meta.tiles.N, { minTrunk }) : null;

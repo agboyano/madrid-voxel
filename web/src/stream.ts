@@ -55,6 +55,7 @@ export class TileStreamer implements ColumnSource {
   readonly dims: Record<number, TileLevel>;
   readonly nodes = new Map<string, TileNode>();
   readonly group = new THREE.Group();
+  bakeAO = true; // set before the first request (main.ts ?ao=merge)
   readonly world: World;
   version = 0;
   remeshed = 0; // tiles meshed again after a lost context: the city's shadow map is drawn again
@@ -166,7 +167,7 @@ export class TileStreamer implements ColumnSource {
   private requestFor({ node: n, dataOnly }: Job): { msg: MeshRequest; transfer: Transferable[] } {
     const [x0, y0] = this.bounds(n.s, n.tx, n.ty);
     const file = (k: string) => dataUrl(`tiles/${k}.bin`);
-    const base = { key: n.key, N: this.N, s: n.s, x0, y0 };
+    const base = { key: n.key, N: this.N, s: n.s, x0, y0, bakeAO: this.bakeAO };
     if (n.foliage) {
       // the base tile's column data is still here: hand over a copy instead of fetching it again
       const b = this.nodes.get(this.key(1, n.tx, n.ty))?.data;

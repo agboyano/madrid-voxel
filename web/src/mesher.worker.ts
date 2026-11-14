@@ -16,6 +16,7 @@ export interface MeshRequest {
   keep: boolean;
   dataOnly: boolean;
   bld: Uint16Array | null;
+  bakeAO: boolean;
 }
 
 export type MeshReply =
@@ -53,7 +54,7 @@ self.onmessage = async (e: MessageEvent<MeshRequest>) => {
       return;
     }
     const under = typeof m.under === 'string' ? decode(await fetchGzip(m.under), m.N) : m.under ?? null;
-    const out = meshTile(m.N, m.s, m.x0, m.y0, { counts, ground, runs }, m.bld, under);
+    const out = meshTile(m.N, m.s, m.x0, m.y0, { counts, ground, runs }, m.bld, under, m.bakeAO);
     const transfer: Transferable[] = [out.pos.buffer, out.attr.buffer, out.pal.buffer];
     if (out.bld) transfer.push(out.bld.buffer);
     if (keep) transfer.push(...columnBuffers(keep));
@@ -107,8 +108,10 @@ function topOf(c: RawColumns, off: Uint32Array, n: number) {
   return zmax;
 }
 
-// bldIds (1 m tiles): the building of each column (scripts/zones.py, 0: none); faces never merge across buildings
-function meshTile(N: number, s: number, x0: number, y0: number, cols: Columns, bldIds: Uint16Array | null, under: RawColumns | null) {
+// bldIds (1 m tiles): the building of each column (scripts/zones.py, 0: none); faces never merge across buildings.
+// bakeAO false (?ao=merge, technique 3 of docs/renderer-evaluation-plan.md): no per-vertex occlusion, so it no longer
+// splits the greedy rectangles
+function meshTile(N: number, s: number, x0: number, y0: number, cols: Columns, bldIds: Uint16Array | null, under: RawColumns | null, bakeAO = true) {
   const S = N + 2, SS = S * S, { ground } = cols;
   const off = offsetsOf(cols.counts, SS), uoff = under && offsetsOf(under.counts, SS);
   const zmax = Math.max(topOf(cols, off, SS), under && uoff ? topOf(under, uoff, SS) : 0);
@@ -124,13 +127,13 @@ function meshTile(N: number, s: number, x0: number, y0: number, cols: Columns, b
   fill(cols, off, (v) => v);
   const bidAt = (x: number, y: number) => (bldIds ? bldIds[Math.min(N - 1, Math.max(0, y)) * N + Math.min(N - 1, Math.max(0, x))] : 0);
   const out = new QuadBuffer();
-  meshFaces(N, s, x0, y0, vol, sz, ground, bidAt, out);
+  meshFaces(N, s, x0, y0, vol, sz, ground, bidAt, out, bakeAO);
   const n = out.count;
   return { pos: out.pos.slice(0, n * 3), attr: out.attr.slice(0, n * 4), pal: out.pal.slice(0, n), quads: n / 4, bld: bldIds ? out.bld.slice(0, n) : null };
 }
 
 function meshFaces(N: number, s: number, x0: number, y0: number, vol: Uint16Array, sz: number, ground: Uint8Array,
-  bidAt: (x: number, y: number) => number, out: QuadBuffer) {
+  bidAt: (x: number, y: number) => number, out: QuadBuffer, bakeAO: boolean) {
   const S = N + 2, sx = S, sy = S;
   const dims = [N, N, sz - 2];
   // the tallest column in each row and each column of the slab: slices are scanned only up to it
@@ -164,7 +167,7 @@ function meshFaces(N: number, s: number, x0: number, y0: number, vol: Uint16Arra
                 const px = d === 0 ? sl : u === 0 ? i : j, py = d === 1 ? sl : u === 1 ? i : j;
                 const gm = ground[(px + 1) + S * (py + 1)];
                 const ang = d < 2 && nb === 0 ? wallAngle(N, px, py, d === 0 ? j : i, d, dir, cell) : 0;
-                const aob = nb === 0 ? faceAO(vol, ni, su, sv, ang ? d : -1) : 255;
+                const aob = nb === 0 && bakeAO ? faceAO(vol, ni, su, sv, ang ? d : -1) : 255;
                 // < 2^53: ang < 25, palette < 4096, ids < 16384
                 key = (((ang * 4096 + a) * 256 + aob) * 256 + gm) * 16384 + bidAt(px, py) + 1;
                 any = true;

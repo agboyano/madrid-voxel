@@ -553,3 +553,53 @@ Adopted (`DECISIONS.md`, 2026-11-14): while the camera moves, swaps redraw the s
 Visual check with `web/tools/shadowswap.mjs`: after a 10° turn with no swap redraw at all, the stale map differs from a fresh one in 0.10 % of pixels in `prado` (all on far blocks at the top of the view; `docs/img/shadow-swap-prado-stale.png`, `-fresh.png`) and in none in `sol`, `cibeles` and `overview`.
 
 For technique 2 this leaves the refits (9 per 1.3 km pan, by design), hour and day changes, and loading. Its experiment is only worth running if those still show as slow frames.
+
+## Technique 3, stage B: option a behind `?ao=merge` (2026-11-14)
+
+`?ao=merge` meshes without per-vertex occlusion (`bakeAO` in `web/src/mesher.worker.ts`, set by `web/src/main.ts`): every face gets the neutral value, so occlusion no longer splits the greedy rectangles and the material needs no change. Without the parameter nothing changes. The budget still counts each block's triangles as meshed with occlusion, so at a given level both variants show the same blocks. Raw output in `data/baseline/ao_l03_*.json` and `ao_l1_*.json`.
+
+### Time (`web/tools/passes.mjs`, 15 June, 11:00)
+
+Level 0.3, no N8AO, A-B-B-A (each figure the mean of its two runs; the laptop drifted by up to 12 % between A and A2):
+
+| View | Frame GPU, baked → merged | Sun-map redraw | Triangles shown |
+| --- | --- | --- | --- |
+| overview | 55.8 → 47.6 ms (−15 %) | 19.6 → 15.0 ms (−23 %) | −22 % |
+| top | 39.2 → 31.2 ms (−20 %) | 18.5 → 14.6 ms (−21 %) | −21 % |
+| prado | 45.6 → 39.4 ms (−14 %) | 24.3 → 22.3 ms (−8 %) | −21 % |
+| cibeles | 38.8 → 36.6 ms (−6 %) | 22.0 → 20.2 ms (−8 %) | −20 % |
+| sol | 29.0 → 27.1 ms (−7 %) | 21.1 → 19.1 ms (−9 %) | −26 % |
+| street | 20.7 → 20.4 ms (−2 %) | 22.7 → 21.0 ms (−7 %) | −26 % |
+
+Level 1 (whole city, 42.3 → 32.1 M triangles), one run each:
+
+| View | Frame GPU | Scene pass | Sun-map redraw |
+| --- | --- | --- | --- |
+| overview | 291 → 247 ms (−15 %) | 262 → 219 ms | 186 → 153 ms (−18 %) |
+| prado | 109 → 90 ms (−17 %) | 76 → 60 ms | 70 → 60 ms (−14 %) |
+| sol | 70 → 61 ms (−13 %) | 41 → 33 ms | 28 → 26 ms (−6 %) |
+
+The baseline's reading that the adapted level is fragment-bound was too strong: at level 0.3 the far and middle views gain 14–20 % from a fifth fewer triangles. The time criteria pass: GPU memory −24 % by triangle count (vertex bytes follow it; not measured directly), overview at level 1 −15 %, no view slower.
+
+### Image (`scripts/screenshot.py`, 15 June 13:00; mean luminance difference, threshold 3/255)
+
+| View | Level 0.3, clear | Level 0.3, cloudy | Level 1, clear |
+| --- | --- | --- | --- |
+| street | 1.5 | 2.9 | 2.6 |
+| sol | 1.4 | 2.3 | 1.4 |
+| prado | 2.0 | **3.5** | 1.7 |
+| overview | **4.0** | **5.7** | — |
+
+The merged image is always lighter (the signed difference is positive in every pair). At level 1, with N8AO, it passes. At level 0.3, without N8AO, it fails in the overview and in `prado` under cloud: the dark gaps between buildings and in courtyards go, and the city reads flatter and washed out (`docs/img/ao-overview-cloudy-l0.3-bake.png` against `-merge.png`). At street level the difference is hard to see (`ao-street-cloudy-l0.3-*`, `ao-prado-clear-l1-*`).
+
+### Verdict
+
+- **Option a is dropped**, by the plan's own criterion: it fails the visual check at level 0.3, which is where the devices that need the saving run.
+- **The saving is real and worth a second option.** It is 24 % of the geometry and 13–20 % of the frame in far and middle views, against the "little in fps" this plan expected.
+- **Where the loss is:** in far views, the large-scale darkening of gaps and courtyards. Up close, N8AO or nothing makes little difference. That points to option c (occlusion out of the key only in far tiles) being the wrong way round: the far tiles are where it shows.
+- **Next candidates:**
+  - **Option b:** occlusion per fragment from a per-tile occupancy texture. It costs 1–2 weeks.
+  - **Keep N8AO on below level 0.4:** compare its cost with the 14–20 % gained.
+  - **A cheaper far-field term:** for example darkening by the depth of the gap to the neighbouring roofs, which the ground and height data already give. Not yet designed.
+
+`?ao=merge` stays as an evaluation switch.
