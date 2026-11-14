@@ -476,3 +476,11 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Rejected:**
   - **Coarser shadow geometry (technique 2's experiment):** with no light refits at all, an hour drag draws only 11–15 % more frames than with this fix, and its slow frames stay. A redraw 40 % cheaper would give under half of that.
   - **No refits at all during a flight:** at the end of a flight into a street the frame would be a city wide, and the landing would refit anyway.
+
+## 2026-11-14: dtla-voxel's adaptive levels are dropped after an offline count
+
+- **Decision:** technique 1 of `docs/renderer-evaluation-plan.md` (dtla-voxel's 1/2/4/8 m tree with per-node selection) stops at stage A. The block-and-clay model stays. Clay at 4 m instead of 8 m is noted as a smaller idea, not evaluated.
+- **Why:** with dtla-voxel's own rule and caps applied to six views, it draws about as many triangles as the adapted level (−20 % to +28 %, −6 % in the median), short of the 25 % cut the plan set before measuring, and adds 55 % to the download. Its gain is quality where the viewer shows clay today: in the overview, 98 % of the screen at 4 m instead of 8 m for 11 % fewer triangles; in the middle views, 22–32 % of the screen. The overview under the rule is the whole city at 4 m, which 4 m clay would give without replacing the model.
+- **Rejected:**
+  - **Stage B and C:** 4 days and then 3–5 weeks to replace a tuned model (blocks real with their trees, hysteresis, building-by-building loading, collisions) for no cut in triangles on a GPU bound by fragments.
+  - **Stage A against fixed 1 m only:** that comparison (−92 % in the overview) is dtla-voxel's and holds here too, but no visitor sees fixed 1 m.

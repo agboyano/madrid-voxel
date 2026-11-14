@@ -27,7 +27,7 @@ Paths prefixed `dtla:` are in dtla-voxel; the others are in this repository. The
 | 2. Coarser shadows | Measure how often the shadow map is redrawn now. The experiment can use the existing 8 m clay, without waiting for technique 1. |
 | 1. Adaptive levels | Evaluate later, in stages. It has been turned down twice here, and dtla-voxel's evidence is not enough to reopen it without a measurement of our own. |
 
-**Status (2026-11-14):** technique 3 option a dropped, a far-field occlusion term still open; technique 2 closed after three cheaper fixes to the redraws, its experiment not worth running; technique 1 not started. Results in the dated sections at the end.
+**Status (2026-11-14):** technique 3 option a dropped, a far-field occlusion term still open; technique 2 closed after three cheaper fixes to the redraws, its experiment not worth running; technique 1 dropped after stage A (no triangle cut against the adapted level), with 4 m clay left as a smaller idea. Results in the dated sections at the end.
 
 ---
 
@@ -680,3 +680,49 @@ Rotating and panning are unchanged, as they should be.
 - **Upper bound for technique 2.** With no light refits the drag draws 11–15 % more frames than with the fix. Making each redraw 40 % cheaper, its own acceptance bar, would give under half of that, in drags only, and nothing in hand navigation, where redraws no longer coincide with slow frames.
 
 **Verdict: technique 2's experiment (`?shadowlod=8`) is not worth running.** What remains of the redraw cost after the swap limit and these two fixes is under the 5 % of the frame that this evaluation asks of a change. The slow frames left in flights and hour drags are a separate question, for a profile of streaming and uploads, not for the shadow pass.
+
+## Technique 1, stage A: dtla-voxel's levels, counted offline (2026-11-14)
+
+**How.**
+- `scripts/eval_lod_tiles.py` rebuilds the 1 m volume from the published level-1 tiles (base and foliage) and writes 2, 4 and 8 m tiles with `tiles.py`'s own `export` and `downsample`, outside the repository (`$MADRID_CACHE/eval/lod`). Check: the rebuilt 8 m clay has 99.96 % of the published clay's cells; the difference is the tree trunks, which neither level-1 file holds.
+- `web/tools/lodcost.mjs` meshes every node of every level once in the viewer's mesher (the 2 and 4 m tiles served in place), for triangles, GPU bytes and column bytes per node.
+- `web/tools/lodselect.mjs` applies dtla-voxel's selection to the views: a port of `dtla:web/src/tileSelection.ts` with its balanced profile (refine past 2 px per voxel, always within 192 m, off-screen shadow casters, 384 leaves, 128 MiB), with no dwell. 1600 × 1000, fov 28°, 15 June 11:00.
+- `web/tools/lodshare.mjs` gives what this viewer draws today in the same terms, at the adapted levels of the baseline (`top` and `cibeles`, not in that table, at 0.25).
+- Both count the triangles of tile meshes whose box meets the frustum, as three.js culls them. At fixed 1 m the count matches the GPU's from the baseline (overview 42.3 M against 42.8 M, cibeles 8.1 against 8.2, street 13.1 against 13.3).
+- The screen share is the ground under a 64 × 40 grid of pixels: which level covers it under the rule, and whether its city block is real (1 m) or clay (8 m) in the viewer.
+
+Raw output in `data/baseline/lodcost.log`, `lodselect.log`, `lodshare.log`.
+
+**The levels.**
+
+| Level | Nodes | Triangles | GPU + columns | Download (gzip) |
+| --- | --- | --- | --- | --- |
+| 1 m, buildings and foliage | 805 + 805 | 42.35 M | 1 455 MB | 10.61 MB |
+| 2 m | 216 | 12.55 M | 365 MB | 4.43 MB |
+| 4 m | 54 | 3.48 M | 99 MB | 1.42 MB |
+| 8 m (the clay, exists) | 15 | 0.80 M | 23 MB | 0.42 MB |
+
+Levels 2 and 4 add 5.85 MB, **+55 %** over level 1 with its foliage (dtla-voxel: +71 %), under the plan's 75 %.
+
+**Triangles in view and screen share, rule against the viewer today.**
+
+| View | Fixed 1 m | Viewer today (level) | Screen today: 1 m / clay | Rule, capped | Change | Screen under the rule: 8 / 4 / 2 / 1 m |
+| --- | --- | --- | --- | --- | --- | --- |
+| overview | 42.33 M | 3.93 M (0.14) | 2 / 98 % | 3.48 M | −11 % | 0 / 100 / 0 / 0 % |
+| top | 1.29 M | 1.42 M (0.25) | 90 / 10 % | 1.29 M | −9 % | 0 / 0 / 0 / 100 % |
+| prado | 5.65 M | 1.69 M (0.21) | 78 / 22 % | 1.59 M | −6 % | 0 / 4 / 21 / 75 % |
+| cibeles | 8.14 M | 2.01 M (0.25) | 68 / 32 % | 2.23 M | +11 % | 0 / 10 / 25 / 65 % |
+| sol | 1.54 M | 1.63 M (0.43) | 100 / 0 % | 1.31 M | −20 % | 0 / 0 / 0 / 100 % |
+| street | 13.08 M | 1.54 M (0.39) | 96 / 4 % | 1.97 M | +28 % | 0 / 0 / 0 / 100 % |
+
+- **The caps decide the near views.** The rule alone, uncapped, asks for 5–14 M triangles loaded in `street`, `palace`, `cibeles` and `prado` (up to 168 leaves at 1 m); the 128 MiB cap stops it at 127–128 MB in every view but the overview. Under the caps it loads 3.7–4.4 M triangles in all of them.
+- **Against fixed 1 m** the cut is large where the view is far or wide: the overview falls from 42.3 to 3.5 M (−92 %), `street` from 13.1 to 2.0 M. That is dtla-voxel's comparison, and it holds here.
+- **Against the viewer today** the triangles are about the same: −20 % to +28 %, −6 % in the median.
+- **The quality is not.** In the overview, 98 % of the screen goes from 8 m clay to 4 m for 11 % fewer triangles. In `cibeles` and `prado` the 22–32 % that is clay today becomes 2–4 m. In `top`, `sol` and `street` there is almost no clay to replace.
+
+**Against the criteria.**
+- **Stage A's abandonment test is met as written.** It asks for a triangle cut of at least 25 % against the adapted level; the cut is −20 % to +28 %. The download (+55 %) passes.
+- **The B → C quality bar** (at least 30 more points of the screen at 4 m or finer) is met in two views of six: the overview (+98) and `cibeles` (+32). `prado` gets +22, the street views 0–10.
+- This is what the baseline predicted: at the adapted level the scene pass is bound by fragments, not triangles, so the rule cannot make it faster, and its gain is quality in far views.
+
+**Verdict.** Technique 1 as dtla-voxel builds it (a tree of four levels with per-node selection, replacing the block-and-clay model, 3–5 weeks) is dropped: it does not cut triangles against this viewer, and its quality gain is concentrated where a much smaller change would give it. **That smaller change** is stage B's own setup: the clay at 4 m instead of 8 m, with the block-and-clay model, building ids and collisions untouched. Under the rule the overview is exactly that (100 % at 4 m, 3.48 M triangles); the cost is +2.7 M triangles of clay in every view and +1.42 MB of download. It is a separate question, for a new evaluation if wanted: frame time with 4 m clay at the adapted levels, and the jump from 4 m clay to a 1 m block.
