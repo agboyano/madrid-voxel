@@ -548,3 +548,9 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** the historic core (`landmarks.historic_core`, its brick and render palette and tiled roofs) is the block of the street network bounded by Calle de Bailén, Calle Mayor, Plaza Mayor, Calle de Toledo, Plaza de la Cebada, Plaza de los Carros and Calle de la Redondilla, taken from the OSM centrelines at build time, with Plaza Mayor itself. Each street joins the next where they come closest.
 - **Why:** the rough outline drawn by hand ran up to 80 m north of Calle Mayor and up to 140 m east of Calle de Toledo, and gave the core's palette to blocks round Calle de Atocha and San Ginés. The new outline is 22 ha against 32 ha; 21 ha are common to both (`docs/img/core-before-*.png`, `core-after-*.png`).
 - **Rejected:** the barrio of Palacio, the official unit (OSM relation 8816051): it also takes in the Royal Palace, Ópera and the streets up to Plaza de España. Madrid de los Austrias has no official boundary.
+
+## 2026-11-14: The viewer refuses data built at another voxel size
+
+- **Decision:** the viewer reads `meta.voxel` when it boots and, if it is not 1, stops with a message on the loading screen instead of drawing the map.
+- **Why:** the pipeline takes its voxel size from one constant (`scripts/aoi.py` `VOXEL_SIZE`) and writes it to `meta.json`, but the viewer draws one voxel as one scene metre in the mesher, the world lookups, the terrain and the shaders (`NOTES.md`, "1 m assumptions"). Data at 0.5 m would load and come out at half scale, with wrong heights, and nothing would say why.
+- **Rejected:** scaling the scene by `meta.voxel`. It fixes positions but not the cell-based rules (wall angles over 5 cells, ambient occlusion over 1 cell, the window grid every 3 m, the uint8 ground), so the map would draw but be subtly wrong. `PLAN.md` keeps 1 m voxels and treats another size as a separate project.

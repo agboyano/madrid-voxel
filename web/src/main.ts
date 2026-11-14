@@ -294,6 +294,12 @@ function keepInside() {
 async function boot() {
   let meta: Meta;
   [meta, climate] = await Promise.all([fetchJson<Meta>(dataUrl('meta.json')), fetchJson<Climate>(dataUrl('climate.json'))]);
+  // The viewer draws one voxel as one scene metre (NOTES.md, "1 m assumptions"): data built at another VOXEL_SIZE
+  // would come out at the wrong scale everywhere, so it is refused rather than drawn
+  if ((meta.voxel ?? 1) !== 1) {
+    $('#loading-text').textContent = `These map data use ${meta.voxel} m voxels; this viewer draws 1 m voxels only.`;
+    throw new Error(`meta.voxel = ${meta.voxel}: the viewer supports 1 m voxels only`);
+  }
   setDataAssets(meta.assets);
   views = meta.views;
   if (meta.lonlat) setSite(...meta.lonlat);
