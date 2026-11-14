@@ -11,5 +11,7 @@ declare module 'n8ao' {
       halfRes: boolean;
       depthAwareUpsampling: boolean;
     };
+    // 'Performance' | 'Low' | 'Medium' (the default) | 'High' | 'Ultra' | 'Neural-Low' | 'Neural-Medium' | 'Neural-High'
+    setQualityMode(mode: string): void;
   }
 }

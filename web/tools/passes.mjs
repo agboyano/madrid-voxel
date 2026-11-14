@@ -3,17 +3,18 @@
 // gate's onBeforeShadow), plus the CPU time of composer.render and what is loaded, by kind. Each view twice: as it
 // stands (the sun's map is only redrawn on a change) and with the sun's map redrawn every frame.
 // The common baseline of docs/renderer-evaluation-plan.md.
-// usage: node tools/passes.mjs [views, e.g. "overview,prado,sol"] [query, e.g. "level=1&date=1-15"] [out.json]
+// usage: node tools/passes.mjs [views, e.g. "overview,prado,sol"] [query, e.g. "level=1&date=1-15"] [out.json] [WxH@dpr]
 //        (dev server on :5173; $CHROMIUM picks the browser; without level= the viewer adapts it for 45 s first)
 import fs from 'node:fs';
 import { launch } from './launch.mjs';
 
-const [views = 'overview,top,prado,cibeles,sol,street', query = 'level=1&date=6-15', out] = process.argv.slice(2);
+const [views = 'overview,top,prado,cibeles,sol,street', query = 'level=1&date=6-15', out, vp = '1600x1000@1'] = process.argv.slice(2);
+const [width, height, dpr] = vp.split(/[x@]/).map(Number); // a phone's viewport and density (e.g. 390x844@3) emulates its screen, not its GPU
 const FRAMES = 12, WARM = 4;
 const browser = await launch();
 const rows = [];
 for (const view of views.split(',')) {
-  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: dpr, isMobile: dpr > 1, hasTouch: dpr > 1 });
   page.on('pageerror', (e) => console.log('pageerror', e.message));
   // the tool owns the frames while it measures: the viewer's loop waits
   await page.addInitScript(() => {
@@ -81,14 +82,19 @@ for (const view of views.split(',')) {
       for (let i = 0; i < WARM; i++) await frame(redraw);
       for (let i = 0; fs.length < FRAMES && i < FRAMES * 3; i++) { const f = await frame(redraw); if (!f.disjoint) fs.push(f); }
       const med = (xs) => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+      const p95 = (xs) => { const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.ceil(s.length * 0.95) - 1)]; };
+      const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
       const keys = [...new Set(fs.flatMap((f) => Object.keys(f.parts)))];
       const parts = Object.fromEntries(keys.map((k) => [k, {
         gpu: +med(fs.map((f) => f.parts[k]?.gpu ?? 0)).toFixed(2),
+        gpuMean: +mean(fs.map((f) => f.parts[k]?.gpu ?? 0)).toFixed(2),
+        gpuP95: +p95(fs.map((f) => f.parts[k]?.gpu ?? 0)).toFixed(2),
         Mtris: +(med(fs.map((f) => f.parts[k]?.tris ?? 0)) / 1e6).toFixed(2),
         calls: med(fs.map((f) => f.parts[k]?.calls ?? 0)),
       }]));
-      const gpuTotal = +med(fs.map((f) => Object.values(f.parts).reduce((s, p) => s + p.gpu, 0))).toFixed(2);
-      return { frames: fs.length, cpu: +med(fs.map((f) => f.cpu)).toFixed(2), gpu: gpuTotal, parts };
+      const totals = fs.map((f) => Object.values(f.parts).reduce((s, p) => s + p.gpu, 0));
+      return { frames: fs.length, cpu: +med(fs.map((f) => f.cpu)).toFixed(2), gpu: +med(totals).toFixed(2), gpuMean: +mean(totals).toFixed(2),
+        gpuP95: +p95(totals).toFixed(2), parts };
     };
     // what is loaded and shown, by kind (triangles)
     const tri = (o) => {
@@ -103,7 +109,8 @@ for (const view of views.split(',')) {
     let life = 0; window.__life?.group.traverse((o) => { if (o.isMesh && o.visible) life += tri(o); });
     kinds.life = life;
     const out = {
-      level: +T.level().toFixed(3), budgetM: Number.isFinite(T.budget()) ? +(T.budget() / 1e6).toFixed(2) : 'whole',
+      level: +T.level().toFixed(3), canvas: [r.domElement.width, r.domElement.height], pixelRatio: r.getPixelRatio(),
+      gpuName: (() => { const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : null; })(), budgetM: Number.isFinite(T.budget()) ? +(T.budget() / 1e6).toFixed(2) : 'whole',
       shownMtris: Object.fromEntries(Object.entries(kinds).map(([k, v]) => [k, +(v / 1e6).toFixed(2)])),
       gpuMemMB: { geometries: r.info.memory.geometries, textures: r.info.memory.textures },
       heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : null,
@@ -115,10 +122,10 @@ for (const view of views.split(',')) {
     return out;
   }, { FRAMES, WARM });
   rows.push({ view, query, ...m });
-  console.log(`\n== ${view} (${query}) level ${m.level}, budget ${m.budgetM} M; shown M tris`, JSON.stringify(m.shownMtris), `heap ${m.heapMB} MB`);
+  console.log(`\n== ${view} (${query}) canvas ${m.canvas.join('x')} at ${m.pixelRatio}, level ${m.level}, budget ${m.budgetM} M; shown M tris`, JSON.stringify(m.shownMtris), `heap ${m.heapMB} MB`);
   for (const mode of ['asIs', 'sunRedraw']) {
     const x = m[mode];
-    console.log(`  ${mode.padEnd(9)} cpu ${x.cpu} ms, gpu ${x.gpu} ms (${x.frames} frames)`);
+    console.log(`  ${mode.padEnd(9)} cpu ${x.cpu} ms, gpu ${x.gpu} ms (mean ${x.gpuMean}, p95 ${x.gpuP95}; ${x.frames} frames)`);
     for (const [k, p] of Object.entries(x.parts)) console.log(`    ${k.padEnd(28)} gpu ${String(p.gpu).padStart(7)} ms  ${String(p.Mtris).padStart(6)} M tris  ${String(p.calls).padStart(5)} calls`);
   }
   await page.close();

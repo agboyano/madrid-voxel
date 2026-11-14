@@ -38,12 +38,19 @@ class DepthBlur extends Effect {
   }
 }
 
-export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
+// Evaluation switches for N8AO (docs/n8ao-evaluation.md), all off by default: force it on or off whatever the level,
+// a quality mode of n8ao's setQualityMode, full resolution, no depth-aware upsampling
+export interface AOOptions { force?: 'on' | 'off'; quality?: string; fullRes?: boolean; upsampling?: boolean }
+
+export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, ao: AOOptions = {}) {
   const tone = new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL });
   const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType, multisampling: 0 });
   composer.addPass(new RenderPass(scene, camera));
   const n8 = new N8AOPostPass(scene, camera, innerWidth, innerHeight);
   Object.assign(n8.configuration, { aoRadius: 6, distanceFalloff: 1.5, intensity: 2.2, halfRes: true, depthAwareUpsampling: true });
+  if (ao.quality) n8.setQualityMode(ao.quality);
+  if (ao.fullRes) n8.configuration.halfRes = false;
+  if (ao.upsampling === false) n8.configuration.depthAwareUpsampling = false;
   composer.addPass(n8);
   const bloom = new BloomEffect({ intensity: 0.2, luminanceThreshold: 0.92, luminanceSmoothing: 0.15, mipmapBlur: true, radius: 0.55 });
   const tilt = new DepthBlur();
@@ -58,7 +65,7 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, came
     new SMAAEffect()));
   // light: for slow GPUs, no ambient occlusion and no depth blur, the two passes that read depth all over the screen
   let light = false;
-  const setLight = (on: boolean) => { light = on; n8.enabled = !on; };
+  const setLight = (on: boolean) => { light = on; n8.enabled = ao.force ? ao.force === 'on' : !on; };
   // focused on what the camera looks at; the blur fades out towards the street, and eases over the whole map
   const setHeight = (h: number, enabled: boolean, focus = 500) => {
     tiltPass.enabled = enabled && !light && h > 60;

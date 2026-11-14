@@ -62,7 +62,9 @@ renderer.domElement.addEventListener('webglcontextrestored', () => { streamer?.c
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.5, 9000);
 const controls = makeControls();
-const post = makePost(renderer, scene, camera);
+// ?n8=on|off, ?n8q=<quality mode>, ?n8full=1, ?n8up=0: N8AO variants for docs/n8ao-evaluation.md (evaluation only)
+const post = makePost(renderer, scene, camera, { force: qs.get('n8') === 'on' || qs.get('n8') === 'off' ? qs.get('n8') as 'on' | 'off' : undefined,
+  quality: qs.get('n8q') ?? undefined, fullRes: qs.get('n8full') === '1', upsampling: qs.get('n8up') === '0' ? false : undefined });
 post.setLight(level < LIGHT_POST);
 const daylight = new Daylight(renderer, scene, phone ? 2048 : 4096);
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);

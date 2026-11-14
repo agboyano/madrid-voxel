@@ -603,3 +603,10 @@ The merged image is always lighter (the signed difference is positive in every p
   - **A cheaper far-field term:** for example darkening by the depth of the gap to the neighbouring roofs, which the ground and height data already give. Not yet designed.
 
 `?ao=merge` stays as an evaluation switch.
+
+## N8AO's cost and its tie to technique 3 (2026-11-14)
+
+Measured in `docs/n8ao-evaluation.md`. Two results bear on this plan:
+
+- **N8AO fades with camera distance** (its radius is in world metres): it adds 6–20/255 of darkening up to about 2.5 km and almost none at the overview's 6 km. With N8AO forced on, `?ao=merge` passes the image check near and at middle distance but still fails in the overview (4.0–5.7/255). N8AO cannot replace the per-vertex occlusion where the saving matters most. That follow-up of technique 3 is dropped; a far-field occlusion term (option b, or a cheap gap darkening from heights) is what remains.
+- **The pass costs 10–25 % of the frame on the UHD 620** (6–18 ms), against about 1 ms on dtla-voxel's GTX 1080 Ti. The report recommends fading it out between 4 and 6 km, and matching the tone when it is off below level 0.4.
