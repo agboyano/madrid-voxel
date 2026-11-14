@@ -90,7 +90,7 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [x] Generate voxels for the test AOI with ground and elevation only, generic palette.
 - [x] Screenshots from 3 views (top-down, oblique over Sol, street level).
 - [x] Assess quality: holes in roofs, roof edges and cornices, inner courtyards, trees, artefacts. Measure the percentage of 1 m roof cells with no points and how they are filled.
-- [ ] **Optional, only if roofs come out with many holes or very ragged edges:** download the Ayuntamiento DSM 2023 for the AOI (`fetch_dsm.py`), build a variant with its heights and compare screenshots. Bear in mind it dates from 2023 (the LiDAR is from 2024) and is unclassified.
+- [x] Not needed (`DECISIONS.md`, 2026-11-11). **Optional, only if roofs come out with many holes or very ragged edges:** download the Ayuntamiento DSM 2023 for the AOI (`fetch_dsm.py`), build a variant with its heights and compare screenshots. Bear in mind it dates from 2023 (the LiDAR is from 2024) and is unclassified.
 
 **Checkpoint 2:** the user approves the NPC02 elevation result, or decides whether it is worth complementing with the DSM 2023. Log it in `DECISIONS.md`.
 
@@ -153,7 +153,7 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 - [x] README in English: what it is, screenshots, how to build it, data sources with attributions and licences, credits to Piotr Migdał (warsaw-vibe-voxel) and sigman78 (dtla-voxel).
 - [x] Known limitations section (as in dtla-voxel).
 - [x] Final attribution review before publishing: search the whole repository (code, comments, docs, package metadata, workflow files, site HTML) and the git history for AI credits or attribution, and remove any found. The GitHub contributors list must show only the user; upstream authors are credited in the README and licence files, not through git history.
-- [ ] Check that the published site loads correctly.
+- [x] Check that the published site loads correctly (checked by the user at https://agboyano.github.io/madrid-voxel/).
 
 **Checkpoint 6:** site published.
 
