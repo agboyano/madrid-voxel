@@ -610,3 +610,40 @@ Measured in `docs/n8ao-evaluation.md`. Two results bear on this plan:
 
 - **N8AO fades with camera distance** (its radius is in world metres): it adds 6–20/255 of darkening up to about 2.5 km and almost none at the overview's 5.9 km. With N8AO forced on, `?ao=merge` passes the image check near and at middle distance but still fails in the overview (4.0–5.7/255). N8AO cannot replace the per-vertex occlusion where the saving matters most. That follow-up of technique 3 is dropped; a far-field occlusion term (option b, or a cheap gap darkening from heights) is what remains.
 - **The pass costs 10–25 % of the frame on the UHD 620** (6–18 ms), against about 1 ms on dtla-voxel's GTX 1080 Ti. The report recommends fading it out between 4 and 6 km, and matching the tone when it is off below level 0.4.
+
+## Technique 2: do the remaining redraws make the slow frames? (2026-11-14)
+
+The abandonment test of technique 2, run after the swap limit. `web/tools/slowframes.mjs` records every frame's interval and whether the sun's map was redrawn in it, and why, through rotate, tilt, pan and zoom (as `redraws.mjs`), a tour of eight views with `flyTo`, and the hour dragged from 16:00 to 19:00 in 10 s. Overview, 21 June, UHD 620, at the adapted level and at level 0.3; raw output in `data/baseline/slowframes-*.log` and `.json`.
+
+A redraw shows in its own frame's interval or the next one, since the GPU runs behind, so a slow frame "coincides" if either of them redrew. The "chance" column is the share of all frames with a redraw that near, which is what the coincidence would be if redraws had nothing to do with it.
+
+| Activity | Redraws / min (adapted, 0.3) | Causes | Frames > 100 ms with a redraw (adapted; 0.3) | Chance (adapted; 0.3) |
+| --- | --- | --- | --- | --- |
+| Rotate | 39, 36 | swaps | 5 of 30 (17 %); 2 of 26 (8 %) | 8 %; 7 % |
+| Tilt | 13, 34 | swaps | 0 of 2; 2 of 31 (6 %) | 2 %; 6 % |
+| Pan | 63, 56 | 9 refits, 4 swaps | none slow; 0 of 3 | 6 %; 7 % |
+| Zoom | 8, 19 | swaps | none slow; 0 of 1 | 1 %; 2 % |
+| Fly between views | 426, 364 | 85 % refits, the rest swaps | 19 of 22 (86 %); 27 of 35 (77 %) | 39 %; 41 % |
+| Drag the hour | 666, 484 | refits (the light moved) | 37 of 37; 43 of 43 | 93 %; 95 % |
+
+The same frames split by whether a redraw was near (share over 100 ms, mean interval):
+
+| Activity | Near a redraw, adapted | Elsewhere, adapted | Near a redraw, 0.3 | Elsewhere, 0.3 |
+| --- | --- | --- | --- | --- |
+| Rotate | 36 %, 85 ms (14 frames) | 15 %, 58 ms | 17 %, 74 ms | 15 %, 56 ms |
+| Tilt | 0 %, 33 ms | 1 %, 36 ms | 17 %, 53 ms | 15 %, 51 ms |
+| Pan | 0 %, 32 ms | 0 %, 31 ms | 0 %, 47 ms | 1 %, 39 ms |
+| Fly | 9 %, 51 ms | 1 %, 31 ms | 15 %, 67 ms | 3 %, 36 ms |
+| Hour | 20 %, 60 ms | 0 %, 18 ms (13 frames) | 36 %, 91 ms | 0 %, 17 ms (7 frames) |
+
+**What it says**
+
+- **Moving the camera by hand: the redraws are not what makes it slow.** At the rates left after the swap limit, slow frames coincide with a redraw about as often as chance would have it (0–17 % against 1–8 %), always under the 20 % bar. The slow frames while rotating and tilting (15 % of them over 100 ms) come from elsewhere, most likely the blocks the budget swaps in, which have to be uploaded.
+- **Flights and hour drags: they are.** A flight refits the sun's frame almost every frame, because the focus crosses a sixteenth of the frame's width in one or two frames. A drag of the hour moves the light, and every step redraws by design. Near a redraw, frames are 20–30 ms longer on average in a flight and 40–75 ms longer in a drag, and slow frames go from 0–3 % to 9–36 %.
+- **The abandonment test is not met.** It needs fewer than 6 redraws a minute and fewer than 20 % of slow frames with one; hand navigation alone gives 8–63 a minute, and flights and hour drags give 77–100 % coincidence. Technique 2 stays open, but for two moments only, both driven by refits rather than swaps: flights between views and dragging the hour.
+
+**Next, before the `?shadowlod=8` experiment.** As with the swaps, a cheaper fix could come first:
+
+- **Flights:** during a `flyTo`, fit the sun's frame once to cover both ends of the flight (or the path, up to the size the frame allows), and refit when it lands. Shadows mid-flight would be coarser, for 1.6 s.
+- **Hour drags:** redraw at most every 100–150 ms while the slider moves, and once when it stops. The shadows would step instead of gliding.
+- **Technique 2** makes each of these redraws cheaper rather than rarer. Its experiment is worth running only if the slow frames in flights and drags are still there after these two.
