@@ -496,17 +496,24 @@ A sun-map redraw costs 15–37 ms, about as much as the rest of the frame.
 
 At level 1 the scene pass follows the triangle count. The sun map takes in the whole city whenever the view is far or high (`top`: 1.7 M triangles in view, 42.8 M in the shadow map).
 
-### Sun-map redraws (`web/tools/redraws.mjs`, adapted level, 21 June)
+### Sun-map redraws (`web/tools/redraws.mjs`, overview, 21 June)
 
-| Activity | Redraws |
-| --- | --- |
-| Loading | 43 in 16.3 s |
-| After loading, still | 0 in 25 s |
-| Orbiting | 51 in 15.5 s (the 5 s of mouse moves took 15.5 s) |
-| Zooming | 2 in 8.5 s |
-| Panning | 0 in 7.8 s |
+The first run of the tool had the mouse buttons swapped: in this viewer the left button pans and the right one rotates (`web/src/nav/nav.ts:69`). Its "orbiting" figure (51 redraws in 15.5 s) was a pan. The tool now uses the right buttons, takes a fixed level, and puts each redraw down to its cause: a refit of the sun's frame (`daylight.fitSun`: the focus moved or the view grew) or a change in what the map shows (`stillChanged` in `web/src/main.ts`: the tiles shown, real or clay, and their uniforms). Raw output in `data/baseline/redraws-causes.log`.
 
-While orbiting the map is redrawn about three times a second. The likely cause is that the blocks the budget makes real change as the view turns, which changes the set of casters (`web/src/main.ts:370-379`). This has not been checked.
+Each movement is 100 mouse steps 50 ms apart; the frames are slow, so it lasts 8–17 s at levels 0.15–0.3 and about 40 s at level 1.
+
+| Activity | Level 0.15 | Level 0.3 | Level 1 (whole city) |
+| --- | --- | --- | --- |
+| Loading | 22 in 6.8 s | 29 in 10.1 s | 287 in 132 s |
+| After loading, still | 0 in 25 s | 0 in 25 s | 0 in 25 s |
+| Rotate 47° | 12 in 8.1 s (all set) | 19 in 9.8 s (all set) | 0 in 40 s |
+| Tilt 23° | 11 in 7.9 s (all set) | 19 in 9.0 s (all set) | 0 in 35 s |
+| Pan 1.3 km | 54 in 15.0 s (set 46, fit 9) | 61 in 17.2 s (set 52, fit 9) | 9 in 42 s (all fit) |
+| Zoom in and back out | 2 in 8.0 s (set) | 7 in 8.9 s (set) | 0 in 21 s |
+
+**Cause, verified.** With the whole city real (level 1), rotating and tilting never redraw the map, and a 1.3 km pan redraws it 9 times, once per refit of the frame (a sixteenth of its width; `web/src/daylight.ts:169-178`). At the levels this laptop runs at, 85–100 % of the redraws while moving come from the set of shown tiles changing. The budget gives blocks in view priority (`web/src/city.ts:70-95`). As the view turns, blocks swap between real and clay, the set of shadow casters changes, and `stillChanged` redraws the map as often as its 300 ms limit allows (`web/src/main.ts:356-357`). Panning at level 0.3 redraws it 3.5 times a second.
+
+The refits are not the problem: 9 per 1.3 km is the design. The swaps are. Each one changes only which blocks cast at 1 m and which as 8 m clay, which have the same massing, so a map a second or so out of date would mostly differ in detail.
 
 ### Merge key (`web/tools/mergekey.mjs`, all 805 base and 805 foliage tiles)
 
@@ -526,7 +533,7 @@ The face area per direction is identical in every variant. The plan's assumption
   - The saving is in triangles and GPU memory.
   - At the adapted level on this laptop the scene pass is fragment-bound and N8AO is off. Option a (N8AO only) would leave these devices with no AO, and is unlikely to speed them up.
   - Stage B decides it.
-- **Technique 2 clears its abandonment bar** (the threshold was 6 redraws per minute; orbiting gives about 200).
+- **Technique 2 clears its abandonment bar** (the threshold was 6 redraws per minute; moving gives 70–210).
   - A redraw costs as much as a frame.
-  - Before coarser shadow geometry, it is worth checking why orbiting redraws at all. If it is the caster set changing with the budget, holding the shadow casters steady while the camera turns could remove most redraws without touching the geometry.
+  - But almost all of those redraws come from the budget swapping blocks between real and clay, not from the camera (see above). A cheaper fix comes first: fewer redraws for swaps while the camera moves (a longer limit than 300 ms while moving, one redraw when it stops). Technique 2 makes each redraw cheaper; this makes them rarer. Coarser geometry is only worth measuring for what is left after it.
 - **Technique 1** is not yet measured. The baseline shows that at the adapted level only 2–5 M triangles are drawn, and that the cost is per fragment. That weakens the speed argument and leaves the quality argument: 2–4 m instead of 8 m clay at middle distance.
