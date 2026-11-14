@@ -1027,7 +1027,7 @@ AOI: 500 × 500 m centred on Puerta del Sol, the centre of the OSM square (relat
 | Municipal tree inventory (datos.madrid.es 300761-0-arbolado-especies) | `fetch_trees.py` | `trees/trees.json` (541 trees in AOI + 20 m) | 2026-07 edition, published 2026-07-09 | ETRS89 / UTM 30N (EPSG:25830) | tree `height_m` above ground | point per tree; coordinates to the mm |
 | Catastro INSPIRE Buildings WFS | `fetch_catastro.py` | `catastro/buildings.geojson` (596), `building_parts.geojson` (4 106) | live service, read 2026-11-10 | EPSG:25830 | no heights: floors above/below ground only | stated horizontal accuracy 0.1 m |
 | PNOA orthophoto, most recent (IGN WMS `pnoa-ma`) | `fetch_ortho.py` | `ortho/ortho.tif` (2401 × 2401 px), `ortho.json` | flight 2023-07 over the whole AOI | EPSG:25830 (requested axis-aligned) | n/a | 0.25 m native |
-| PNOA-LiDAR 3rd coverage NPC02 (CNIG) | `fetch_pnoa_lidar.py` (check), `lidar_report.py` | `pnoa_lidar/*.LAZ` (16 tiles of 1 km, 1.2 GB) | flown 2024-03-17/18; files created 2026-02-22 | EPSG:25830 (horizontal only in the header) | orthometric (ellipsoidal to orthometric conversion per IGN; geoid model not stated) | 5.9 pts/m² own points, 10.0 with overlap; Z scale 1 mm |
+| PNOA-LiDAR 3rd coverage NPC02 (CNIG) | `fetch_pnoa_lidar.py` (check), `lidar_report.py` | `pnoa_lidar/*.LAZ` (24 tiles of 1 km, 1.7 GB, for the full area) | flown 2024-03-17/18; files created 2026-02-22 | EPSG:25830 (horizontal only in the header) | orthometric (ellipsoidal to orthometric conversion per IGN; geoid model not stated) | 5.9 pts/m² own points, 10.0 with overlap; Z scale 1 mm |
 
 Notes per source:
 
