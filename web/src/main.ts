@@ -353,8 +353,10 @@ renderer.setAnimationLoop((now) => {
   streamer?.update(camera);
   daylight.fitShadow(focus(), camera, viewDist, map);
   const redraws = daylight.redraws;
+  if (!camera.matrixWorld.equals(lastPose)) { lastPose.copy(camera.matrixWorld); movedAt = now; }
   if (stillChanged()) stillDue = true;
-  if (stillDue && now - redrawnAt > 300) { stillDue = false; redrawnAt = now; daylight.redrawShadow(); }
+  if (daylight.shadowDue) { stillDue = false; redrawnAt = now; } // a refit redraws this frame, with the tiles as they are
+  if (stillDue && now - redrawnAt > (now - movedAt < 250 ? STILL_MOVING : 300)) { stillDue = false; redrawnAt = now; daylight.redrawShadow(); }
   renderer.info.reset();
   post.composer.render();
   if (daylight.redraws !== redraws) busy = true;
@@ -382,7 +384,12 @@ function stillChanged() {
 // 30 frames (or 1 s): slow twice running (median under 27 fps), a step down, bigger the slower, and no growing past it
 // for a minute; smooth twice running (the slowest tenth over 30 fps) with all the city asked for in, a step up, bigger
 // at the screen's own rate. The slider sets the level and the most it may grow back to; it never stops the stepping down.
-let busy = false, stillDue = false, redrawnAt = 0, slow = 0, calm = 0, cap = 1, capAt = 0, windowAt = 0;
+let busy = false, stillDue = false, redrawnAt = 0, movedAt = 0, slow = 0, calm = 0, cap = 1, capAt = 0, windowAt = 0;
+// While the camera moves, the budget swaps blocks between real and clay as they come into view, and each swap changed
+// the casters: the map was redrawn every 300 ms (15-37 ms each on the UHD 620). A real block and its clay have the same
+// massing, so while moving the map follows the swaps at most every STILL_MOVING ms, and once more when the camera stops.
+// Refits of the sun's frame (daylight.fitShadow) redraw at once as before. ?stillmove= sets it (300: as before)
+const STILL_MOVING = qs.get('stillmove') ? +qs.get('stillmove')! : 1500, lastPose = new THREE.Matrix4();
 function setLevel(l: number) {
   level = Math.max(0, Math.min(1, l));
   const px = pixelsAt(level);

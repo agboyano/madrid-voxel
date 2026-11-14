@@ -89,6 +89,7 @@ export class Daylight {
   }
 
   redrawShadow() { this.sun.shadow.needsUpdate = true; }
+  get shadowDue() { return this.sun.shadow.needsUpdate; }
 
   // the sky's light and the shadow map were in the lost WebGL context: drawn again once it is back
   contextRestored() {

@@ -445,3 +445,11 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Estimating every girth from height:** the measured girth exists for almost every tree.
   - **Keeping some brown voxels as dead leaves:** even 1 in 16 read as floating cubes.
   - The 2026-11-11 decision to keep street lamps as voxels stands. Trunks differ because they are sub-voxel, and trees are 58 000 objects across the whole map.
+
+## 2026-11-14: The sun's shadow map follows block swaps at most every 1.5 s while the camera moves
+
+- **Decision:** while the camera moves, a change in the tiles shown (the budget swapping blocks between real and clay) redraws the sun's shadow map at most every 1.5 s, and once more 250 ms after the camera stops; a refit of the map's frame still redraws at once and takes any pending swap with it. `?stillmove=` sets the limit (300 gives the old behaviour).
+- **Why:** at the levels the UHD 620 runs at (0.15-0.3), 85-100 % of redraws while moving came from those swaps, every 300 ms, at 15-37 ms each. Rotating 47° went from 16-19 redraws to 5, panning 1.3 km from 54-61 to 13-16. A block and its clay have the same massing: after a 10° turn with no redraw at all, the stale map differs from a fresh one in 0.10 % of pixels at most, on far blocks at the top of the view (`docs/img/shadow-swap-prado-*.png`).
+- **Rejected:**
+  - **Coarser shadow geometry first** (technique 2 of `docs/renderer-evaluation-plan.md`): it makes each redraw cheaper but not rarer, and costs days.
+  - **A shadow caster set independent of the budget:** the map shows what is drawn by construction; separating them needs a second set of meshes.

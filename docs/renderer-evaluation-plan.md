@@ -537,3 +537,19 @@ The face area per direction is identical in every variant. The plan's assumption
   - A redraw costs as much as a frame.
   - But almost all of those redraws come from the budget swapping blocks between real and clay, not from the camera (see above). A cheaper fix comes first: fewer redraws for swaps while the camera moves (a longer limit than 300 ms while moving, one redraw when it stops). Technique 2 makes each redraw cheaper; this makes them rarer. Coarser geometry is only worth measuring for what is left after it.
 - **Technique 1** is not yet measured. The baseline shows that at the adapted level only 2–5 M triangles are drawn, and that the cost is per fragment. That weakens the speed argument and leaves the quality argument: 2–4 m instead of 8 m clay at middle distance.
+
+## Fewer redraws for block swaps (2026-11-14)
+
+Adopted (`DECISIONS.md`, 2026-11-14): while the camera moves, swaps redraw the sun's map at most every 1.5 s, and once when it stops; a refit takes any pending swap with it. `redraws.mjs`, overview, 21 June (raw output in `data/baseline/redraws-stillmove.log`):
+
+| Activity | Level 0.15, before → after | Level 0.3, before → after |
+| --- | --- | --- |
+| Rotate 47° | 12 → 5 | 16 → 5 |
+| Tilt 23° | 10 → 5 | 20 → 6 |
+| Pan 1.3 km | 51 → 13 (9 of them refits) | 56 → 16 (9 of them refits) |
+| Zoom in and out | 2 → 1 | 6 → 3 |
+| Loading, still | unchanged | unchanged |
+
+Visual check with `web/tools/shadowswap.mjs`: after a 10° turn with no swap redraw at all, the stale map differs from a fresh one in 0.10 % of pixels in `prado` (all on far blocks at the top of the view; `docs/img/shadow-swap-prado-stale.png`, `-fresh.png`) and in none in `sol`, `cibeles` and `overview`.
+
+For technique 2 this leaves the refits (9 per 1.3 km pan, by design), hour and day changes, and loading. Its experiment is only worth running if those still show as slow frames.
