@@ -554,3 +554,17 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** the viewer reads `meta.voxel` when it boots and, if it is not 1, stops with a message on the loading screen instead of drawing the map.
 - **Why:** the pipeline takes its voxel size from one constant (`scripts/aoi.py` `VOXEL_SIZE`) and writes it to `meta.json`, but the viewer draws one voxel as one scene metre in the mesher, the world lookups, the terrain and the shaders (`NOTES.md`, "1 m assumptions"). Data at 0.5 m would load and come out at half scale, with wrong heights, and nothing would say why.
 - **Rejected:** scaling the scene by `meta.voxel`. It fixes positions but not the cell-based rules (wall angles over 5 cells, ambient occlusion over 1 cell, the window grid every 3 m, the uint8 ground), so the map would draw but be subtly wrong. `PLAN.md` keeps 1 m voxels and treats another size as a separate project.
+
+## 2026-11-15: The street life follows Madrid's counters hour by hour
+
+- **Decision:**
+  - Cars, people and bikes follow hourly profiles measured in Madrid (`scripts/life_profiles.py` -> `web/public/data/life.json`), for weekdays and for weekends and holidays, instead of Warsaw's curves; bikes also by month.
+  - **Cars:** the Ayuntamiento's traffic measurement points inside the map, October 2026 (339 of 406 urban points: errors flagged and incomplete days left out).
+  - **People and bikes:** its permanent pedestrian and bike counters inside the map, 2023, the last whole year (19 and 8 counters).
+  - Each point's hours are divided by its own busiest weekday hour, so a quiet street weighs as much as an avenue; the median over the points is the profile, scaled so the busiest weekday hour is 1.
+  - Signals keep the generic fixed cycle, now listed among the README's known limitations.
+- **Why:** Madrid keeps late hours. On a weekday at 20:00 cars stand at 0.95 of the peak (Warsaw's curve gave 0.38) and people at 0.98 (0.66); at weekends the centre is busier with people than on weekdays (1.11), and bikes peak in February and March, not in July.
+- **Rejected:**
+  - **A month of counts from each season:** one working month gives the daily rhythm; the month-to-month change in car traffic is small next to it, and bikes, which change most, have their own year.
+  - **Per-street profiles:** the viewer has one density for the whole active zone; the median shape is what it can use.
+  - **Signal plans:** none are published (`docs/seasons-and-life-sources.md`, §6); they could be asked of the Ayuntamiento's traffic department.

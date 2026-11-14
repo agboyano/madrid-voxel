@@ -18,7 +18,7 @@ import { makePost } from './post';
 import type { SearchItem } from './search';
 import { StreetLife } from './sim/life';
 import { UPLOAD } from './sim/meshes';
-import type { Kind, TrafficData } from './sim/types';
+import type { Kind, LifeProfiles, TrafficData } from './sim/types';
 import { TileStreamer } from './stream';
 import type { Facts, Label, Meta, Place, View } from './types';
 import { dateOf, dayOfYear, hourAt, madridDate, setSite, SOLAR_YEAR, solarNoon, trueNorthRotation } from './sun';
@@ -347,6 +347,7 @@ async function boot() {
     life.population = POP;
     if (simLog) life.timing = simTiming;
     window.__life = life;
+    fetchJson<LifeProfiles>(dataUrl('life.json')).then((p) => { if (life) life.profiles = p; }).catch((e) => console.warn('life.json', e));
   });
   $('#loading').classList.add('hidden');
   window.__streamer = streamer;

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { hash, pushTo, smooth } from '../util';
+import { hash, isWeekend, pushTo, smooth } from '../util';
 import type { World } from '../world';
 import { findCrossings } from './crossings';
 import { flagRange, LifeMeshes, MAX_BIKES, MAX_CARS, MAX_PEOPLE, MAX_TRAM_SECTIONS, setCount, setCountOf, Slots, UPLOAD } from './meshes';
 import { at, cellKey, landingLane, prepPath, pt, Turn, turnOf, type Pt } from './path';
 import { Trains } from './trains';
-import type { Agent, Car, Controller, Kind, PedEdge, Person, Pose, Rideable, Road, TrafficData, Tram, TramPath, TramStop } from './types';
+import type { Agent, Car, Controller, Kind, LifeProfiles, PedEdge, Person, Pose, Rideable, Road, TrafficData, Tram, TramPath, TramStop } from './types';
 
 // Live streets on the real OSM networks (scripts/traffic.py): fixed-time signals; cars with the Intelligent Driver
 // Model per lane, turn lanes, OSM turn restrictions and junction "box" locks; trams along their routes; people on
@@ -57,6 +57,8 @@ export class StreetLife {
   day = 180;
   // scales the agents the hour asks for (cars, people, riders; not trains or signals): ?pop= (main.ts)
   population = 1;
+  // Madrid's counters, hour by hour (main.ts loads life.json); until then, and without it, the generic curves below
+  profiles: LifeProfiles | null = null;
   // set to an object (main.ts ?perf=sim) to have each update's logic and drawing time written into it: the steps and
   // the trains' advance, then the instance writes
   timing: { stepMs: number; steps: number; renderMs: number } | null = null;
@@ -131,11 +133,17 @@ export class StreetLife {
     const hh = ((hour % 24) + 24) % 24;
     const bell = (c: number, w: number) => Math.exp(-(((hh - c) / w) ** 2));
     const k = this.population;
-    const density = {
+    const P = this.profiles, dk = isWeekend(this.day) ? 'weekend' : 'weekday';
+    // each hour's value stands for the middle of that hour; in between, a straight line
+    const at = (p: number[]) => { const x = hh - 0.5, i = Math.floor(x), t = x - i; return p[(i + 24) % 24] * (1 - t) + p[(i + 25) % 24] * t; };
+    // and each month's for its middle day
+    const month = (p: number[]) => { const x = (this.day - 15.2) / 30.44, i = Math.floor(x), t = x - i; return p[(i + 12) % 12] * (1 - t) + p[(i + 13) % 12] * t; };
+    const density = P ? { cars: k * at(P.cars[dk]), peds: k * at(P.peds[dk]), trams: hh > 0.5 && hh < 5 ? 0 : 1,
+      bikes: k * at(P.bikes[dk]) * month(P.bikes.month) } : {
       cars: k * Math.min(1, 0.18 + 0.55 * bell(8, 2.2) + 0.5 * bell(17, 2.6) + 0.45 * bell(13, 5)),
       peds: k * Math.min(1, 0.08 + 0.4 * bell(8.5, 1.8) + 0.85 * bell(16, 4.5) + 0.25 * bell(21, 2)),
       trams: hh > 0.5 && hh < 5 ? 0 : 1,
-      // the counters' day: the commute to work and home, a lunch hump, little at night; a fifth of July's in January
+      // Warsaw's counters: the commute to work and home, a lunch hump, little at night; a fifth of July's in January
       bikes: k * (0.03 + 0.85 * bell(8, 1.4) + 1.0 * bell(17, 2.0) + 0.35 * bell(13, 3))
         * (0.2 + 0.4 * (1 - Math.cos(2 * Math.PI * (this.day - 15) / 365))),
     };

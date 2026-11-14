@@ -23,6 +23,7 @@ run window_stats
 run places
 run lawns_s2        # irrigated and dry lawns by month, Sentinel-2 (cached per scene)
 run phenology       # seasonal cycle and foliage.bin, from trees.json
+run life_profiles   # how busy the streets are by hour: the Ayuntamiento's traffic, pedestrian and bike counters
 run cost1m          # triangles per tile (meshed in the viewer), for zones.py's block budget
 run zones           # again, with the blocks priced
 run labels_doc      # docs/labels.md, the label list for review

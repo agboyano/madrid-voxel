@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Meta } from './types';
-import { dataTexture, dataUrl, fetchGzip, fetchJson } from './util';
+import { dataTexture, dataUrl, fetchGzip, fetchJson, isWeekend } from './util';
 import type { VoxelUniforms } from './voxelMaterial';
 
 interface WinType { med: { weekday: number[]; weekend: number[] }; shape: number[]; floors: number; colour: [number, number, number] }
@@ -25,7 +25,7 @@ export async function loadWindows(meta: Meta, U: VoxelUniforms) {
 }
 
 function setWindows(U: VoxelUniforms, stats: WinStats, hour: number, day: number) {
-  const weekday = new Date(Date.UTC(2026, 0, day)).getUTCDay(), weekend = weekday === 0 || weekday === 6;
+  const weekend = isWeekend(day);
   const t = hour < 12 ? hour + 24 : hour;
   const i = CENTRES.findIndex((c) => c > t), a = i < 0 ? CENTRES.length - 1 : Math.max(i - 1, 0), b = i < 0 ? a : i;
   const f = a === b ? 0 : (t - CENTRES[a]) / (CENTRES[b] - CENTRES[a]);

@@ -23,6 +23,11 @@ export type TramCrossing = { kind: 'road'; e: number; sR: number; sT: number } |
 export interface TramPathData extends PathData { ref?: string }
 export interface TramPath extends TramPathData, Path { i: number; stops: TramStop[]; nextSpawn: number; xs: TramCrossing[] }
 
+// Madrid's daily rhythm (scripts/life_profiles.py, web/public/data/life.json): per hour from 0:00, 1 = the busiest weekday
+// hour; bikes also per month, 1 = the busiest month
+export interface Rhythm { weekday: number[]; weekend: number[] }
+export interface LifeProfiles { cars: Rhythm; peds: Rhythm; bikes: Rhythm & { month: number[] } }
+
 export interface TrafficData {
   roads: RoadData[];
   peds: PedData[];
