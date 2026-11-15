@@ -691,7 +691,9 @@ _ids = vol[g - 1, np.arange(D)[:, None], np.arange(W)[None, :]]
 _lut = np.array([e[:3] for e in pal.entries], np.uint8)
 _lut[[i for i, e in enumerate(pal.entries) if e[3] == M_GRASS]] = _lut[C["bare"]]
 np.savez_compressed(AREA / "ground.npz", g=g.astype(np.int16), rgb=_lut[_ids],
-                    b=np.where(bmask, topi, 0).astype(np.int16))  # building height above ground (photo-pose tools)
+                    b=np.where(bmask, topi, 0).astype(np.int16),  # building height above ground (photo-pose tools)
+                    road=np.where(is_road, 1, np.where(_driven, 2, 0)).astype(np.uint8),  # carriageway 1, track 2
+                    deck=np.where(deck, L["deck_top"], 0).astype(np.int16))  # a bridge deck's walking surface (lamps.py)
 import tiles
 EXPORT_IDS = dict(face_ids={i for i, e in enumerate(pal.entries) if e[3] == M_CLOCK},
                          fol_ids={i for i, e in enumerate(pal.entries) if e[3] == M_LEAF}, drop_ids={C["trunk"]},

@@ -108,6 +108,7 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Decision:** street lamps from OSM only; crossings with dtla-voxel's `road_markings.py`; no NDVI or multiple-return tree detection.
 - **Reason:** OSM maps 80 lamps in the test area (74 drawn). dtla-voxel's crossings follow traffic and fall back to marked nodes. Only 22 LiDAR crowns lack an inventory tree.
 - **Rejected:** dtla-voxel's lamps every 36 m along kerbs (would double the mapped lamps); NDVI from the leaf-off PNOA cloud (weak on deciduous crowns, see Phase 1).
+- **Superseded (lamps):** by "2026-11-15: Street lamps from the Ayuntamiento's inventory".
 
 ## 2026-11-11: Checkpoint 3 — bridge test deferred, viewer cleaned now
 
@@ -598,3 +599,16 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Royal Palace:** `recolour_walls` now starts at the first voxel over the ground. It started one above, which left a course of the historic core's brick at the foot of the courtyards; the Metrópolis and the Almudena had the same course.
 - **Why:** the first pass was drawn from memory. The Puerta de Alcalá had the side bodies at the same height as the crest's base, eight columns on both faces and its sculpture as a few loose voxels; the Metrópolis's dome carried the LiDAR's statue under the new one.
 - **Rejected:** finer sculpture. At 1 m a 2 m figure is two or three voxels; the groups are placed and sized, not modelled.
+
+## 2026-11-15: Street lamps from the Ayuntamiento's inventory
+
+- **Decision:** take the street lamps from the Ayuntamiento's lighting inventory (datos.madrid.es 300573 for the streets and 300582 for the Retiro and Sabatini, CC BY 4.0, 2022). OpenStreetMap's `street_lamp` nodes only fill in where the inventory has no unit within 12 m.
+  - **Support:** the inventory gives the luminaire model, not the support, but each model code is hung on facades or set on posts almost without exception. A code whose units stand within 1 m of a building (or inside its footprint) at least 80 % of the time is a wall lamp, one at most 20 % a post; codes with fewer than 8 units in the AOI or no clear answer are decided unit by unit.
+  - **Lantern:** the code's prefix: `FV` the Villa lantern, `FF` the Fernando VII, `G` a globe, the rest a modern luminaire. The historic parks' units are Fernando VII lantern posts.
+  - **Height** (not in the inventory): Villa and Fernando VII posts 4 m (4.5 m on avenues), globes 3.5–4 m, modern luminaires 5 m off the street, 7 m on streets and 9 m on avenues; wall brackets at 4.5 m. A modern post with carriageway on both sides within 6 m stands on a median and gets two arms, as do the `LLED` codes (two lights in OSM).
+  - **Position:** where the inventory puts it. A post inside a building or on a carriageway or track moves to the nearest clear cell within 4 m, or is dropped; a wall lamp hangs on the nearest facade within 3 m.
+- **Why:** OSM maps 2 774 lamps over the map, most of them west of the Castellana axis (none in large parts of Salamanca and Retiro). The inventory has about 22 000 units over the AOI, spread over the whole map, and 1 712 of the OSM lamps lie within 5 m of one of its units.
+- **Rejected:**
+  - **dtla-voxel's lamps every 36 m along kerbs** where OSM has none: invented, regular positions, where the inventory has the real ones.
+  - **OSM's tags for the support** (`support`, `lamp_mount`): only 562 of the 7 165 Villa lanterns have an OSM node beside them, and those mix posts and walls; the model code separates them.
+  - **The inventory's free-text address** to place lamps: the coordinates are already there.

@@ -1058,6 +1058,24 @@ Defined once, in `COLUMNS` in `scripts/fetch_trees.py`.
 | `VITALIDAD` | `vitality` | Alta / Media / Baja (not in the 2026 CSV) |
 | `ESTADO_GENERAL` | `condition` | Sano … Muerto (not in the 2026 CSV) |
 
+### Street-lighting inventory columns (Spanish -> English)
+
+Defined once, in `COLUMNS` in `scripts/fetch_lamps.py`. Three files of 2022 (served again on 2026-02-16), semicolon separated, UTF-8 with BOM, decimal comma, EPSG:25830: the streets (datos.madrid.es 300573-0, 233 309 units, 23.8 MB), the historic parks (300582-2: the Retiro and Sabatini, among others) and the forest parks and nurseries (300582-0). A fourth file (300582-6) only counts the lamps of other parks and has no positions. The street file's header carries dBase field types (`X_UTM,N,19,11`), dropped on reading.
+
+| Spanish column | English key | Meaning |
+| --- | --- | --- |
+| `tipo_bloqu` | `model` | luminaire model code, e.g. `FVLED005`; empty in the forest parks, free text in the historic parks (`32 LEDWW (Opt.5068)`) |
+| `TIPOL` | `light` | `LED`, `DESCARGA` (sodium, metal halide and older) or `LED-DESCARGA` (both on one support) |
+| `VIA_CLASE` / `VIA_PAR` / `VIA_NOMBRE` | `street_class` / `street_particle` / `street` | the street the unit's address is on |
+| `CLASE_APP` (`CLA_APP` in the parks) | `address_class` | kind of address (`NUMERO`, …) |
+| `NUMERO`, `COD_NDP` | `number`, `address_id` | street number and the address's id |
+| `DISTRITO`, `BARRIO` | `district_id`, `neighbourhood_id` | administrative district and neighbourhood |
+| `X_UTM`, `Y_UTM` | `x`, `y` | EPSG:25830 metres |
+| `DENOMINACION` (`DENOMINACIÓN` in the forest parks) | `park` | the park's name |
+| (unnamed, forest parks) | `unit_id` | `LU_000001` … |
+
+The dataset publishes no dictionary of model codes, and no support or height. What the codes show over the AOI is in "Street lamps from the inventory" below.
+
 ### PNOA-LiDAR NPC02 over the AOI
 
 Figures from `scripts/lidar_report.py` (re-run it for NPC03 or the municipal 2026 flight).
@@ -1408,6 +1426,27 @@ Post-processing is still about half the frame at street level.
 - **Wall lanterns:** a wall lantern is placed only where the voxel against the wall is solid at its height, or it would be dropped as floating debris. Otherwise the lamp falls back to a post at the kerb.
 - **Leaves:** the shaft replaces leaves as well as air. A crown left in the shaft let the lantern float, and the floating check, for which leaves hold nothing up, removed it: 105 lanterns before this rule. 26 of the 2 567 lanterns are still missing from the tiles, removed or overwritten by later steps of the build (not traced one by one).
 - **Checking:** decode `tiles/1` around `meta.lamps` and look for the `lamp` run at each z, with a `lampiron` run above it.
+
+### Street lamps from the inventory (2026-11-15)
+
+`scripts/lamps.py`, a pipeline step after `voxelize.py`. It reads `ground.npz` (ground, building heights, and two layers added for it: `road`, carriageway 1 and track 2, and `deck`, a bridge deck's walking surface), the inventory (`lamps.json`) and OSM's `street_lamp` nodes, and writes `web/public/data/lamps.bin` (layout in the module docstring, 217 kB gzipped). Rules and their reasons are in `DECISIONS.md`.
+
+- **Counts over the AOI:** 21 685 inventory units (20 464 on the streets, 1 181 in the Retiro and Sabatini, 40 in the Vivero de Estufas). 1 000 are a second entry within 0.8 m of another (640 at the same point) and are merged. 86 OSM lamps have no unit within 12 m and are kept; 91 posts find nothing clear of buildings and carriageways within 4 m and are dropped. **20 680 lamps**, 10 seconds.
+- **Kinds:** 5 983 modern posts (377 more with two arms), 4 916 Villa posts, 3 214 Fernando VII posts, 371 globes; on walls 2 270 Villa, 1 882 modern, 1 632 Fernando VII, 35 globes. 40 stand on the Viaducto de Segovia's deck.
+- **Model codes:** 188 over the AOI. 20 are wall models and 80 post models; 88 have under 8 units or no clear answer and are decided unit by unit. The split is sharp: `FVLED005` 95 % within 1 m of a building, `FVLED006` 97 %, `FFLED002` 97 %, `LBE006` 99 %; `FVLED002` 10 %, `FFLED005` 1 %, `LBE003` 2 %, `LS00111` 2 %. Prefixes by count: `FVLED` 7 165, `LBE` 5 283, `FFLED` 3 598, `LS` 1 456, `PO` 1 232 (the one mixed family: 55–74 % on a wall by code), `PRD` 417, `GLED` 363.
+- **Light:** 11 379 LED, 8 820 discharge, 265 both, on the streets.
+- **Against OSM:** 1 712 of OSM's 2 774 lamps lie within 5 m of an inventory unit. Per 500 m block (x to the right, y downward) the inventory has 64–1 245 lamps, OSM had none in 17 of the 54 blocks and under 25 in 14 more:
+
+```
+ 283  364  442  447  437  297  305  349  221
+ 527  527  498  437  449  496  366  325  310
+ 243  506  549  370  389  351  326  326  226
+ 374  890 1245  534  551  257  174  368  164
+ 395  732  622  563  410  184  213  520  246
+ 174  278  387  320  217   64  150  162  120
+```
+
+- **Rebuilding the committed data:** a full `voxelize.py` run on the code of 2026-11-15 writes 347 palette entries where the committed `meta.json` has 350, and 16 tiles differ. The three extra entries are colours `patch.py` appended while the landmarks were iterated (indices 332, 342, 343), no longer used. Not a lamp change.
 
 ### Extended area at −6° (after Phase 6)
 
