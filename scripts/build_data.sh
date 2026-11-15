@@ -8,6 +8,7 @@ run() { PYTHONPATH=scripts uv run python scripts/measure.py "scripts/$1.py"; }
 run fetch_osm
 run fetch_wikidata   # landmark facts through the OSM wikidata tags
 run fetch_trees
+run fetch_lamps     # the Ayuntamiento's street-lighting inventory
 run fetch_catastro
 run fetch_ortho
 run fetch_pnoa_lidar
