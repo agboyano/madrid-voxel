@@ -116,7 +116,7 @@ nav.onHour = (step) => { const h = (Math.round(daylight.hour + step) % 24 + 24) 
 nav.input.onPad = (on) => { hud?.setPad(on); track('gamepad', { on }); };
 const touch = coarsePointer() ? new TouchControls(nav) : null;
 new ResizeObserver(() => { barRect = null; }).observe(bar.el);
-el('div', '', `<div>by Agboyano, based on <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">warsaw-vibe-voxel</a> by Piotr Migdał</div>
+el('div', '', `<div>by <a href="https://github.com/agboyano/madrid-voxel" target="_blank" rel="noopener">Agboyano</a>, based on <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">warsaw-vibe-voxel</a> by Piotr Migdał</div>
   <div>PNOA-LiDAR and PNOA © IGN/CNIG, Catastro, Ayuntamiento de Madrid and <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></div>`).id = 'credits';
 if (qs.get('ui') === '0') document.body.classList.add('noui');
 addEventListener('resize', onResize);
