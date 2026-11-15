@@ -9,7 +9,7 @@ build() returns the layers by name; voxelize.py fills the 3D volume from them:
            LIDAR_VEG, LIDAR_BRIDGE (point classes)
   buildings feats (OSM + Catastro features with their styles), render, bmask, top / topi (roof height over ground),
            boti (underside), cell_maxh, over (roofs clipped under tree crowns), CORE, GARDEN_ROOFS
-  bridges  bridge_shapes, bridge_lines, bridge_rails, bridge_roads; decks(): deck, deck_col, deck_top, deck_under,
+  bridges  bridge_shapes, bridge_lines, bridge_rails; decks(): deck, deck_col, deck_top, deck_under,
            water, bridge_area
   trees    vegetation(): veg, crown_top, crown_bot, leaf_at, leafidx, trunks, trunk_info, trunk_ok_db, taken, young,
            needles, all_trees
@@ -304,7 +304,6 @@ def build():
     foot_shapes, road_shapes, bridge_shapes, cycle_shapes, road_lines = [], [], [], [], []  # bridge ways are painted on the deck, not on the river below
     bridge_rails = []  # (line, colour) the rails of tracks on bridges, drawn on the deck like those on the ground
     bridge_lines = []  # (line, half width, layer) of every way on a bridge: the deck's height profile is taken along them
-    bridge_roads = []  # (line, width) of carriageways on bridges, for the inferred deck lamps
     crossing_roads = []  # (id, tags, centreline, width) of surface carriageways, for road_markings.py
     _paved = [(g_, t_["surface"]) for _, _, t_, g_ in osm.areas
               if t_.get("surface") in SURF and ("area:highway" in t_ or (t_.get("highway") and t_.get("area") == "yes"))]
@@ -340,8 +339,6 @@ def build():
             key = SURF.get(t.get("surface"), "asphalt") if (hw in ROADS or base in ROADS) else ("cycle" if hw == "cycleway" else SURF.get(t.get("surface"), "paving"))
             bridge_shapes.append((poly, C[key], int(parse_len(t.get("layer")) or 1)))
             bridge_lines.append((line, w / 2, int(parse_len(t.get("layer")) or 1), C[key]))
-            if (hw in ROADS or base in ROADS) and line.length > 60 and t.get("motor_vehicle") not in ("no", "private"):
-                bridge_roads.append((line, w))  # (not the Karowa footbridge, a living_street for service vans only)
             continue
         if hw in ROADS or base in ROADS:
             _s = t.get("surface") or (area_surface(line) if base in ("service", "living_street") else None)
@@ -983,7 +980,6 @@ def build():
         boti=boti,
         bridge_lines=bridge_lines,
         bridge_rails=bridge_rails,
-        bridge_roads=bridge_roads,
         bridge_shapes=bridge_shapes,
         cell_maxh=cell_maxh,
         cellcol=cellcol,

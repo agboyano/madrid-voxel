@@ -138,7 +138,7 @@ def main():
     }
     meta = dict(W=W, D=D, H=int(H), base=base, voxel=VOXEL_SIZE, tiles=tile_info, center=[CX, CY],
                 theta_deg=math.degrees(THETA), crs=CRS, trams=[], jets=[],
-                palette=[list(p) for p in PALETTE], lamps=[], floods=[], labels=[], views=views,
+                palette=[list(p) for p in PALETTE], floods=[], labels=[], views=views,
                 sources=dict(osm="", lidar=info["description"], ortho=""))
     json.dump(meta, open(out / "meta.json", "w"))
     note(f"columns: building {is_b.mean() * 100:.1f} %, vegetation {is_v.mean() * 100:.1f} %, bridge "

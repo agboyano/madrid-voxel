@@ -5,7 +5,7 @@ The 2D fusion of ground, buildings and roofs lives in layers.py; this script fil
 and adds what is drawn voxel by voxel (vegetation and trunks, fountains, street furniture, bridge decks, underpasses,
 landmarks), then exports the tiles and the viewer's data.
 
-Output (web/public/data/): tiles/ (tiles.py), meta.json (palette, lamps, labels, views), trees.json, traffic.json,
+Output (web/public/data/): tiles/ (tiles.py), meta.json (palette, labels, views), trees.json, traffic.json,
 qa_roadmask.bin.gz; {AREA}/ground.npz for terrain.py.
 Volume axes: vol[z, row, col]; row grows south, col grows east, z up.
 """
@@ -15,7 +15,6 @@ import gzip
 import json
 import math
 import os
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -29,7 +28,7 @@ import roofgardens
 import layers
 from buildlog import DBG, OUT, note, report
 from layers import burn, cells_of, tunnelish
-from palette import C, LEAVES, M_CAR, M_CLOCK, M_GLASS, M_GRASS, M_LAMP, M_LEAF, M_METAL, M_ROOF, M_SOIL, M_WATER, PERENNIALS, pal, parse_len, stable_hash
+from palette import C, LEAVES, M_CAR, M_CLOCK, M_GLASS, M_GRASS, M_LEAF, M_METAL, M_ROOF, M_SOIL, M_WATER, PERENNIALS, pal, parse_len, stable_hash
 
 L = layers.build()
 BASE = L["BASE"]
@@ -45,7 +44,6 @@ bmask = L["bmask"]
 boti = L["boti"]
 bridge_lines = L["bridge_lines"]
 bridge_rails = L["bridge_rails"]
-bridge_roads = L["bridge_roads"]
 bridge_shapes = L["bridge_shapes"]
 cell_maxh = L["cell_maxh"]
 cellcol = L["cellcol"]
@@ -358,124 +356,9 @@ for oid, typ, t, geom in osm.areas:
 note("raised planting beds:", n_beds)
 
 # ---------------------------------------------------------------- street furniture
-# a post stands beside the carriageway and the tracks, not in them: OSM's lamp nodes sit on the kerb line, and 89 of
-# them fell a metre or two inside the road as drawn (cars drove through the poles); such a post takes the nearest
-# cell off the road within 4 m, and one deeper in (a lamp hung over the street) gets no pole
+# the street lamps are not voxels: lamps.py places them for the viewer, which draws them at their own width; it stands
+# no post on the carriageway or the tracks (ground.npz "road")
 _driven = is_road | np.isin(gcol, [C["trambed"], C["rail"], C["ballast"]])
-_kd, (_kr, _kc) = ndimage.distance_transform_edt(_driven, return_indices=True)
-
-
-def kerb(c, r):
-    if not (0 <= c < W and 0 <= r < D):
-        return None
-    return (int(_kc[r, c]), int(_kr[r, c])) if _kd[r, c] <= 4 else None
-
-
-# lamp heights where OSM gives none, by the street beside the post: Madrid's avenues have columns of about 8 m, its
-# ordinary streets lower ones (and wall brackets), squares and pedestrian streets the 4 m "fernandino" lantern posts;
-# Warsaw's 10 m / 6 m stood over the walkers. A road at least LAMP_AVENUE_W wide within 6 m makes an avenue
-LAMP_AVENUE, LAMP_STREET, LAMP_WALK, LAMP_AVENUE_W = 8.0, 5.0, 4.0, 12.0  # metres
-_road_half = ndimage.maximum_filter(ndimage.distance_transform_edt(is_road), size=2 * round(6 / VOXEL_SIZE) + 1)
-
-
-def lamp_height(r, c):
-    if _road_half[r, c] * VOXEL_SIZE >= LAMP_AVENUE_W / 2:
-        return round(LAMP_AVENUE / VOXEL_SIZE)
-    near = round(6 / VOXEL_SIZE)
-    if is_road[max(r - near, 0):r + near + 1, max(c - near, 0):c + near + 1].any():
-        return round(LAMP_STREET / VOXEL_SIZE)
-    return round(LAMP_WALK / VOXEL_SIZE)
-
-
-# the lamp's shape, in voxels (the viewer lights every "lamp" voxel at night and pools light under each meta.lamps
-# entry): Madrid's dark green cast-iron "fernandino" -- a base, the shaft, the lantern and a cap over it -- by default;
-# the column with two arms on avenues (and where OSM counts two lights), its lanterns along the kerb; a modern bent
-# mast with its lantern over the road; a lantern on the facade where OSM says wall_mounted. At 1 m a lantern is about
-# twice its real size and the base cannot be wider than the shaft
-_to_road_d, (_to_road_r, _to_road_c) = ndimage.distance_transform_edt(~_driven, return_indices=True)
-lamps, lamp_kinds = [], Counter()
-
-
-def _open(z, r, c):
-    """Air or leaves: a lantern or an arm may take the cell; a wall or a roof may not."""
-    return 0 <= c < W and 0 <= r < D and 0 <= z < H and (vol[z, r, c] == 0 or pal.entries[vol[z, r, c]][3] == M_LEAF)
-
-
-def to_road(r, c, reach=8):
-    """Unit step (dr, dc) along a grid axis from a kerb cell towards the nearest carriageway within reach, or None."""
-    if _to_road_d[r, c] * VOXEL_SIZE > reach:
-        return None
-    dr, dc = int(_to_road_r[r, c]) - r, int(_to_road_c[r, c]) - c
-    return (int(np.sign(dr)), 0) if abs(dr) >= abs(dc) else (0, int(np.sign(dc)))
-
-
-def lantern(z, r, c):
-    if not _open(z, r, c):
-        return False
-    vol[z, r, c] = C["lamp"]
-    if _open(z + 1, r, c):
-        vol[z + 1, r, c] = C["lampiron"]  # the cap
-    lamps.append((c, r, int(z)))
-    return True
-
-
-def draw_lamp(c, r, z0, hgt, kind):
-    """A post standing on (c, r) at ground z0 with its lantern hgt voxels up; returns the kind drawn."""
-    top = z0 + hgt - 1
-    if vol[z0, r, c] == 0:
-        vol[z0, r, c] = C["lampbase"]
-    for z in range(z0 + 1, top):  # through a crown too: leaves hold nothing up, and the lantern would be dropped
-        if _open(z, r, c):
-            vol[z, r, c] = C["lampiron"]
-    step = to_road(r, c)
-    if kind == "bent_mast" and step and lantern(top, r + step[0], c + step[1]):
-        vol[top, r, c] = C["lampiron"]
-        return kind
-    if kind == "two_arm":
-        along = (0, 1) if step is None or step[0] else (1, 0)  # perpendicular to the road: the arms run along the kerb
-        lit = [lantern(top, r + s * along[0], c + s * along[1]) for s in (-1, 1)]
-        if any(lit):
-            vol[top, r, c] = C["lampiron"]
-            return kind
-    lantern(top, r, c)
-    return "fernandino"
-
-
-def on_wall(x, y, reach=2):
-    """The open cell nearest (x, y) within reach that touches a building cell face to face: (r, c, (wr, wc)) or None."""
-    best = None
-    for r in range(int(y) - reach, int(y) + reach + 1):
-        for c in range(int(x) - reach, int(x) + reach + 1):
-            if not (1 <= r < D - 1 and 1 <= c < W - 1) or bmask[r, c]:
-                continue
-            d = np.hypot(c + 0.5 - x, r + 0.5 - y)
-            if d > reach + 0.5:
-                continue
-            for wr, wc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
-                if bmask[wr, wc] and (best is None or d < best[0]):
-                    best = (d, r, c, (wr, wc))
-    return best and best[1:]
-
-
-for oid, t, p in osm.nodes_with("highway", ("street_lamp",)):
-    hgt = parse_len(t.get("height"))
-    if t.get("support") == "wall_mounted":
-        w_ = on_wall(p.x, p.y)
-        if w_:
-            r, c, (wr, wc) = w_
-            z_lamp = int(g[r, c]) + int(hgt or round(LAMP_STREET / VOXEL_SIZE)) - 1
-            if vol[z_lamp, wr, wc] != 0 and lantern(z_lamp, r, c):  # a wall voxel to hang on, or it would float off
-                lamp_kinds["wall"] += 1
-                continue
-    c, r = kerb(int(p.x), int(p.y)) or (-1, -1)
-    if not (0 <= c < W and 0 <= r < D) or bmask[r, c]:
-        continue
-    avenue = _road_half[r, c] * VOXEL_SIZE >= LAMP_AVENUE_W / 2
-    kind = ("bent_mast" if t.get("lamp_mount") == "bent_mast" else
-            "two_arm" if avenue or int(parse_len(t.get("light:count")) or 1) >= 2 else "fernandino")
-    lamp_kinds[draw_lamp(c, r, int(g[r, c]), int(hgt or lamp_height(r, c)), kind)] += 1
-note("street lamps:", len(lamps), "lanterns;", dict(lamp_kinds))
-lamp_xy = np.array([(c, r) for c, r, _ in lamps], float) if lamps else np.zeros((0, 2))  # for lamps inferred later
 for oid, typ, t, geom in osm.areas_with("amenity", ("shelter",)):
     if t.get("shelter_type") not in (None, "public_transport", "basic_hut") or bmask[cells_of(geom)].any():
         continue
@@ -563,33 +446,6 @@ for i_, sl in enumerate(ndimage.find_objects(lab_), 1):
         vol[z0_:z1_, r_, c_] = np.where(vol[z0_:z1_, r_, c_] == 0, C["fence"], vol[z0_:z1_, r_, c_])
     n_pyl += 1
 note("bridge pylons from LiDAR:", n_pyl)
-# lamps on the bridges: OSM maps almost none on the Vistula bridges (0 on Świętokrzyski and Poniatowskiego), but they
-# are lit -- put one every 32 m on each kerb of the deck, as for Złota, unless OSM has a lamp within 12 m. A kerb is
-# deck that carries no way of its own, with no carriageway or track within 4 m beyond it: the inner side of a
-# carriageway with tram tracks beside it (Poniatowski) has none, and its lamps stood in the trams' way
-_bed = np.isin(deck_col, [C["asphalt"], C["mark"], C["trambed"], C["ballast"], C["rail"]])
-n_bl = 0
-for line, w in bridge_roads:
-    for k_, dist in enumerate(np.arange(10, line.length - 6, 32.0)):
-        p = line.interpolate(dist)
-        q_ = line.interpolate(min(dist + 1, line.length))
-        tx, ty = q_.x - p.x, q_.y - p.y
-        tl = max(np.hypot(tx, ty), 1e-6)
-        for side in (-1, 1):
-            off = side * (w / 2 + 0.4)
-            c, r = int(p.x - ty / tl * off), int(p.y + tx / tl * off)
-            if not (0 <= c < W and 0 <= r < D) or not deck[r, c] or _bed[r, c]:
-                continue
-            if any(_bed[min(max(int(p.y + tx / tl * (off + side * d_)), 0), D - 1), min(max(int(p.x - ty / tl * (off + side * d_)), 0), W - 1)]
-                   for d_ in (1, 2, 3, 4)):
-                continue
-            if len(lamp_xy) and np.min(np.hypot(lamp_xy[:, 0] - c, lamp_xy[:, 1] - r)) < 12:
-                continue
-            z0 = int(g[r, c] + round(float(deck_h[r, c])))
-            lamp_kinds[draw_lamp(c, r, z0, 9, "fernandino")] += 1
-            lamp_xy = np.vstack([lamp_xy, [c, r]])
-            n_bl += 1
-note("inferred lamps on bridge decks (OSM has almost none):", n_bl)
 
 # ---------------------------------------------------------------- vehicles frozen from the 2025 LiDAR + ortho
 # only parked cars stay frozen; cars caught mid-carriageway by the 2025 flight are replaced by the live simulation
@@ -727,7 +583,7 @@ for ln in sorted(tram_lines, key=lambda l: -l.length):
 note("tram paths:", len(trams), "total km", round(sum(len(p) for p in trams) * 2 / 1000, 2))
 meta = dict(W=W, D=D, H=Hm, base=BASE, voxel=VOXEL_SIZE, tiles=tile_info, center=[CX, CY], theta_deg=math.degrees(THETA),
             crs=CRS, lonlat=[round(float(v), 6) for v in grid_to_lonlat(W / 2, D / 2)], trams=trams, jets=jets,
-            palette=[list(e) for e in pal.entries], lamps=lamps, floods=floods, labels=labels, views=views,
+            palette=[list(e) for e in pal.entries], floods=floods, labels=labels, views=views,
             sources=dict(osm=osm.timestamp, lidar=json.loads(str(z["info"]))["description"] if "info" in z else "",
                          ortho="PNOA most recent orthophoto (IGN), 0.25 m", buildings="Catastro INSPIRE + OSM",
                          trees="Ayuntamiento de Madrid tree inventory"))
@@ -744,9 +600,9 @@ with gzip.GzipFile(OUT / "qa_roadmask.bin.gz", "wb", compresslevel=9, mtime=0) a
 _dd, (_ir, _ic) = ndimage.distance_transform_edt(~deck, return_indices=True)
 deck_near = np.where(_dd <= 2, deck_h[_ir, _ic], 0).astype(np.float32)
 # off the deck mask, on a bridge way (a viaduct whose arches are OSM buildings, a deck end): the top of what the
-# voxels hold there -- lamps, poles and leaves aside -- within the LiDAR's reach
+# voxels hold there -- poles and leaves aside -- within the LiDAR's reach
 _skip = np.zeros(len(pal.entries) + 64, bool)
-_skip[[i for i, e in enumerate(pal.entries) if e[3] in (M_LEAF, M_LAMP, M_CAR)] + [C["trunk"], C["pole"], C["lampiron"], C["lampbase"], C["fence"]]] = True
+_skip[[i for i, e in enumerate(pal.entries) if e[3] in (M_LEAF, M_CAR)] + [C["trunk"], C["pole"], C["fence"]]] = True
 _rb, _cb = np.nonzero((deck_col > 0) & (_dd > 2))
 _lim = g[_rb, _cb] + np.clip(np.round(nd_mean[_rb, _cb]), 0, 40).astype(int) + 3
 _top = g[_rb, _cb].copy()

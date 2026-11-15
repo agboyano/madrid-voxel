@@ -307,8 +307,6 @@ const SURFACE = `
         gRough = 0.95; gMetal = 0.0;
       }
     }
-  } else if (m == ${MAT.LAMP}) {
-    col = base; gEmissive = vec3(1.0, 0.82, 0.55) * (0.15 + 3.2 * uNight);
   } else if (m == ${MAT.METAL}) {
     gRough = 0.4; gMetal = 0.5;
     if (base.r > 0.3 && base.r > base.b * 2.0) gEmissive = base * 1.2 * uNight;
@@ -350,7 +348,7 @@ const SURFACE = `
       gRough = 1.0; gMetal = 0.0;
     }
   }
-  if (uSnow > 0.0 && vN.y > 0.5 && m != ${MAT.WATER} && m != ${MAT.LAMP} && m != ${MAT.JET} && m != ${MAT.SIGN}) {
+  if (uSnow > 0.0 && vN.y > 0.5 && m != ${MAT.WATER} && m != ${MAT.JET} && m != ${MAT.SIGN}) {
     float lum = dot(base, vec3(0.3, 0.59, 0.11));
     float street = lvl < 0.5 && m != ${MAT.GRASS} && m != ${MAT.SOIL} && m != ${MAT.LEAF} ? 1.0 : 0.0;
     float cover = smoothstep(0.0, 0.6, uSnow - 0.35 * hash13(cell + 0.5)) * mix(1.0, 0.35 + 0.4 * step(0.5, hash12(floor(cell.xz / 3.0))), street);
@@ -373,7 +371,7 @@ const SURFACE = `
     else lampE = col * lc * fall * uNight * 1.8 * up;
     gEmissive += lampE;
   }
-  if (m != ${MAT.LAMP} && m != ${MAT.JET} && m != ${MAT.SIGN}) col *= mix(1.0, uAlbedo, smoothstep(0.2, 0.6, dot(col, vec3(0.2126, 0.7152, 0.0722))));
+  if (m != ${MAT.JET} && m != ${MAT.SIGN}) col *= mix(1.0, uAlbedo, smoothstep(0.2, 0.6, dot(col, vec3(0.2126, 0.7152, 0.0722))));
   diffuseColor.rgb = col * mix(0.62, 1.0, vAO);
   if (vHide > 0.5) { diffuseColor.rgb = vec3(0.42, 0.41, 0.39); gEmissive = vec3(0.0); lampE = vec3(0.0); }
   #ifdef CLAY

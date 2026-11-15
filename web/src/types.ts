@@ -48,7 +48,6 @@ export interface Meta {
   theta_deg: number;
   tiles: { N: number; levels: TileLevel[] };
   palette: [number, number, number, number][];
-  lamps: [number, number, number][];
   floods?: [number, number, number][];
   jets?: [number, number, number][];
   labels: Label[];

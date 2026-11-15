@@ -308,6 +308,7 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - the base cannot be wider than the shaft (3 × 3 m would be too big);
   - lanterns inside a crown stay hidden.
 - **Rejected:** an instanced mesh in the viewer (base, shaft, glass lantern and crown, like the pedestrians). It would be finer, but it would change the viewer only for the lamps.
+- **Superseded:** by "2026-11-15: Street lamps drawn by the viewer" (the user asked for the lamps not to take 1 m voxels).
 
 ## 2026-11-11: Catastro ATOM file for the squares the WFS cannot serve
 
@@ -627,3 +628,22 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **A 4 m map** (a quarter of the size): too coarse for the shadow of the buildings across 10 m streets.
   - **Interleaved full-precision pairs:** 2.5 MB against 1.6 MB for the planes with the colour in 16 steps.
   - **Lamps on bridge decks in the map:** it has one level, and their light would fall on the street under the deck.
+
+## 2026-11-15: Street lamps drawn by the viewer
+
+- **Decision:** the street lamps are no longer voxels. The viewer draws them from `lamps.bin` (`web/src/lamps.ts`) in three draw calls, whatever the view:
+  - the posts' iron (base, shaft, arm, cap) as one instanced mesh of thin boxes (`MeshLambertMaterial`), for the lamps within 350 m of the camera (200 m at the lowest render sizes), rewritten only when the camera has moved 50 m;
+  - their lanterns as a second instanced mesh, grey glass by day and HDR warm white or sodium amber at night, so the bloom picks them up;
+  - every lantern as one point beyond (at least 1.5 px, additive, fading in between 70 % and 100 % of the radius), at night only.
+  - Nothing casts a shadow. Where the budget leaves a block to the 8 m clay, its lamps are not drawn as geometry.
+  - `voxelize.py` no longer draws lamps (nor infers them on bridge decks), `meta.lamps` and the `lamp`, `lampiron` and `lampbase` colours are gone, and the shader's lamp material branch with them. The tile format is unchanged.
+- **Why:** with 20 680 lamps, voxels would be about 40 triangles each inside the tiles and in the shadow map, five times as thick as the real posts. Measured against the baseline (`scripts/profile.py`, `web/tools/passes.mjs`, level 1, 15 January 23:00):
+  - draw calls +2 at Sol (167 → 169), none in the overview (2 390);
+  - triangles: overview 47.50 M → 47.38 M at night and 42.95 M → 42.83 M by day; Sol 2.17 M → 2.20 M (+30 000, the near lamps);
+  - the sun's shadow pass 7.90 M → 7.85 M triangles;
+  - GPU time of the main pass at Sol 41.8 → 42.1 ms, fps within the noise (overview 3.0 → 3.1, Sol 14.5 → 14.5; phone 17.6 → 17.6 and 24.1 → 24.0);
+  - GPU memory: the light map is a 6.3 MB RG texture against the canvas's 16.7 MB RGBA with mipmaps; the lamp buffers are 1.7 MB.
+- **Rejected:**
+  - **Voxels for 20 000 lamps:** about 0.8 M triangles in the tiles and the shadow map, and each post splits the pavement's merged faces.
+  - **One mesh per tile, as the trunks:** up to 805 more draw calls in the overview and about 1 M triangles for posts under a pixel.
+  - **One mesh with every lamp:** about 1 M triangles every frame, seen or not.
