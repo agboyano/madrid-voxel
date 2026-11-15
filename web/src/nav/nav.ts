@@ -54,6 +54,7 @@ export class Nav {
   private possessed: unknown = null;
   private jumpAsked = false;
   private walkPending = false;
+  private held = false; // flying up with a stick, a trigger or a key still down: ignored until let go
   private detailAt = { x: NaN, z: NaN, t: 0 };
   private detailWanted = false;
   private zoomT = 0;
@@ -95,6 +96,7 @@ export class Nav {
       const k = KEYMAP[e.code];
       if (!k) return;
       this.input.keys.add(k);
+      if (e.repeat) { e.preventDefault(); return; } // a key held down, not a new one: it must not stop a flight up
       if (this.ride && this.ride.kind !== 'person') this.hopOff();
       this.goal = null;
       this.cancelFly();
@@ -324,6 +326,7 @@ export class Nav {
     const from = this.camera.position.clone(), f = this.camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize();
     const S = this.skyView;
     this.setOrbit();
+    this.held = true;
     if (S && Math.hypot(S.target.x - from.x, S.target.z - from.z) < 120) { this.flyTo({ pos: S.pos.toArray(), target: S.target.toArray() }); return; }
     const tgt = from.clone().addScaledVector(f, 60);
     tgt.y = this.world ? this.world.groundAt(tgt.x, tgt.z) + 5 : from.y;
@@ -427,7 +430,11 @@ export class Nav {
     dt = Math.min(dt, 0.1);
     const I = this.input;
     I.poll();
-    if (Math.abs(I.move) + Math.abs(I.strafe) > 0.05) { // a stick pushed, as a key pressed: no click-to-walk, no flight, out of a vehicle
+    // walking with the stick and pressing B (or Esc with W down): the stick would stop the flight up at once and walk
+    // on from the street; it counts again once let go
+    if (this.held && Math.abs(I.move) + Math.abs(I.strafe) + Math.abs(I.turn) + Math.abs(I.pitch) + Math.abs(I.rise) < 0.05) this.held = false;
+    if (this.held) { if (this.mode === 'orbit') return; }
+    else if (Math.abs(I.move) + Math.abs(I.strafe) > 0.05) { // a stick pushed, as a key pressed: no click-to-walk, no flight, out of a vehicle
       this.goal = null;
       this.cancelFly();
       if (this.ride && this.ride.kind !== 'person' && !this.walkPending) this.hopOff();
