@@ -10,6 +10,8 @@ An interactive 3D map of central Madrid in 1 m voxels, running in the browser as
 | --- | --- |
 | ![Overview](docs/img/final-overview.png) | ![Gran Vía and the Metrópolis](docs/img/final-granvia.png) |
 | ![Cibeles and the Puerta de Alcalá](docs/img/final-cibeles.png) | ![The Prado](docs/img/final-prado.png) |
+| ![The whole map at night, every street lit](docs/img/final-overview-night.png) | ![Gran Vía and the Metrópolis at night](docs/img/final-granvia-night.png) |
+| ![Gran Vía at street level, with cars and people](docs/img/final-street-granvia.png) | ![The Puerta del Sol at night, at street level](docs/img/final-street-sol.png) |
 
 It is a port of [warsaw-vibe-voxel](https://github.com/stared/warsaw-vibe-voxel) by Piotr Migdał, with pieces adapted from [dtla-voxel](https://github.com/sigman78/dtla-voxel) by sigman78. [docs/improvements.md](docs/improvements.md) explains what changed from Warsaw, and what was taken, adapted or turned down from Los Angeles.
 
