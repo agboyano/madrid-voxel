@@ -8,6 +8,7 @@ import { loadFoliage } from './foliage';
 import { loadWindows } from './windows';
 import { Fountains } from './fountains';
 import { Trunks } from './trunks';
+import { Lamps } from './lamps';
 import { Hud } from './hud';
 import { Labels } from './labels';
 import { always, blank, gpu, remember, startStats, track, trackLater } from './stats';
@@ -95,7 +96,9 @@ const card = new Card();
 const map = new THREE.Box3();
 const tiltShift = qs.get('tilt') !== '0' && innerWidth >= 600 && !phone;
 let world: World | null = null, labels: Labels | null = null, hud: Hud | null = null;
-let life: StreetLife | null = null, fountains: Fountains | null = null, trunks: Trunks | null = null;
+let life: StreetLife | null = null, fountains: Fountains | null = null, trunks: Trunks | null = null, lamps: Lamps | null = null;
+// metres of street lamps drawn as geometry around the camera (lamps.ts): fewer on slow GPUs, the rest are points
+const lampRadius = () => 200 + 150 * clamp(level / 0.5, 0, 1);
 let city: Awaited<ReturnType<typeof installCity>> | null = null;
 let uniforms: ReturnType<typeof makeUniforms> | null = null, streamer: TileStreamer | null = null, views: Record<string, View> = {};
 let fly: ((now: number) => void) | null = null;
@@ -317,6 +320,8 @@ async function boot() {
   const trunksIn = qs.get('trunks') !== '0' ? Trunks.load(meta, uniforms, meta.tiles.N, { minTrunk }) : null;
   trunksIn?.then((t) => { trunks = t; t.attachAll(S); foliageIn.then((c) => t.setLeafDays(c.leaf, c.colour)).catch(() => {}); })
     .catch((e) => console.warn('trunks', e));
+  if (qs.get('lamps') !== '0') Lamps.load(meta, uniforms).then((l) => { lamps = l; l.setRadius(lampRadius()); scene.add(l.group); })
+    .catch((e) => console.warn('lamps', e));
   daylight.casters(streamer.group, () => life?.group ?? null);
   nav.streamer = streamer;
   map.set(new THREE.Vector3(0, 0, 0), new THREE.Vector3(meta.W, meta.H, meta.D));
@@ -378,6 +383,7 @@ renderer.setAnimationLoop((now) => {
   setWindows?.(daylight.hour, daylight.day);
   fountains?.update(t, daylight.night);
   if (uniforms) trunks?.season(uniforms.uDay.value);
+  lamps?.update(camera, daylight.night, renderer.domElement.height);
   precip.update(t, camera.position, daylight.weather, daylight.night);
   if (city?.complete) document.body.classList.remove('loading');
   if (life) {
@@ -447,6 +453,7 @@ function setLevel(l: number) {
   const px = pixelsAt(level);
   if (Math.abs(px - renderer.getPixelRatio()) > 0.01) { renderer.setPixelRatio(px); onResize(); busy = true; }
   setLight();
+  lamps?.setRadius(lampRadius());
   perf.show(level);
   if (!fixedLevel) try { localStorage.setItem(LEVEL_KEY, level.toFixed(3)); } catch { /* private window: start at 0.75 next time */ }
 }
