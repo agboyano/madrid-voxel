@@ -23,6 +23,7 @@ BOXES = {  # name -> (r0, r1, c0, c1) of the 1 m grid around a landmark's curate
     "almudena": (1730, 1845, 405, 555),
     "metropolis": (1288, 1332, 1860, 1915),
     "cristal": (1720, 1787, 3220, 3273),
+    "congreso": (1510, 1615, 1945, 2035),
 }
 OUT = Path("web/public/data")
 t0 = time.time()

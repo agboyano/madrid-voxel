@@ -489,6 +489,9 @@ def details_geometry(vol, g, feats, pal, note):
     f = _by_id(feats, PALACIO_DE_CRISTAL)
     if f is not None:
         palacio_de_cristal(vol, g, f["geom"], pal, note)
+    f = _by_id(feats, CONGRESO)
+    if f is not None:
+        congreso(vol, g, f["geom"], pal, note)
 
 
 PALACIO_REAL, METROPOLIS, ALMUDENA, PALACIO_DE_CRISTAL = 30399, 4655046, 75658, 23596451  # OSM relations and way
@@ -725,6 +728,141 @@ def puerta_de_alcala(vol, g, geom, pal, note):
                 for m, h in ((0, 3), (-1, 2), (1, 2), (-3, 1), (3, 1)):
                     put(m, bc, h)
     note(f"Puerta de Alcalá rebuilt: {n} columns, {L:.0f} x {Dp:.0f} m")
+
+
+CONGRESO = 4545711  # OSM relation: the Palacio del Congreso de los Diputados
+CONGRESO_LIONS = ((440882.8, 4474178.8), (440898.3, 4474173.0))  # OSM nodes Daoiz and Velarde (EPSG:25830)
+
+
+def congreso(vol, g, geom, pal, note):
+    """The Palacio del Congreso de los Diputados (Narciso Pascual y Colomer, 1843-1850). A two-storey palace in grey
+    granite, the ground floor rusticated, the main floor's windows under straight pediments, a cornice at about 17 m
+    and hipped roofs in grey zinc round light wells. On the Carrera de San Jerónimo, the 18 m portico: six fluted
+    Corinthian columns two storeys high in white stone, an entablature with CONGRESO DE LOS DIPUTADOS on the
+    architrave, and a triangular pediment (Ponciano Ponzano's relief of Spain embracing the Constitution, a rise of
+    two fifths of its half-width) standing clear of the roofs behind; the bronze doors behind, opened only for the King's opening of
+    the Cortes; a flight of granite steps in front, the bronze lions Daoiz and Velarde (Ponzano, cast in 1866 from
+    cannon of the African war) on pedestals at its ends. The session hall's semicircular glass vault stands over the
+    middle of the roof, 43 m behind the facade.
+    The LiDAR read it as a block whose portico melted into the steps, so the main block is rebuilt from its footprint
+    (classic_rebuild) and the portico drawn in its own frame, set by the two lions (OSM): its axis between them, the
+    facade line the footprint's edge beside it. Proportions from photographs of the facade (Commons, "España - Madrid -
+    Palacio de las Cortes - Fachada", "Congreso de los Diputados, enero de 2015", "Congreso de los Diputados (España)
+    02"), the bays and the portico's width from OSM, heights from the LiDAR."""
+    C = 1 / VOXEL_SIZE  # metres -> cells and levels
+    D, W = g.shape
+    (l1x, l1y), (l2x, l2y) = (tuple(float(v) for v in to_grid(*p)) for p in CONGRESO_LIONS)
+    tx, ty = l2x - l1x, l2y - l1y
+    n_ = math.hypot(tx, ty)
+    tx, ty = tx / n_, ty / n_  # along the facade
+    cx0, cy0 = geom.centroid.x, geom.centroid.y
+    mx, my = (l1x + l2x) / 2, (l1y + l2y) / 2
+    nx, ny = -ty, tx
+    if (mx - cx0) * nx + (my - cy0) * ny < 0:
+        nx, ny = -nx, -ny  # out of the building, over the street
+    ab = lambda x, y: ((x - mx) * tx + (y - my) * ty, (x - mx) * nx + (y - my) * ny)  # noqa: E731  (along, out)
+    # the facade line: the footprint's edge either side of the portico, and the front of the steps
+    pts = [ab(x, y) for x, y in geom.exterior.coords]
+    wall_b = max(b for a, b in pts if 10 * C < abs(a) < 20 * C)
+    front_b = max(b for a, b in pts if abs(a) < 9 * C)
+    HW = 9.2 * C  # the pediment's half-width
+    cut = Polygon([(mx + tx * a + nx * b, my + ty * a + ny * b) for a, b in
+                   ((-HW - 1, wall_b), (HW + 1, wall_b), (HW + 1, front_b + 2), (-HW - 1, front_b + 2))])
+    main = geom.difference(cut)
+    main = max(main.geoms, key=lambda p: p.area) if main.geom_type == "MultiPolygon" else main
+    granite = "#c9c6bf"
+    # the roofs rise gently from behind the cornice and stay under the pediment's apex, as seen from the street
+    classic_rebuild(vol, g, pal, main, int(round(17 * C)), 0.35, granite, "#a6a9ab", note, "Palacio del Congreso",
+                    rows=((int(2 * C), int(4 * C)), (int(10 * C), int(4 * C))), bay=5.0 * C, attic=1, cap=int(20 * C))
+    # the rusticated ground floor a shade darker
+    rr, cc = _cells_geom(main.buffer(1.0), D, W)
+    wall, rustic = pal(_hex(granite), MAT_IDS["classic"]), pal(_hex("#b4b1aa"), MAT_IDS["classic"])
+    for r, c in zip(rr, cc):
+        col = vol[int(g[r, c]):int(g[r, c]) + int(7 * C), r, c]
+        col[col == wall] = rustic
+    # the session hall's glass vault: a half dome over the roof, ribbed every 15 degrees
+    zinc, glass = pal(_hex("#b9bcbd"), MAT_IDS["metal"]), pal(_hex("#9fbccd"), M_GLASS)
+    hx, hy, R = mx - nx * 43 * C, my - ny * 43 * C, 13 * C
+    for r in range(int(hy - R) - 1, int(hy + R) + 2):
+        for c in range(int(hx - R) - 1, int(hx + R) + 2):
+            a, b = ab(c + 0.5, r + 0.5)
+            b += 43 * C  # from the vault's straight side, out towards the facade
+            d = math.hypot(a, b)
+            if b > 0 or d > R:
+                continue
+            col = vol[:, r, c]
+            nz = np.nonzero(col)[0]
+            if not len(nz) or nz[-1] - g[r, c] < 12 * C:
+                continue
+            z0 = int(g[r, c]) + int(17 * C)
+            h = int(round(4 * C * math.sqrt(max(1 - (d / R) ** 2, 0))))
+            col[z0 + 1:z0 + 8] = 0
+            col[z0:z0 + h + 1] = zinc
+            if d < R - 1 and int(math.degrees(math.atan2(b, a)) // 15) % 2 == 0:
+                col[z0 + h] = glass
+    # the portico: cleared, then the steps, the floor, the columns, the entablature and the pediment
+    stone = pal(_hex("#e6e2d8"), MAT_IDS["classic"])
+    white = pal(_hex("#f1eee6"), MAT_IDS["classic"])  # capitals, the inscription, the relief's figures
+    bronze = pal(_hex("#4a4436"), MAT_IDS["metal"])
+    lead = pal(_hex("#8d9093"), MAT_IDS["metal"])
+    step = pal(_hex("#b4b1aa"), MAT_IDS["classic"])
+    zb = int(np.median([g[int(y), int(x)] for x, y in ((l1x, l1y), (l2x, l2y))]))
+    Z = lambda m: zb + int(round(m * C))  # noqa: E731
+    COLS = [k * 3.2 * C for k in (-2.5, -1.5, -0.5, 0.5, 1.5, 2.5)]  # six columns, 3.2 m apart
+    col_b = wall_b + 2.4 * C  # their row out from the wall; the steps take the rest, down to the lions
+    col_cells = {(int(my + ty * k + ny * col_b), int(mx + tx * k + nx * col_b)) for k in COLS}
+    ent_b = col_b + 0.7 * C  # the entablature's and pediment's front
+    n_cols = 0
+    for r in range(int(min(l1y, l2y) - 16 * C), int(max(l1y, l2y) + 16 * C)):
+        for c in range(int(min(l1x, l2x) - 16 * C), int(max(l1x, l2x) + 16 * C)):
+            if not (0 <= r < D and 0 <= c < W):
+                continue
+            a, b = ab(c + 0.5, r + 0.5)
+            if abs(a) > HW + 0.5 or b < wall_b - 0.5 or b > front_b + 1.5:
+                continue
+            col = vol[:, r, c]
+            gz = int(g[r, c])
+            col[gz:gz + int(30 * C)] = 0
+            if b > front_b - 0.5:  # the bottom step
+                col[gz:Z(0.5)] = step
+                continue
+            if b > ent_b + 0.5:  # the flight up to the portico floor
+                col[gz:Z(1.0)] = step
+                continue
+            col[gz:Z(1.5)] = step  # the portico's floor
+            if b > wall_b + 0.5:
+                if (r, c) in col_cells:
+                    col[Z(1.5):Z(14.0)] = stone
+                    col[Z(14.0):Z(15.0)] = white
+                    n_cols += 1
+            else:  # the wall behind, the bronze doors in it
+                col[Z(1.5):Z(17)] = stone
+                if abs(a) < 1.6 * C:
+                    col[Z(1.5):Z(7.5)] = bronze
+            col[Z(15.0):Z(18.0)] = stone  # architrave, frieze and cornice
+            if b > ent_b - 0.5 and abs(a) < 5.5 * C:
+                col[Z(15.4):Z(16.4)] = white  # CONGRESO DE LOS DIPUTADOS
+            top = 18.0 + 0.45 * (HW - abs(a)) / C  # the pediment
+            col[Z(18.0):Z(top)] = stone
+            col[Z(top) - 1] = lead
+            if b > ent_b - 0.5:  # the relief's figures, a frieze of them along the tympanum's floor, the seated Spain higher
+                if abs(a) < 6.5 * C and int(math.floor(a / C)) % 2 == 0:
+                    col[Z(18.0)] = white
+                if abs(a) < 1.5 * C:
+                    col[Z(18.0):Z(20.0)] = white
+    # the lions on their pedestals, facing the street
+    for lx, ly in ((l1x, l1y), (l2x, l2y)):
+        for da in (-1, 0, 1):
+            for db in (-1, 0, 1):
+                x, y = lx + tx * da + nx * db, ly + ty * da + ny * db
+                col = vol[:, int(y), int(x)]
+                gz = int(g[int(y), int(x)])
+                col[gz:Z(2.0)] = step
+                if da == 0 and db >= 0:
+                    col[Z(2.0):Z(3.5)] = bronze
+                    if db == 1:
+                        col[Z(3.5)] = bronze  # the head and mane
+    note(f"Palacio del Congreso: portico of {n_cols} column cells, facade at {wall_b:.1f}, steps to {front_b:.1f} m")
 
 
 MON_TOP = np.zeros((_D, _W), np.int32)  # top of the monuments (monuments.build), for label heights

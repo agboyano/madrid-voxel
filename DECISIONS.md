@@ -647,3 +647,16 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Voxels for 20 000 lamps:** about 0.8 M triangles in the tiles and the shadow map, and each post splits the pavement's merged faces.
   - **One mesh per tile, as the trunks:** up to 805 more draw calls in the overview and about 1 M triangles for posts under a pixel.
   - **One mesh with every lamp:** about 1 M triangles every frame, seen or not.
+
+## 2026-11-15: The Palacio del Congreso rebuilt
+
+- **Decision:** rebuild the Palacio del Congreso de los Diputados (OSM relation 4545711) in `landmarks.congreso`, run from `details_geometry` (and by `patch.py congreso`).
+  - **Main block:** `classic_rebuild` from the footprint without the portico: grey granite walls to a 17 m cornice with a parapet, the ground floor rusticated a shade darker, windows on both floors in 5 m bays, zinc roofs rising gently behind the cornice (capped at 20 m) round the light wells the LiDAR keeps.
+  - **Portico**, drawn in a frame set by the two lions' OSM nodes (its axis between them, the facade line the footprint's edge beside it): six columns in white stone 3.2 m apart and 2.4 m out from the wall, 12.5 m high on a 1.5 m floor, with white capitals; a 3 m entablature with the inscription; a triangular pediment over 18.4 m rising 0.45 m per m, a row of white figures along the tympanum and the seated Spain higher at its centre; the bronze doors in the wall behind; the flight of steps down to the lions.
+  - **The lions** Daoiz and Velarde, in bronze, on 2 m granite pedestals at the foot of the steps.
+  - **The session hall's glass vault:** a 13 m half dome 43 m behind the facade, zinc ribs and glass every 15°, where the ortho shows it.
+- **Why:** the LiDAR and OSM drew it as a white block of flats with no portico. The proportions come from photographs of the facade (Commons: "España - Madrid - Palacio de las Cortes - Fachada", "Congreso de los Diputados, enero de 2015", "Congreso de los Diputados (España) 02"). The portico's 18 m width comes from OSM's outline, which agrees with the photos: three bays of windows either side of a 55 m facade. The heights come from the LiDAR, and the elements from the Spanish Wikipedia.
+- **Rejected:**
+  - **A flag over the pediment:** at 1 m its pole is a grey chimney.
+  - **The pediment's relief modelled:** at 1 m a figure is one voxel; the frieze is suggested, not drawn.
+  - **The 1980 and 2006 extensions:** they are separate buildings on their own footprints and keep their LiDAR shape.
