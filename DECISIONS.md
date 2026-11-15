@@ -568,3 +568,15 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **A month of counts from each season:** one working month gives the daily rhythm; the month-to-month change in car traffic is small next to it, and bikes, which change most, have their own year.
   - **Per-street profiles:** the viewer has one density for the whole active zone; the median shape is what it can use.
   - **Signal plans:** none are published (`docs/seasons-and-life-sources.md`, §6); they could be asked of the Ayuntamiento's traffic department.
+
+## 2026-11-15: Lit windows measured in Madrid
+
+- **Decision:**
+  - **When:** homes follow Madrid's hour-by-hour rhythm, the share of households with someone at home and awake, from INE's Time Use Survey 2009–2010 (microdata, the Comunidad de Madrid's 1 008 households, weighted). Their lit share is that rhythm times one level fitted to the photo counts.
+  - **How much:** the level, the other building types by time of evening, the share lit in whole floors and the light's colour come from 233 facades counted on 174 night photos of central Madrid from Commons (`scripts/window_photos.py`, `scripts/window_counts.json`). Facades flagged while counting as festivals or decorations, shop displays, empty buildings, wrong camera clocks or outside the centre are left out: 170 remain, 75 of them homes.
+  - `windows.json` gives 24 hourly values per type instead of five bins.
+- **Why:** Warsaw's photos put homes at a level of 0.19; Madrid's at 0.10. Madrid's homes peak at 21–22 h (8 % of windows lit on a weekday) and are nearly dark by 1:00 (1 %); offices fall from 16 % at 18 h to 4–5 % after 22 h.
+- **How the counts were checked:** counted by eye, by subagents, in batches of about 20 photos. A first pass in batches of 120 lost images to the request limit and some counts were made without the photo in view, so the whole set was counted again; on the 100 photos counted in both passes, the photo's lit share agrees with a correlation of 0.81 and a median difference of 2.7 points, with no bias.
+- **Rejected:**
+  - **The national hourly tables:** the INE publishes the rhythm only for Spain; Madrid's is later (at 23:00, 0.71 of households awake at home against 0.65).
+  - **Fitting the level per day type:** the weekend sample is small; the rhythm carries the weekday and weekend difference.

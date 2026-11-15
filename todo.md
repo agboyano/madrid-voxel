@@ -31,7 +31,6 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 - **PEP725 / AEMET** phenological series are given on request: https://pep725.eu/dataset/ (non-commercial use; cite Templ et al. 2018) and AEMET's climatological data bank. Useful for Aesculus and Tilia.
 - **Autumn colours with small samples:** Melia (5 photos), Ulmus (6, of *Ulmus minor*: Commons had no autumn canopies of *U. pumila*), Celtis (7, mixing *C. australis* and *C. occidentalis*). The horse chestnut keeps Warsaw's measurement (Central Europe). More photos would steady them: iNaturalist research-grade photos from the Madrid region, October to December.
 - **Flowering:** almonds and the purple plum blossom white and pink in February and March; the viewer has no flowering phase.
-- **Lit windows** still use Warsaw's measurements: night photos of Warsaw facades. Measure Madrid's timing and appearance (`docs/seasons-and-life-sources.md` §5). Traffic follows Madrid's counters since 2026-11-15; signal plans are not published.
 
 ## Pipeline and viewer
 

@@ -4,11 +4,11 @@ import { dataTexture, dataUrl, fetchGzip, fetchJson, isWeekend } from './util';
 import type { VoxelUniforms } from './voxelMaterial';
 
 interface WinType { med: { weekday: number[]; weekend: number[] }; shape: number[]; floors: number; colour: [number, number, number] }
-interface WinStats { bins: [number, number][]; types: Record<string, WinType> }
+// med: the share of lit windows per clock hour from 0:00 (scripts/window_stats.py)
+interface WinStats { types: Record<string, WinType> }
 
 // building kinds in windows.bin (scripts/windows.py) and the measured type each one follows (scripts/window_stats.py)
 const KIND_MODEL = ['residential', 'residential', 'office', 'hotel', 'office', 'public', 'religious', 'public'];
-const CENTRES = [16.5, 18.5, 20.5, 22.5, 27];
 
 export async function loadWindows(meta: Meta, U: VoxelUniforms) {
   const [stats, buf] = await Promise.all([fetchJson<WinStats>(dataUrl('windows.json')), fetchGzip(dataUrl('windows.bin'))]);
@@ -26,11 +26,10 @@ export async function loadWindows(meta: Meta, U: VoxelUniforms) {
 
 function setWindows(U: VoxelUniforms, stats: WinStats, hour: number, day: number) {
   const weekend = isWeekend(day);
-  const t = hour < 12 ? hour + 24 : hour;
-  const i = CENTRES.findIndex((c) => c > t), a = i < 0 ? CENTRES.length - 1 : Math.max(i - 1, 0), b = i < 0 ? a : i;
-  const f = a === b ? 0 : (t - CENTRES[a]) / (CENTRES[b] - CENTRES[a]);
+  // each hour's value stands for the middle of that hour; in between, a straight line
+  const x = ((hour % 24) + 24) % 24 - 0.5, i = Math.floor(x), f = x - i;
   KIND_MODEL.forEach((m, k) => {
     const med = stats.types[m].med[weekend ? 'weekend' : 'weekday'];
-    U.uWinMed.value[k] = med[a] + (med[b] - med[a]) * Math.min(Math.max(f, 0), 1);
+    U.uWinMed.value[k] = med[(i + 24) % 24] * (1 - f) + med[(i + 25) % 24] * f;
   });
 }
