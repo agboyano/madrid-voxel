@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Meta } from './types';
 import { FOLIAGE_CLASSES } from './foliage';
-import { dataTexture } from './util';
+import { dataTexture, dataUrl, fetchGzip } from './util';
 
 // material ids, as in scripts/voxelize.py
 export const MAT = { SOLID: 0, WALL: 1, GLASS: 2, LEAF: 3, WATER: 4, LAMP: 5, METAL: 6, FLOODLIT: 7, GRASS: 8, MARK: 9, SOIL: 10, CAR: 11,
@@ -48,7 +48,7 @@ const tiny = (format: THREE.PixelFormat, data: Uint8Array | Uint16Array, type?: 
 export function makeUniforms(meta: Meta): VoxelUniforms {
   return {
     uPalette: { value: makePaletteTexture(meta.palette) },
-    uLampMap: { value: makeLampTexture(meta) },
+    uLampMap: { value: tiny(THREE.RGFormat, new Uint8Array(2)) },
     uSize: { value: new THREE.Vector2(meta.W, meta.D) },
     uNight: { value: 0 },
     uTime: { value: 0 },
@@ -89,27 +89,16 @@ function makePaletteTexture(palette: Meta['palette']) {
   return tex;
 }
 
-// warm pools of street light on the ground (2 m texels), and an even wash over floodlit pitches
-function makeLampTexture(meta: Meta) {
-  const s = 0.5, cv = document.createElement('canvas');
-  cv.width = meta.W * s; cv.height = meta.D * s;
-  const ctx = cv.getContext('2d')!;
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.globalCompositeOperation = 'lighter';
-  const pool = (x: number, y: number, r: number, stops: [number, string][]) => {
-    const gr = ctx.createRadialGradient(x, y, 0, x, y, r);
-    for (const [t, c] of stops) gr.addColorStop(t, c);
-    ctx.fillStyle = gr;
-    ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
-  };
-  for (const [x, y] of meta.lamps) pool((x + 0.5) * s, (y + 0.5) * s, 20 * s,
-    [[0, 'rgba(255,226,180,0.65)'], [0.3, 'rgba(255,216,170,0.28)'], [0.65, 'rgba(255,210,160,0.08)'], [1, 'rgba(255,205,150,0)']]);
-  for (const [x, y, r] of meta.floods ?? []) pool(x * s, y * s, r * 1.35 * s,
-    [[0, 'rgba(225,235,255,0.6)'], [0.7, 'rgba(225,235,255,0.52)'], [1, 'rgba(225,235,255,0)']]);
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.NoColorSpace;
-  tex.flipY = false;
-  return tex;
+// The street lamps' light on the ground (scripts/lampmap.py: lampmap.bin, 2 m texels): r the light, g its colour from
+// cool white to sodium amber. Until it comes, none.
+export async function loadLampMap(meta: Meta, U: VoxelUniforms) {
+  const buf = new Uint8Array(await fetchGzip(dataUrl('lampmap.bin')));
+  const n = buf.length / 2, w = Math.round(n / Math.round(meta.D * (meta.voxel ?? 1) / 2)), h = n / w, rg = new Uint8Array(buf.length);
+  for (let i = 0; i < n; i++) { rg[2 * i] = buf[i]; rg[2 * i + 1] = buf[n + i]; } // two planes in the file, pairs on the GPU
+  const tex = dataTexture(rg, w, h, THREE.RGFormat);
+  // no mipmaps: seen at a grazing angle the coarse levels smeared a park's lit paths over its lawns (and cost 2 MB)
+  tex.magFilter = tex.minFilter = THREE.LinearFilter;
+  U.uLampMap.value = tex;
 }
 
 // A leaf voxel through the year (foliage.ts): x = in leaf (0 bare .. 1), y = turned (0 green .. 1 autumn colour), z = class.
@@ -374,23 +363,26 @@ const SURFACE = `
     col *= mix(1.0, mix(0.82, mix(0.5, 0.3, pud), flat_), uWet);
     gRough = mix(gRough, mix(0.5, 0.03, pud), uWet * mix(0.5, 1.0, flat_));
   }
+  vec3 lampE = vec3(0.0);
   if (uNight > 0.0) { // street lamps light what is near the ground; water reflects them instead
-    vec3 lm = texture2D(uLampMap, vVox.xz / uSize).rgb;
-    float fall = clamp(1.0 - (vVox.y - gz) / 16.0, 0.0, 1.0);
-    float up = m == ${MAT.LEAF} ? (vN.y < -0.5 ? 2.6 : 1.7) : 1.0;
-    if (m == ${MAT.WATER}) gEmissive += lm * vec3(1.0, 0.72, 0.42) * fall * uNight * 0.45;
-    else gEmissive += col * lm * fall * uNight * 2.2 * up;
+    vec2 lm = texture2D(uLampMap, vVox.xz / uSize).rg;
+    vec3 lc = mix(vec3(0.9, 0.93, 1.0), vec3(1.0, 0.76, 0.5), lm.g) * lm.r;
+    float fall = clamp(1.0 - (vVox.y - gz) / 14.0, 0.0, 1.0); fall *= fall; // a 4 m lantern lights the ground floor, little above
+    float up = m == ${MAT.LEAF} ? (vN.y < -0.5 ? 2.2 : 1.0) : 1.0; // a crown is lit from below
+    if (m == ${MAT.WATER}) lampE = lc * fall * uNight * 0.5;
+    else lampE = col * lc * fall * uNight * 1.8 * up;
+    gEmissive += lampE;
   }
   if (m != ${MAT.LAMP} && m != ${MAT.JET} && m != ${MAT.SIGN}) col *= mix(1.0, uAlbedo, smoothstep(0.2, 0.6, dot(col, vec3(0.2126, 0.7152, 0.0722))));
   diffuseColor.rgb = col * mix(0.62, 1.0, vAO);
-  if (vHide > 0.5) { diffuseColor.rgb = vec3(0.42, 0.41, 0.39); gEmissive = vec3(0.0); }
+  if (vHide > 0.5) { diffuseColor.rgb = vec3(0.42, 0.41, 0.39); gEmissive = vec3(0.0); lampE = vec3(0.0); }
   #ifdef CLAY
   if (zreal(cell)) discard;
   #else
   if (!zreal(cell)) discard;
   #endif
-  #ifdef CLAY
-  { gEmissive = vec3(0.0); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), 0.3); }
+  #ifdef CLAY // the street lamps' light stays on the clay: the far city is lit at night, its windows are not
+  { gEmissive = lampE; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), 0.3); }
   #endif`;
 
 // the clay's shadow: none where the city is real (it casts its own)

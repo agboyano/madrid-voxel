@@ -612,3 +612,18 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **dtla-voxel's lamps every 36 m along kerbs** where OSM has none: invented, regular positions, where the inventory has the real ones.
   - **OSM's tags for the support** (`support`, `lamp_mount`): only 562 of the 7 165 Villa lanterns have an OSM node beside them, and those mix posts and walls; the model code separates them.
   - **The inventory's free-text address** to place lamps: the coordinates are already there.
+
+## 2026-11-15: The street lamps' light, baked with the buildings' shadow
+
+- **Decision:** bake the lamps' light on the ground in the pipeline (`scripts/lampmap.py` → `lampmap.bin`, 2 m texels, two 8-bit planes: light and colour) instead of painting 20 m pools on a canvas in the viewer.
+  - Each lamp is a point source at its lantern's height: light on the ground falls as (1 + (d / 1.8 h)²)^−1.5, lowered by 5 % of the light under the lamp so it ends smoothly. Taller masts light a wider patch as brightly.
+  - Rays from each lantern stop one texel into the first building: the facade it faces is lit, the courtyard behind is not, and a wall bracket lights only its side of the street.
+  - The light is summed in float and stored as 1 − exp(−0.5 x): crowded squares brighten towards white without clipping.
+  - Colour: warm white for LED, amber for sodium, cool white for floodlights. Park lanterns at 0.35 of a street lantern; globes at 0.6.
+  - Viewer: the same single texture read as before, with linear filtering and no mipmaps (seen at a grazing angle the coarse levels smeared a park's lit paths over its lawns). The light falls off with the square of the height above the ground up to 14 m, and stays on the 8 m clay, whose windows stay off.
+- **Why:** with 20 680 lamps the canvas pools summed in 8 bits turned every street white, leaked through buildings, and would have blocked the main thread for 100–300 ms at start. Without a smooth end, the faint tails summed into a glow over every lawn, which the night exposure brightens.
+- **Rejected:**
+  - **Real lights** (point or spot lights): thousands of lights is not a forward renderer's budget.
+  - **A 4 m map** (a quarter of the size): too coarse for the shadow of the buildings across 10 m streets.
+  - **Interleaved full-precision pairs:** 2.5 MB against 1.6 MB for the planes with the colour in 16 steps.
+  - **Lamps on bridge decks in the map:** it has one level, and their light would fall on the street under the deck.

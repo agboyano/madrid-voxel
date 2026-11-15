@@ -27,7 +27,7 @@ import { floodlight } from './sky';
 import { Card } from './card';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
 import type { World } from './world';
-import { makeUniforms, makeVoxelMaterial } from './voxelMaterial';
+import { loadLampMap, makeUniforms, makeVoxelMaterial } from './voxelMaterial';
 import './style.css';
 
 declare global {
@@ -309,6 +309,7 @@ async function boot() {
   foliageIn.then((city) => bar.setDays({ 'leaves out': city.leaf, 'trees in colour': city.colour, 'leaves down': city.fall, ...DAYS }))
     .catch((e) => console.warn('foliage', e));
   loadWindows(meta, uniforms).then((set) => { setWindows = set; }).catch((e) => console.warn('windows', e));
+  loadLampMap(meta, uniforms).catch((e) => console.warn('lamp map', e));
   streamer = new TileStreamer(meta, makeVoxelMaterial(uniforms), scene);
   streamer.bakeAO = qs.get('ao') !== 'merge'; // ?ao=merge: no per-vertex occlusion, larger merged faces (evaluation only)
   world = nav.world = streamer.world;
