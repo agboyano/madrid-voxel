@@ -1435,7 +1435,7 @@ Post-processing is still about half the frame at street level.
 - **Kinds:** 5 983 modern posts (377 more with two arms), 4 916 Villa posts, 3 214 Fernando VII posts, 371 globes; on walls 2 270 Villa, 1 882 modern, 1 632 Fernando VII, 35 globes. 40 stand on the Viaducto de Segovia's deck.
 - **Model codes:** 188 over the AOI. 20 are wall models and 80 post models; 88 have under 8 units or no clear answer and are decided unit by unit. The split is sharp: `FVLED005` 95 % within 1 m of a building, `FVLED006` 97 %, `FFLED002` 97 %, `LBE006` 99 %; `FVLED002` 10 %, `FFLED005` 1 %, `LBE003` 2 %, `LS00111` 2 %. Prefixes by count: `FVLED` 7 165, `LBE` 5 283, `FFLED` 3 598, `LS` 1 456, `PO` 1 232 (the one mixed family: 55–74 % on a wall by code), `PRD` 417, `GLED` 363.
 - **Light:** 11 379 LED, 8 820 discharge, 265 both, on the streets.
-- **Against OSM:** 1 712 of OSM's 2 774 lamps lie within 5 m of an inventory unit. Per 500 m block (x to the right, y downward) the inventory has 64–1 245 lamps, OSM had none in 17 of the 54 blocks and under 25 in 14 more:
+- **Against OSM:** 1 712 of OSM's 2 774 lamps lie within 5 m of an inventory unit. Per 500 m block (x to the right, y downward) the inventory has 64–1 245 lamps, OSM had none in 17 of the 54 blocks and under 25 in 17 more:
 
 ```
  283  364  442  447  437  297  305  349  221
@@ -1446,6 +1446,14 @@ Post-processing is still about half the frame at street level.
  174  278  387  320  217   64  150  162  120
 ```
 
+- **Baseline before the viewer draws them** (UHD 620, render size 1 unless phone; `scripts/profile.py`, `web/tools/passes.mjs`; lamps still voxels from OSM):
+
+| View | 15 June 11:00 | 15 January 23:00, clear | phone, 15 January 23:00 |
+| --- | --- | --- | --- |
+| overview | 3.6 fps, 42.95 M tris, 2 390 calls | 3.0 fps, 47.50 M, 2 390 | 17.6 fps, 4.84 M, 247 |
+| sol | 14.9 fps, 2.13 M, 167 | 14.5 fps, 2.17 M, 167 | 24.1 fps, 1.06 M, 96 |
+
+  At night the main pass takes 319 ms of GPU in the overview and 42 ms at Sol, the sun's shadow map 206 ms and 61 ms when redrawn, bloom 4.4–5.0 ms. Night screenshots `docs/img/lamps-before-{overview,sol,street,granvia,cibeles,prado}.png` (15 January 23:00, clear) and `lamps-before-street-day.png`.
 - **Rebuilding the committed data:** a full `voxelize.py` run on the code of 2026-11-15 writes 347 palette entries where the committed `meta.json` has 350, and 16 tiles differ. The three extra entries are colours `patch.py` appended while the landmarks were iterated (indices 332, 342, 343), no longer used. Not a lamp change.
 
 ### Extended area at −6° (after Phase 6)
