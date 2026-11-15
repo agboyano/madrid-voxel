@@ -88,11 +88,13 @@ The full build peaks at about 16 GB of memory, in `voxelize.py`. `scripts/build_
 | Rasters | `prep.py` | the surface, terrain and orthophoto on the grid |
 | Fusion | `layers.py` | ground, streets, buildings and roofs as 2D layers |
 | Voxels | `voxelize.py`, with `trees.py`, `trunks.py`, `landmarks.py`, `underpass.py`, `traffic.py`, `tiles.py` | the 3D city: buildings with their roofs and windows, trees and their trunks, street furniture, bridge decks, underpasses; then the tiles and the road and footpath graph for the traffic |
+| Street lamps | `fetch_lamps.py`, `lamps.py`, `lampmap.py` | the Ayuntamiento's lighting inventory placed for the viewer, and their light on the ground baked with the buildings' shadow |
 | Viewer data | `terrain.py`, `zones.py`, `cost1m.py`, `windows.py`, `window_stats.py`, `places.py`, `phenology.py`, `lawns_s2.py`, `climate.py`, `horizon.py` | first-moment terrain, city blocks and their cost in triangles, lit windows, the search index, the seasonal cycle of each tree and lawn, how likely each kind of weather is on each day of the year (ERA5, 1995–2024), the skyline of the Sierra |
 
 The main rules:
 - **Buildings:** OSM footprints with heights from the LiDAR. Catastro gives the floor count where OSM has none, and adds the buildings OSM lacks. Where the LiDAR sees nothing tall, the OSM or Catastro height wins (a building finished after the flight).
 - **Trees:** the Ayuntamiento's inventory, about 48 000 trees with species, height and girth, plus about 3 000 from OSM and 7 000 crowns seen only by the LiDAR (58 569 in all). A tree whose crown the leaf-off LiDAR flight did not catch is drawn young, at its inventory height. Each tree turns with the season of its genus. Trunks are drawn at the width the inventory measured (girth at 1.3 m), and deciduous trees show bare limbs in autumn and winter.
+- **Street lamps:** the Ayuntamiento's lighting inventory, 20 680 lamps across the map, each a Villa or Fernando VII lantern, a globe or a modern luminaire, on a post or a facade bracket as its model code says. The viewer draws them at their own width; their light on the ground is baked, cut by the buildings.
 - **Roofs:** clay tile, slate, zinc or flat terrace, chosen from the orthophoto; walls in Madrid's render and brick, with Madrid de los Austrias in its own colours.
 - **Labels:** found through the `wikidata` tag of OSM features, never by name. They show the Spanish name, as on the street signs, with the English one under it where it differs. The cards carry the year built, architect, height, style, heritage designation and links, all written at build time.
 
@@ -102,7 +104,7 @@ The main rules:
 
 - **One LiDAR flight, in March:** the PNOA flight of 17–18 March 2024 was leaf-off, so deciduous crowns are sparse. Trees without a crown are drawn young from the inventory; private trees outside it take their crown from the LiDAR alone.
 - **Older orthophoto:** the most recent PNOA orthophoto (July 2023) is a year older than the LiDAR and is not a true orthophoto, so the roofs of tall buildings lean slightly off their footprints.
-- **1 m voxels:** pitched roofs become 1 m terraces, cornices and eaves make facades ragged, and kiosks, signs and statues taller than 1.5 m show as grey blocks (street lamps are drawn in their own shapes).
+- **1 m voxels:** pitched roofs become 1 m terraces, cornices and eaves make facades ragged, and kiosks, signs and statues taller than 1.5 m show as grey blocks (street lamps and trunks are drawn at their own width). Street lamp heights are assumed by type and street, since the inventory has none.
 - **Grid at −6°:** the grid follows the Ensanche of the Barrio de Salamanca, which covers most of the map. Streets at other angles show a staircase along their facades: Gran Vía, the Paseo del Prado and the irregular streets of the historic centre.
 - **Landmarks in a first pass:** the Puerta de Alcalá and the Cibeles group are rebuilt by hand, and the Royal Palace, the Metrópolis, the Almudena and the Palacio de Cristal have their stone, domes and glass; their sculptures are a few voxels each.
 - **Seasons with gaps:** Styphnolobium, the horse chestnut and the chinaberry, and the leaf-out of hackberries and limes, take the median dates of the other trees: iNaturalist has too few observations of them in Mediterranean climates (`todo.md` has the satellite source that would measure them in Madrid).
@@ -118,6 +120,7 @@ Data the map is built from:
 - **[OpenStreetMap](https://www.openstreetmap.org/)**: © OpenStreetMap contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/), via the Overpass API.
 - **Catastro**: buildings from the INSPIRE service of the Dirección General del Catastro ([sede.catastro.gob.es](https://www.sedecatastro.gob.es/)), and from its ATOM file for four squares near Calle de Toledo where the WFS fails. Source: Dirección General del Catastro.
 - **Tree inventory**: "Arbolado en parques y zonas verdes de Madrid (detalle)", Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Street-lighting inventory**: "Unidades luminosas (farolas)" and "Unidades luminosas (farolas) en parques históricos y singulares" (2022), Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **[Wikidata](https://www.wikidata.org/)**: landmark names and facts, [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
 - **[Open-Meteo](https://open-meteo.com/)**: the ERA5 historical weather archive, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), for how likely each kind of weather is on each day.
 - **[iNaturalist](https://www.inaturalist.org/)**: leaf annotations of observations in regions with Madrid's climate (Spain, Portugal, Italy, Greece, southern France, Cyprus, Turkey, Israel, Lebanon, the Maghreb, California), aggregated by week, for when each genus leafs out and colours.

@@ -159,6 +159,20 @@ Test area: **500 × 500 m centred on Puerta del Sol** (approx. X 440 290, Y 4 47
 
 ---
 
+## Street lamps across the map (2026-11-15)
+
+The lamps from the Ayuntamiento's inventory instead of OSM, drawn by the viewer instead of as 1 m voxels, with their light baked (`DECISIONS.md`, 2026-11-15).
+
+- [x] **A. Data:** the night-lighting baseline; `fetch_lamps.py` (inventory 300573 and 300582); `lamps.py` → `lamps.bin` (20 680 lamps, the support from the model code).
+- [x] **B. Light map:** `lampmap.py` → `lampmap.bin` (2 m, cut by the buildings, compressed without clipping); the viewer reads it in place of the canvas pools and keeps it on the clay.
+- [x] **C. Thin lamps:** `web/src/lamps.ts` (near instanced meshes and far points, 3 draw calls); voxel lamps and `meta.lamps` removed; tiles rebuilt; after screenshots and the measured cost against the baseline.
+- [x] **D. Documentation:** `DECISIONS.md`, `NOTES.md`, `README.md`, `CLAUDE.md`, `docs/improvements.md`.
+- [ ] The pending checks and problems found at checkpoint C, listed in `todo.md` ("Street lamps").
+
+**Checkpoint C:** approved.
+
+---
+
 ## Phase 7 (future): data updates
 
 **Municipal 2026 flight**, once the Ayuntamiento publishes it on the Geoportal:

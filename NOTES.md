@@ -183,12 +183,14 @@ Grid coordinates are used everywhere downstream: OSM geometries (`osm.py:16-19`)
 | --- | --- | --- | --- |
 | `data/raw/osm.json` | fetch_osm.sh / osm_pbf.py | Overpass JSON | osm.py, traffic.py, underpass.py |
 | `data/prep.npz` | prep.py:80 | npz; see the raster contract | voxelize, flood, landmarks |
-| `data/ground.npz` | voxelize.py:1975 | `g` int16 (D, W) ground level (first free z, metres above BASE); `rgb` uint8 (D, W, 3) colour of the top ground voxel, grass shown as bare; `b` int16 building height above ground | terrain.py, flood.py, tools/poses.py |
+| `data/ground.npz` | voxelize.py:1975 | `g` int16 (D, W) ground level (first free z, metres above BASE); `rgb` uint8 (D, W, 3) colour of the top ground voxel, grass shown as bare; `b` int16 building height above ground; Madrid adds `road` uint8 (1 carriageway, 2 track) and `deck` int16 (a bridge deck's walking surface, 0 off decks) | terrain.py, flood.py, tools/poses.py, lamps.py, lampmap.py |
 | `data/cache/*` | voxelize (env `LMCACHE`, `FINALDUMP`) | `pre_vol.npy`, `pre_state.pkl`, `export_ids.pkl`, `final_vol.npy`, `final_g.npy`, `traffic_in.pkl` (`final_top.npy` is read by labels.py:786 but never written) | patch, traffic, labels, floating, surface_check |
 | `data/debug/*` | voxelize, debris, zones | `report.json`, `topdown.png`, `ground.png`, `thin_parts.json`, `pkin_box.npz`, … | humans |
 | `tiles/{1,8}/{tx}_{ty}.bin` | tiles.py | gzip (mtime 0) of `counts` uint16[(N+2)²] (runs per column, row-major with a 1-cell apron) + `ground` uint8[(N+2)²] (ground metres, clipped to 0..255) + `runs` uint16[3·Σ] (z0, len, palette id), bottom to top. N = 128. **Levels are 1 and 8 only** (`tiles.py:24`), not 1/2/4/8. Level 8: a cell is solid when ≥ ¼ of its 8×8×8 block is full; colour = the topmost voxel. Warsaw: 31×35 nodes at s = 1, 4×5 at s = 8 | stream.ts:158, mesher.worker.ts:49 |
 | `tiles/1f/{tx}_{ty}.bin` | tiles.py:114 | same format; leaves, trunk and grass only. In `tiles/1` grass becomes `bare` and leaves and trunks are removed | stream.ts:164 |
-| `meta.json` (1.1 MB) | voxelize.py:2005-2009 (labels rewritten by labels.py; palette appended by patch.py) | `{W, D, H, base, tiles{N, levels[{s,nx,ny}], bytes}, center[CX,CY], theta_deg, crs, trams[[x,y,z]…] (unused by the viewer), jets[[x,z,y]], palette[[r,g,b,mat]] (3402 entries; viewer limit 4096 = 64×64 texture, voxelMaterial.ts:81, world.ts:22), lamps[[c,r,z]], floods[[x,y,r]], labels[{name,en,kind,height,year,rebuilt,by,building,site,alt,far,x,y,z,g,R}], views{key:{label,pos,target}}, sources{osm,lidar,ortho}}` | main.ts, voxelMaterial (palette, lamps, floods), labels.ts, flood.py, surface_check, floating, tools |
+| `meta.json` (1.1 MB) | voxelize.py:2005-2009 (labels rewritten by labels.py; palette appended by patch.py) | `{W, D, H, base, tiles{N, levels[{s,nx,ny}], bytes}, center[CX,CY], theta_deg, crs, trams[[x,y,z]…] (unused by the viewer), jets[[x,z,y]], palette[[r,g,b,mat]] (3402 entries; viewer limit 4096 = 64×64 texture, voxelMaterial.ts:81, world.ts:22), floods[[x,y,r]], labels[{name,en,kind,height,year,rebuilt,by,building,site,alt,far,x,y,z,g,R}], views{key:{label,pos,target}}, sources{osm,lidar,ortho}}` | main.ts, voxelMaterial (palette, floods), labels.ts, flood.py, surface_check, floating, tools |
+| `lamps.bin` (Madrid) | lamps.py | gzip of 16-byte records: x, y float32 (grid cells, the post's foot or the bracket's point on the facade), z uint16 (surface), height uint8 (dm), style uint8 (0 Villa, 1 Fernando VII, 2 globe, 3 modern), heading uint8 (·2π/256 from +column towards +row), arms uint8 (1 or 2), light uint8 (0 LED, 1 discharge, 2 both), flags uint8 (1 wall, 2 OSM, 4 park, 8 bridge deck). 20 680 lamps, 217 kB | lamps.ts, lampmap.py |
+| `lampmap.bin` (Madrid) | lampmap.py | gzip of two uint8 planes, 2200 × 1425 at 2 m, row-major: light (1 − exp(−0.5 x), x the summed illuminance, 1 under a lone lantern), then colour (0 cool white … 0.55 warm LED … 1 sodium amber, 16 steps). 1.6 MB | voxelMaterial.ts (`loadLampMap`) |
 | `terrain.bin` | terrain.py | gzip of uint16[ceil(D/4), ceil(W/4)] dm above base (4 m mean), then uint8[D//2, W//2, 3] sRGB | city.ts:239 |
 | `zones.bin` / `zones.json` | zones.py:112-114 | gzip of uint16 block[D, W] + uint16 building[D, W]; JSON `{blocks:[[cx,cy,n,x0,y0,x1,y1,(tris)]], buildings:[…]}` (Warsaw: 869 blocks, 13 135 buildings; uint16 caps both at 65 535) | city.ts:29, stream.ts (building ids per tile) |
 | `windows.bin` / `windows.json` | windows.py / window_stats.py | gzip uint8[D, W]: kind in the low 3 bits, per-building habit in the high 5; JSON `{bins, types{residential,office,hotel,public,religious:{n,med{weekday,weekend},shape,floors,colour}}, n}` | windows.ts |
@@ -212,13 +214,14 @@ Total size of `web/public/data`: 55 MB.
 | `stream.ts` | `TileStreamer`: worker pool, LOD selection, building-id masks per tile | `tiles/{1,8,1f}/*.bin` |
 | `mesher.worker.ts` | Fetches, gunzips and decodes a tile; greedy meshing with baked AO | tile files |
 | `world.ts` | Voxel queries and raycasts over the loaded columns (walking, labels, camera) | (from stream) |
-| `voxelMaterial.ts` | Voxel shader: palette texture, `MAT` ids (`:7-8`, must match `voxelize.py:44`, `landmarks.py:13,148`), facade windows, PKiN floodlight, foliage, grass, snow, wet, flood, lamp-pool texture | `meta.palette`, `lamps`, `floods` |
+| `voxelMaterial.ts` | Voxel shader: palette texture, `MAT` ids (`:7-8`, must match `voxelize.py:44`, `landmarks.py:13,148`), facade windows, PKiN floodlight, foliage, grass, snow, wet, flood, street-lamp light map (Madrid: baked, loaded after boot) | `meta.palette`, `floods`, `lampmap.bin` |
 | `daylight.ts`, `sky.ts`, `sun.ts` | Sun position (fixed lat/lon, EU DST), sky colours, shadows, fog; PKiN light colours (`sky.ts:119-127`) | `meta.theta_deg` |
 | `weather.ts` | Weather presets, the "typical" day from climate, rain and snow particles | `climate.json` |
 | `foliage.ts` | Phenology uniforms and the class map | `phenology.json`, `foliage.bin` |
 | `windows.ts` | Lit-window uniforms by hour and weekday | `windows.json`, `windows.bin` |
 | `flood.ts` | River sheet and drop (sandbanks) | `flood.json`, `flood.bin` |
 | `fountains.ts` | Animated jets | `meta.jets` |
+| `lamps.ts` (Madrid) | Street lamps at their own width: iron and lanterns as two instanced meshes within 350 m of the camera (200 m at low render sizes), one point per lantern beyond at night | `lamps.bin` |
 | `labels.ts`, `search.ts`, `bar.ts`, `hud.ts`, `caption.ts`, `perf.ts` | Map pins, type-ahead, bottom bar, mouse HUD, loading caption, FPS and level knob | `meta.labels`, `places.json` |
 | `post.ts` | Tilt-shift depth of field, N8AO, bloom | — |
 | `stats.ts` | PostHog (cookieless) events | — |
@@ -552,7 +555,7 @@ exist. `s` means both "metres per cell" and "cells per block" at the same time.
 | `scripts/voxelize.py:372-374` | `HW` road widths (m) buffered as cells | metres = cells |
 | `scripts/voxelize.py:553`, `:560-563` | zebra crossing `buffer(1.5 / 2.2)`, stripes `int(tpos) % 2` | **1 m stripes = 1 cell** |
 | `scripts/voxelize.py:575`, `:591-592`, `:602` | lane width `lanes * 3.1`; dashes every 9 m, 3 m long; junction `+ 4` | metres = cells |
-| `scripts/voxelize.py:1523`, `:1531-1535` | lamp post: kerb within 4 cells; height 10/6 (or OSM `height`) cells; head = 1 voxel | **lamp = 1×1 cell column**, z in cells |
+| `scripts/voxelize.py:1523`, `:1531-1535` | lamp post: kerb within 4 cells; height 10/6 (or OSM `height`) cells; head = 1 voxel | **lamp = 1×1 cell column**, z in cells. Madrid: no voxel lamps; `lamps.py` places them in metres through `VOXEL_SIZE` and `lamps.ts` draws them in metres times `1 / meta.voxel` |
 | `scripts/voxelize.py:1544-1561` | inferred Złota lamps every 18 m, ±5.5 m, 9 m apart, 6 cells tall | metres = cells |
 | `scripts/voxelize.py:1567-1569`, `:1574-1575` | shelter roof at `g + 2`, posts every 3rd cell; flagpole 9 cells | |
 | `scripts/voxelize.py:1302-1306`, `:1393-1396` | trunks: 1 cell, "thick" = 2×2 cells | **trunk width = 1 or 2 cells**. Madrid: only the 8 m clay sees them; the 1 m view draws trunks at their inventory width (`trunks.py`, `trunks.ts`: diameters in cm and crown radii in dm of metres, converted with `meta.voxel`) |
@@ -572,7 +575,7 @@ exist. `s` means both "metres per cell" and "cells per block" at the same time.
 | `web/src/sim/crossings.ts:21`, `web/src/nav/spots.ts:18` | spatial hash `G = 32`, 64 m | metric |
 | `web/src/sim/dance.ts:7` | `DANCE` at grid `(2626.2, 741.0)`, radii 3.6 / 5.0 | grid position (cells) used as metres; Warsaw-specific |
 | `web/src/nav/ride.ts:7-10` | camera rigs: eye 1.62 / 1.3 / 2.1 m, back 4.5-26 m | metric |
-| traffic.json / meta.json (`trams`, `lamps`, `jets`, `labels`, `views`) | written in cells, read as metres | cells = metres |
+| traffic.json / meta.json (`trams`, `jets`, `labels`, `views`) | written in cells, read as metres | cells = metres |
 
 ### Landmarks and hand-tuned corrections in voxel coordinates
 
@@ -724,6 +727,9 @@ allows it):
 - `prep.py`: Warsaw's fixed raster cell sizes (0.5 / 1 / 0.2 m) in metres;
 - `voxelize_elevation.py`: heights to levels, `MIN_HEIGHT`, `DECK_THICK` and the terrain step;
 - `fetch_trees.py`: the AOI margin.
+- `lamps.py`: snap, wall and road distances, heights and the avenue width in metres, converted with `VOXEL_SIZE`; `lamps.bin` stores positions in cells and heights in decimetres;
+- `lampmap.py`: `TEXEL` (2 m), heights and arm offsets in metres, converted with `VOXEL_SIZE`;
+- `lamps.ts`: every dimension in metres times `1 / meta.voxel`; the near radius and its 50 m step too. The shader samples the light map by `vVox.xz / uSize`, in cells, so the map covers the grid whatever the voxel.
 
 Assumptions in Madrid code that still tie to 1 m:
 - `voxelize_elevation.py` passes ground levels to `tiles.py`, which stores them as uint8 metres;
@@ -1454,7 +1460,17 @@ Post-processing is still about half the frame at street level.
 | sol | 14.9 fps, 2.13 M, 167 | 14.5 fps, 2.17 M, 167 | 24.1 fps, 1.06 M, 96 |
 
   At night the main pass takes 319 ms of GPU in the overview and 42 ms at Sol, the sun's shadow map 206 ms and 61 ms when redrawn, bloom 4.4–5.0 ms. Night screenshots `docs/img/lamps-before-{overview,sol,street,granvia,cibeles,prado}.png` (15 January 23:00, clear) and `lamps-before-street-day.png`.
-- **Rebuilding the committed data:** a full `voxelize.py` run on the code of 2026-11-15 writes 347 palette entries where the committed `meta.json` has 350, and 16 tiles differ. The three extra entries are colours `patch.py` appended while the landmarks were iterated (indices 332, 342, 343), no longer used. Not a lamp change.
+- **Rebuilding the committed data:** a full `voxelize.py` run on the code of 2026-11-15 writes 347 palette entries where the committed `meta.json` had 350, and 16 tiles differ. The three extra entries are colours `patch.py` appended while the landmarks were iterated (indices 332, 342, 343), no longer used. Not a lamp change. The rebuild without voxel lamps (`f3265aa`) drops them with the three lamp colours: 344 entries.
+- **After the viewer draws them** (same harness and views; `docs/img/lamps-after-*.png`):
+
+| View | 15 June 11:00 | 15 January 23:00, clear | phone, 15 January 23:00 |
+| --- | --- | --- | --- |
+| overview | 4.0 fps, 42.83 M tris, 2 390 calls | 3.1 fps, 47.38 M, 2 390 | 17.6 fps, 4.82 M, 247 |
+| sol | 14.8 fps, 2.16 M, 169 | 14.5 fps, 2.20 M, 169 | 24.0 fps, 1.11 M, 99 |
+
+  Main pass at Sol 42.1 ms of GPU (41.8 before), the sun's shadow pass 60.4 ms and 7.85 M triangles (60.6 ms, 7.90 M), bloom 4.45 ms. `web/tools/mem.mjs` moves by tens of MB between runs of the same build, so the memory change is taken from the sizes: the light map is 6.3 MB on the GPU (RG8, no mipmaps) where the canvas was 16.7 MB (RGBA with mipmaps), and the lamp buffers 1.7 MB.
+- **Tuning the light map** (`docs/img/lampmap-*.png`): the first bake (K = 0.75, gain 2.4, light up to 16 m) turned Sol orange and lit facades evenly to the fourth floor; the falloff with height is now squared over 14 m and the gain 1.8. The Retiro's lawns glowed green: the summed tails of 1 130 park lanterns, brightened by the night exposure, and mipmaps smearing the paths at grazing angles. Each lamp's light now ends smoothly at 5 % of its peak, park lanterns are at 0.35 and the texture has no mipmaps. Open items are in `todo.md` ("Street lamps").
+
 
 ### Extended area at −6° (after Phase 6)
 

@@ -31,6 +31,21 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 - **Autumn colours with small samples:** Melia (5 photos), Ulmus (6, of *Ulmus minor*: Commons had no autumn canopies of *U. pumila*), Celtis (7, mixing *C. australis* and *C. occidentalis*). The horse chestnut keeps Warsaw's measurement (Central Europe). More photos would steady them: iNaturalist research-grade photos from the Madrid region, October to December.
 - **Flowering:** almonds and the purple plum blossom white and pink in February and March; the viewer has no flowering phase.
 
+## Street lamps
+
+The lamps come from the Ayuntamiento's inventory and the viewer draws them (`scripts/lamps.py`, `scripts/lampmap.py`, `web/src/lamps.ts`; `DECISIONS.md`, 2026-11-15). Left from checkpoint C:
+- **Checks not run yet:**
+  - `web/tools/abdiff.mjs` by day, to confirm that only the lamps changed in the rebuilt tiles;
+  - the balance of street light and lit windows against the night photos (`web/tools/photoshot.mjs`, `scripts/window_photos.json`);
+  - screenshots at the blue hour, and with `--cam` in Salamanca (only the Retiro has one: `docs/img/lampmap-retiro.png`).
+- **Modern luminaires barely show:** their heads (0.25 × 0.14 × 0.65 m) are small and seen from below; at night they read as a thin line. Try a larger head or a brighter lantern colour for `MODERN` in `lamps.ts` (`LANTERN`, `HEAD`).
+- **A lantern at head height in Sol** (`docs/img/lamps-after-street.png`, in front of the Carlos III statue): its post stands below the square, probably a lamp of a sunken level whose `z` is that level's ground. Find it in `lamps.bin` and decide from the ground under it.
+- **The Retiro reads greenish in the overview:** the average of its lit paths over the lawns. Park lanterns are at 0.35 of a street lantern (`PARK` in `lampmap.py`); lower it, or light only the paths, if it should be darker.
+- **`lampmap.bin` is 1.6 MB**, against the 0.3–0.6 MB estimated in the plan. It loads after the first frame. A PNG of the light plane would be about 1.1 MB, decoded off the main thread.
+- **GPU memory is computed, not measured:** `web/tools/mem.mjs` changes by tens of MB between runs (its 4 s wait catches the tiles mid-stream), so the saving (16.7 MB canvas → 6.3 MB map + 1.7 MB lamp buffers) comes from the texture and buffer sizes.
+- **Heights are assumptions:** the inventory has none (`STYLE_HEIGHT`, `WALL_HEIGHT` in `lamps.py`). Replace them if the Ayuntamiento's luminaire catalogue gives heights by model.
+- **Lamps on bridge decks get no light on the ground:** the map has one level (40 on the Viaducto de Segovia).
+
 ## Pipeline and viewer
 
 - **Construction sites** were not reviewed one by one at full scale (OSM `landuse=construction`, buildings finished after the 2024 flight).

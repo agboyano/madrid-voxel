@@ -73,9 +73,10 @@ Timings come from the development laptop, an Intel UHD 620 with Chromium on Vulk
   - Walls are Madrid render and brick, with a Madrid de los Austrias palette in the historic core.
   - Sources: D 2026-11-11 "Madrid roof materials from the ortho"; N "Palette".
 - **Street lamps.**
-  - Warsaw drew 1×1 columns and inferred some lamps.
-  - Madrid takes OSM's lamps only (2 774) and draws four voxel shapes chosen from their tags: fernandino, wall, bent mast and two-arm.
-  - Sources: D 2026-11-11 "Madrid street lamp heights", "Fernandino street lamps, in voxels".
+  - Warsaw drew 1×1 voxel columns from OSM and inferred some lamps.
+  - Madrid takes the Ayuntamiento's lighting inventory: 20 680 lamps across the map, against OSM's 2 774 mostly west of the Castellana axis. The model code says post or facade bracket and the lantern (Villa, Fernando VII, globe, modern).
+  - They are not voxels: the viewer draws them at their own width (near instanced meshes and far points, three draw calls), and their light on the ground is baked in the pipeline, cut by the buildings, where Warsaw painted 20 m pools on a canvas.
+  - Sources: D 2026-11-15 "Street lamps from the Ayuntamiento's inventory", "The street lamps' light, baked with the buildings' shadow", "Street lamps drawn by the viewer".
 - **Crossings** come from dtla-voxel's `road_markings.py`: 403 from crossing ways, 407 from nodes, and 114 ambiguous ones left unpainted. Source: D 2026-11-11 "Lamps from OSM, crossings from dtla-voxel…".
 - **Bridges** add the LiDAR's bridge class (17) next to OSM bridge ways: 349 deck cells. Source: N "Defects reviewed at scale".
 - **Labels by Wikidata id only.**
@@ -208,7 +209,7 @@ What dtla-voxel does or proposes, and what Madrid did with it. Of 24 items, 6 we
 | `scripts/layers.py`: a dict of 2D layers read by the 3D fill | the structure, with Warsaw's rules; LA's class inference, palette and palms left out | adapted | Warsaw's zones, traffic, windows and foliage depend on its fusion | D 2026-11-11 "Reuse Warsaw's fusion, reorganised into layers" |
 | Bridge decks from class 17 | class-17 cells next to OSM bridge ways added to Warsaw's decks (349 cells) | adapted | decks the OSM heights missed | N "Defects reviewed at scale" |
 | `scripts/road_markings.py`: crossing bars along the traffic, ambiguous ones refused | copied; Warsaw's white lane markings kept instead of LA's double yellow | adopted | Spanish road markings | D 2026-11-11 "Lamps from OSM, crossings from dtla-voxel…" |
-| Street lamps every 36 m along both kerbs | OSM's 2 774 lamps only, in four shapes | rejected | OSM maps them; 36 m would double them | same |
+| Street lamps every 36 m along both kerbs | the Ayuntamiento's inventory (20 680 lamps) | rejected | the inventory has the real positions | D 2026-11-15 "Street lamps from the Ayuntamiento's inventory" |
 | Tree detection from NDVI and multiple returns | not used | rejected | 22 crowns without an inventory tree in the test area; NDVI is weak on a leaf-off flight | same; N "PNOA-LiDAR NPC02" |
 | `scripts/tiles.py`: levels of 1, 2, 4 and 8 m, with a block of thin voxels | Warsaw's 1 and 8 m tiles kept | rejected | the tile format is fixed by the project's rules; no measured need | D 2026-11-10 "Keep Warsaw's `tiles.py`" |
 | Mountain skyline from USGS 3DEP (`9eeb73e`) | the same from the IGN's MDT200 (`scripts/horizon.py`) | adapted | same agency, datum and licence as the PNOA | D 2026-11-13 "The Sierra de Guadarrama in the sky" |

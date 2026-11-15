@@ -72,6 +72,7 @@ This repository is **not a GitHub fork**: it starts from a snapshot of the Warsa
 | OpenStreetMap | Streets, pavements, parks, water, rail, building types | Overpass API |
 | Catastro INSPIRE | Building footprints and number of floors (municipality 28079) | Catastro ATOM service |
 | Municipal tree inventory | Location and species of each tree | datos.madrid.es |
+| Municipal street-lighting inventory | Location, luminaire model and lamp type of each street lamp (300573 streets, 300582 historic parks) | datos.madrid.es |
 | Orthophoto (PNOA or Ayuntamiento) | Roof and vegetation colours | CNIG / Geoportal |
 | Wikidata (CC0) | Landmark names (English and Spanish) and facts for info cards. Linked through the `wikidata=Q…` tag of OSM objects, never by name | Wikidata API (SPARQL or `wbgetentities`), fetched at build time |
 | Ayuntamiento DSM 2023 (**optional**) | Only as a Phase 2 test if roofs come out with many holes. Photogrammetric raster (COG, 10 cm / 1 m), unclassified, from 2023 | geoportal.madrid.es, record on datos.gob.es |
