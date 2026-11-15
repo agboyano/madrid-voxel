@@ -580,3 +580,21 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
 - **Rejected:**
   - **The national hourly tables:** the INE publishes the rhythm only for Spain; Madrid's is later (at 23:00, 0.71 of households awake at home against 0.65).
   - **Fitting the level per day type:** the weekend sample is small; the rhythm carries the weekday and weekend difference.
+
+## 2026-11-15: Landmarks, second pass: measured on photographs
+
+- **Decision:**
+  - **Puerta de Alcalá:** rebuilt from proportions measured on photographs of both faces (Commons) and the Spanish Wikipedia's description:
+    - three round arches of nearly one size and the two doors;
+    - ten columns on the east face and four on the west, where the others are pilasters;
+    - the central body standing forward and rising to a pediment roofed in lead, curved on the east and triangular on the west, with the inscription's tablet;
+    - the royal arms with Fame and a child on the east and trophies on the west, groups on the parapet over the columns, keystones and the panels over the doors.
+  - **Cibeles:**
+    - The goddess faces the first stretch of Calle de Alcalá, as since 1895 (Spanish Wikipedia), taken from its OSM centreline: phi 249° instead of the 253° from memory.
+    - The group is measured on photographs: the rock broken into ledges, the lions side by side with their heads 4 m over the rock, two 2.5 m wheels a side, the goddess with sceptre and keys, and the children with the urn at the back.
+  - **Metrópolis:**
+    - The LiDAR had read the Victory as a 2 × 6 m slab of columns standing over the dome, from 37 m to 43 m, which drew as a black block. `landmarks.lidar_statue` clears it down to the dome.
+    - A 6 m gilded Victory now stands at the slab's place, wings spread along the slab's long side, so the building tops out at about 44 m. Wikipedia gives 45 m for the building and 6 m for the statue.
+  - **Royal Palace:** `recolour_walls` now starts at the first voxel over the ground. It started one above, which left a course of the historic core's brick at the foot of the courtyards; the Metrópolis and the Almudena had the same course.
+- **Why:** the first pass was drawn from memory. The Puerta de Alcalá had the side bodies at the same height as the crest's base, eight columns on both faces and its sculpture as a few loose voxels; the Metrópolis's dome carried the LiDAR's statue under the new one.
+- **Rejected:** finer sculpture. At 1 m a 2 m figure is two or three voxels; the groups are placed and sized, not modelled.

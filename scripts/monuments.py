@@ -79,21 +79,39 @@ def plane(L, S, col):
 MONUMENTS = {}
 
 # Cibeles (Ventura Rodríguez, 1782): the goddess enthroned on a chariot drawn by two lions, in Montesclaros marble,
-# on a rock of Redueña stone in the middle of the basin; about 12.5 m long, 4.7 m wide and 5.5 m high over the rock.
-# She faces west along Calle de Alcalá, toward Puerta del Sol; phi is that bearing in the grid (Cibeles to Puerta de
-# Alcalá is (361, -108) cells, so the goddess looks along (-361, 108)).
-CIB_MARBLE, CIB_ROCK = ("#c9c3bb", STONE), ("#b5aa94", STONE)
-MONUMENTS["Fuente de Cibeles"] = dict(at=(-3.693088, 40.419335), phi=253.3, clear=6.5, parts=[
-    B(0, 0, 8, 14, 0, 1, CIB_ROCK),  # the rock in the basin
-    B(0, 0, 5, 12, 1, 2, CIB_ROCK),
-    B(0, -2.5, 3, 4, 2, 4, CIB_MARBLE),  # the chariot's body
-    B(-2, -2, 1, 3, 2, 5, CIB_MARBLE), B(2, -2, 1, 3, 2, 5, CIB_MARBLE),  # its wheels
-    B(0, -3.5, 3, 2, 4, 5, CIB_MARBLE),  # the throne
-    B(0, -3, 2, 1, 5, 7, CIB_MARBLE), B(0, -3, 1, 1, 7, 8, CIB_MARBLE),  # the goddess, seated, and her turreted head
-    B(1.5, -2.5, 1, 1, 6, 7, CIB_MARBLE),  # the sceptre arm
-    B(0, 0.5, 1, 3, 3, 4, CIB_MARBLE),  # the pole to the lions
-    B(-1.2, 3, 2, 4, 2, 4, CIB_MARBLE), B(1.2, 3, 2, 4, 2, 4, CIB_MARBLE),  # the lions' bodies
-    B(-1.2, 5, 2, 1, 3, 5, CIB_MARBLE), B(1.2, 5, 2, 1, 3, 5, CIB_MARBLE),  # their heads and manes
+# on a rock of Redueña stone in the middle of the basin; 12.5 m long, 4.7 m wide and 5.5 m high (Spanish Wikipedia).
+# Since the move of 1895 she faces the first stretch of Calle de Alcalá, toward Puerta del Sol: its OSM centreline
+# leaves the square along (-130, 50) cells, so phi 249. Measured in proportion on photographs (Commons, "Fuente de
+# Cibeles - 01" and "- 04"): the rock about 1.5 m over the water, the lions side by side, 6 m from paws to haunches
+# and their heads 4 m over the rock; the chariot with two wheels of 2.5 m a side; the goddess seated, her head 6 m
+# over the rock, a sceptre in her right hand and keys in her left; at the back the two children with an urn that
+# pour the water, added in 1895.
+CIB_MARBLE, CIB_LION = ("#cdc8c0", STONE), ("#bcb09b", STONE)
+CIB_ROCK, CIB_ROCK2 = ("#a99c84", STONE), ("#968a74", STONE)
+MONUMENTS["Fuente de Cibeles"] = dict(at=(-3.693088, 40.419335), phi=249.0, clear=8, parts=[
+    B(0, 0, 8, 15, 0, 1, CIB_ROCK),  # the rock, broken into ledges
+    B(0, 0.5, 6, 13, 1, 2, CIB_ROCK, top=0.9),
+    B(-3.6, -2, 2, 5, 1, 2, CIB_ROCK2), B(3.5, 1.5, 2, 4, 1, 2, CIB_ROCK2),
+    B(-3, 4.5, 2, 3, 1, 2, CIB_ROCK), B(3, -5, 2, 3, 1, 2.6, CIB_ROCK2, top=0.6),
+    B(-2.5, -6.5, 3, 2, 1, 2, CIB_ROCK2), B(0, 6.5, 4, 2, 1, 2, CIB_ROCK2),
+    B(-1.6, -5, 2, 2, 2, 3, CIB_ROCK),
+    # the lions, side by side: legs, body, mane and head, muzzle; the left one with a forepaw raised
+    B(-1.1, 1.0, 2, 1, 2, 3, CIB_LION), B(1.1, 1.0, 2, 1, 2, 3, CIB_LION),
+    B(1.1, 4.5, 2, 1, 2, 3, CIB_LION), B(-1.1, 5.2, 2, 1, 3, 4, CIB_LION),
+    B(-1.1, 2.75, 2, 4.5, 3, 4.6, CIB_LION), B(1.1, 2.75, 2, 4.5, 3, 4.6, CIB_LION),
+    B(-1.1, 5.0, 2, 2, 4, 6, CIB_LION), B(1.1, 5.0, 2, 2, 4, 6, CIB_LION),
+    B(-1.1, 6.3, 1, 1, 4.4, 5.4, CIB_LION), B(1.1, 6.3, 1, 1, 4.4, 5.4, CIB_LION),
+    B(0, 0, 1, 2, 3, 4, CIB_MARBLE),  # the pole
+    B(0, -2.75, 3, 3.5, 2.8, 4.2, CIB_MARBLE),  # the chariot's body
+    *[B(sx * 1.9, wb, 1, 2.5, 2.6, 3.9, CIB_MARBLE) for sx in (-1, 1) for wb in (-1.6, -3.9)],  # the wheels
+    *[B(sx * 1.9, wb, 1, 1.5, 2, 4.5, CIB_MARBLE) for sx in (-1, 1) for wb in (-1.6, -3.9)],
+    B(0, -3.9, 3, 1, 4.2, 6, CIB_MARBLE),  # the throne's back
+    B(0, -2.6, 2, 2, 4.2, 5.2, CIB_MARBLE),  # the goddess: lap and knees, body, head with its turreted crown
+    B(0, -3.2, 2, 1, 5.2, 7, CIB_MARBLE), B(0, -3.2, 1, 1, 7, 8, CIB_MARBLE),
+    B(1.4, -2.7, 1, 1, 5, 7.6, CIB_MARBLE),  # the sceptre
+    B(-1.4, -2.5, 1, 1, 5, 6, CIB_MARBLE),  # the keys
+    B(-1, -5.9, 1, 1, 2, 3.4, CIB_MARBLE), B(1, -5.9, 1, 1, 2, 3.4, CIB_MARBLE),  # the children at the back
+    B(0, -6.1, 1, 1, 2, 3, CIB_MARBLE),  # their urn
 ])
 
 

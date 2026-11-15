@@ -8,10 +8,9 @@ What is left after phases 0–6. Each item says why it is pending and where to s
 
 ## Landmarks and look
 
-- **Required landmarks, first pass done** (`landmarks.details_geometry`, `monuments.MONUMENTS`; before and after in `docs/img/lm-before-*.png` and `lm-after-*.png`): the Puerta de Alcalá rebuilt as a gate, the Cibeles group on its rock, the Royal Palace in white stone over granite, the Metrópolis and the Almudena with their domes, the Palacio de Cristal in glass and white iron. Still rough:
-  - Cibeles: the goddess's facing (west, toward Sol) is from memory, not checked against a plan; the rock is a plain box.
-  - The Puerta de Alcalá's sculptures and the Metrópolis's Victory are a few voxels each.
-  - A course of the old brick shows at the foot of the Royal Palace's courtyards.
+- **Required landmarks, two passes done** (`landmarks.details_geometry`, `monuments.MONUMENTS`; first pass in `docs/img/lm-before-*.png` and `lm-after-*.png`, second in `lm2-*.png`; `DECISIONS.md`, 2026-11-15). The Puerta de Alcalá, the Cibeles group and the Metrópolis's Victory are measured on photographs; the brick course at the foot of the Royal Palace's courtyards is gone. Still rough:
+  - At 1 m the sculpture is placed and sized, not modelled: Cibeles's lions and goddess, and the Puerta de Alcalá's groups, are blocks of a few voxels.
+  - The Royal Palace's courtyard facades have no windows (`edge_windows` paints only the outer edges).
   - `scripts/patch.py alcala palace almudena metropolis cristal monuments` redoes them in about 3 min after a full build with `LMCACHE=1`.
 
 ## Seasons, weather and life

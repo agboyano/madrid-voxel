@@ -476,12 +476,11 @@ def details_geometry(vol, g, feats, pal, note):
     if f is not None:
         # white stone, and over the corner rotunda the black slate dome with gilded ribs and the gilded Victory
         recolour_walls(vol, g, f["geom"], pal, "#ebe5d8", MAT_IDS["wall"], note, "Edificio Metrópolis")
-        top = dome(vol, g, f["geom"], pal, 31, 33, "#2c2f35", note, "Edificio Metrópolis", gold="#c9a54a", radius=9)
-        if top:
-            r, c, z = top
-            gold = pal(_hex("#c9a54a"), MAT_IDS["metal"])
-            vol[z:z + 4, r, c] = gold  # the Victory, 6 m in bronze leaf on the original; wings spread at her shoulders
-            vol[z + 3, r, c - 1] = vol[z + 3, r, c + 1] = gold
+        statue = lidar_statue(vol, g, f["geom"])
+        dome(vol, g, f["geom"], pal, 31, 33, "#2c2f35", note, "Edificio Metrópolis", gold="#c9a54a", radius=9)
+        if statue:
+            victory(vol, *statue, pal(_hex("#c9a54a"), MAT_IDS["metal"]))
+            note(f"Edificio Metrópolis: the Victory at {statue[:2]}, facing {statue[2]}")
     f = _by_id(feats, ALMUDENA)
     if f is not None:
         # white limestone and grey granite; the dome and its lantern in blue-grey slate
@@ -527,6 +526,50 @@ def dome(vol, g, geom, pal, z_rel, min_top, hex_, note, name, gold=None, radius=
     return r, c, z
 
 
+def lidar_statue(vol, g, geom, radius=7, rise=4):
+    """A statue on a dome as the LiDAR reads it: a thin slab of columns standing more than `rise` m over the median
+    top of the dome around the highest one. The slab is cleared down to the highest column around it that is not
+    part of it. Returns its middle cell and the way it faces (fx, fy), along the grid axis across its longer side
+    (a winged figure's wings make the long side) and out of the building, or None."""
+    D, W = g.shape
+    rr, cc = _cells_geom(geom, D, W)
+    T = _top_rel(vol, g, rr, cc)
+    k = int(np.argmax(T))
+    near = np.hypot(rr - rr[k], cc - cc[k]) <= radius
+    spike = near & (T > np.median(T[near]) + rise)
+    if not spike.any() or not (near & ~spike).any():
+        return None
+    level = int(T[near & ~spike].max())
+    for r, c in zip(rr[spike], cc[spike]):
+        vol[int(g[r, c]) + level + 1:, r, c] = 0
+    r, c = int(round(rr[spike].mean())), int(round(cc[spike].mean()))
+    dx, dy = c + 0.5 - geom.centroid.x, r + 0.5 - geom.centroid.y
+    if np.ptp(rr[spike]) >= np.ptp(cc[spike]):
+        return r, c, (int(np.sign(dx)) or 1, 0)
+    return r, c, (0, int(np.sign(dy)) or 1)
+
+
+def victory(vol, r, c, facing, gold):
+    """The Victoria Alada over the Metrópolis's dome (Federico Coullaut-Valera, 1977): gilded bronze, 6 m, standing
+    with her wings spread and a little raised, drapery falling at her sides (photographs), on the top of the column
+    (r, c), facing (fx, fy) along a grid axis so that her wings stay joined."""
+    fx, fy = facing
+    lx, ly = -fy, fx  # across her shoulders
+    z = int(np.nonzero(vol[:, r, c])[0].max()) + 1
+
+    def put(lat, fw, z0, z1):
+        vol[z0:z1, r + ly * lat + fy * fw, c + lx * lat + fx * fw] = gold
+
+    put(0, 0, z, z + 6)  # legs, body and head
+    put(0, -1, z + 4, z + 5)  # the wings' root at her back
+    for s in (-1, 1):
+        put(s, 0, z + 2, z + 4)  # the drapery at her sides
+        put(s, -1, z + 4, z + 5)  # the wings, from behind her shoulders out to 4 m each side
+        put(2 * s, -1, z + 4, z + 6)
+        put(3 * s, -1, z + 5, z + 6)
+        put(4 * s, -1, z + 5, z + 6)
+
+
 def palacio_de_cristal(vol, g, geom, pal, note):
     """The Palacio de Cristal (Velázquez Bosco, 1887): glass on a white iron frame, a glass dome over the centre.
     The LiDAR's surface is kept; its voxels turn to clear glass, with the frame in white iron every 3 m along both
@@ -569,26 +612,39 @@ PUERTA_DE_ALCALA = 174805987  # OSM way
 
 
 def puerta_de_alcala(vol, g, geom, pal, note):
-    """The Puerta de Alcalá (Sabatini, 1778): granite and Colmenar limestone, about 44 m long and 22 m high at the
-    crest. Five openings: three round arches in the middle, the central one the largest, and a square-headed
-    opening at each end; engaged columns between them; a cornice at 14 m, an attic over the whole length and the
-    crest with the royal arms over the central arch, flanked by sculpture groups. The LiDAR and OSM read it as a
-    block of flats, so its footprint is cleared and the gate rebuilt in its own frame, scaled to the footprint's
-    length (photographs and Sabatini's elevation, measured in proportion)."""
+    """The Puerta de Alcalá (Sabatini, 1778): granite with ornaments in white Colmenar limestone, 44 m long and 22 m
+    high at the central pediment, about 25 m to the top of the arms over it. Five openings: three round arches of
+    nearly one size and a square-headed one at each end. Columns with Ionic capitals stand on the east face, the
+    outer one, ten in all (one at each end, one by each door, three either side of the central arch); on the west
+    face only the four beside the central arch, the others being pilasters. Cornice at 13.3 m and a parapet to 15 m
+    over the whole length. The central body, 14.4 m long, stands forward of the sides and rises in an attic with the
+    inscription (REGE CAROLO III, ANNO MDCCLXXVIII) to a pediment roofed in lead: curved on the east, triangular on
+    the west. Over it, on the east, the royal arms held by Fame and a child; on the west, trophies of arms. Sculpture
+    groups (children and trophies, the four cardinal virtues on the west) stand on the parapet over the columns; the
+    arches' keystones carry masks and lions' heads, and the panels over the doors garlands and cornucopias.
+    The LiDAR and OSM read it as a block of flats, so its footprint is cleared and the gate rebuilt in its own frame,
+    scaled to the footprint's length. Measured in proportion on photographs of both faces (Commons, "Puerta de Alcalá
+    2025" and "Puerta de Alcalá (Madrid) 12") and the description in the Spanish Wikipedia."""
     (cx, cy), (ux, uy), (vx, vy), L, Dp = _frame(geom)
     s = L / 44.0  # proportions from the 44 m elevation
     D, W = g.shape
     rr, cc = _cells_geom(geom.buffer(1.5), D, W)
     zb = int(np.median(g[rr, cc]))
+    Z = lambda m: zb + int(round(m * s))  # noqa: E731  (metres of the elevation -> level)
     stone = pal(_hex("#d9d1c1"), MAT_IDS["classic"])
     granite = pal(_hex("#a9a49a"), MAT_IDS["classic"])
-    arms = pal(_hex("#cfc6b4"), 0)
+    white = pal(_hex("#e8e2d5"), MAT_IDS["classic"])  # the limestone: capitals, keystones, panels, sculpture
+    lead = pal(_hex("#7c8085"), MAT_IDS["metal"])
     for r, c in zip(rr, cc):
         vol[g[r, c]:zb + 40, r, c] = 0
+    east = 1 if vx > 0 else -1  # the across axis's side that faces east, out of the old town
     half = Dp / 2 - 1  # OSM's outline takes in the columns and the steps
-    arches = [(0.0, 3.0 * s, 8.0 * s), (-9.5 * s, 2.25 * s, 7.0 * s), (9.5 * s, 2.25 * s, 7.0 * s)]  # centre, half-width, springing
-    doors = [(-17.0 * s, 1.75 * s, 7.0 * s), (17.0 * s, 1.75 * s, 7.0 * s)]  # centre, half-width, head
-    columns = [a * s for a in (-13.5, -12.0, -5.5, -4.0, 4.0, 5.5, 12.0, 13.5)]
+    CB, RISE = 7.2, 2.6  # the central body's half-length and the pediment's rise, in metres
+    R = (CB * CB + RISE * RISE) / (2 * RISE)  # the curved pediment's radius
+    arches = [(0.0, 2.4, 7.3), (-10.5, 2.5, 6.9), (10.5, 2.5, 6.9)]  # centre, half-width, springing (m)
+    doors = [(-16.3, 1.6, 6.0), (16.3, 1.6, 6.0)]  # centre, half-width, head
+    columns = {1: (-20.1, -14.5, -7.1, -5.7, -4.0, 4.0, 5.7, 7.1, 14.5, 20.1), -1: (-5.7, -4.0, 4.0, 5.7)}
+    near = lambda a, m: abs(a - m * s) < 0.6  # noqa: E731
     n = 0
     r0, r1 = int(cy - L / 2 - 4), int(cy + L / 2 + 5)
     c0, c1 = int(cx - L / 2 - 4), int(cx + L / 2 + 5)
@@ -600,47 +656,74 @@ def puerta_de_alcala(vol, g, geom, pal, note):
                 continue
             col = vol[:, r, c]
             gz = int(g[r, c])
-            out = abs(b) > half  # the course of cells proud of the faces
-            if out:
-                # engaged columns on both faces, and the cornice and plinth courses
-                if any(abs(a - k) < 0.5 for k in columns):
-                    col[gz:zb + int(13 * s)] = stone
-                if abs(a) <= L / 2:
-                    col[zb + int(13 * s):zb + int(14 * s) + 1] = stone
-                    col[gz:zb + 1] = granite
-                continue
+            central = abs(a) < CB * s
+            face = half if central else half - 1  # the side bodies stand a cell behind the central one
+            side = 1 if b * east > 0 else -1  # the east face or the west
             if abs(a) > L / 2:
-                if abs(b) <= half:  # the cornice runs round the ends too
-                    col[zb + int(13 * s):zb + int(14 * s) + 1] = stone
+                if abs(b) <= face:  # the cornice runs round the ends too
+                    col[Z(13.3):Z(14.2)] = stone
                 continue
-            top = 14.0 * s
-            if abs(a) < L / 2 - 1:
-                top = 17.0 * s  # the attic
-            if abs(a) < 7.0 * s:
-                top = 19.0 * s  # the crest's base
-            if abs(a) < 3.0 * s:
-                top = 21.9 * s  # the arms
-            col[gz:zb + int(round(top))] = stone
+            if abs(b) > face:  # the course proud of the faces: columns, cornices, plinth, keystones
+                if abs(b) > face + 1:
+                    continue
+                if any(near(a, k) for k in columns[side]):
+                    col[gz:Z(10.3)] = stone
+                    col[Z(10.3):Z(11.3)] = white
+                col[Z(13.3):Z(14.2)] = stone
+                if central:
+                    col[Z(18.6):Z(19.4)] = stone  # the attic's cornice
+                col[gz:zb + 1] = granite
+                for ac, hw, spring in arches:
+                    if near(a, ac):
+                        col[Z(spring + hw) - 1:Z(spring + hw) + 1] = white
+                continue
+            top = 15.0
+            if central:  # the attic and its pediment
+                x = abs(a) / s
+                top = 19.4 + max(math.sqrt(R * R - x * x) - (R - RISE) if side == 1 else RISE * (1 - x / CB), 0)
+            zt = Z(top)
+            col[gz:zt] = stone
             col[gz:zb + 1] = granite
-            if abs(a) < 3.0 * s and abs(b) > half - 1:
-                col[zb + int(19 * s):zb + int(round(top))] = arms
-            for ac, hw, spring in arches:
-                du = a - ac
-                if abs(du) < hw:
-                    head = spring + math.sqrt(hw * hw - du * du)
-                    col[gz:zb + int(round(head))] = 0
+            if central:
+                col[zt - 1] = lead
+                if abs(a) < 2.2 * s and abs(b) > face - 1:
+                    col[Z(16.0):Z(18.3)] = white  # the inscription's tablet
             for dc_, hw, head in doors:
-                if abs(a - dc_) < hw:
-                    col[gz:zb + int(round(head))] = 0
+                if abs(b) > face - 1 and abs(a - dc_ * s) < 1.5 * s:
+                    col[Z(7.5):Z(9.5)] = white  # the panel over the door
+            for ac, hw, spring in arches:
+                du = (a - ac * s) / s
+                if abs(du) < hw:
+                    col[gz:Z(spring + math.sqrt(hw * hw - du * du))] = 0
+            for dc_, hw, head in doors:
+                if abs(a - dc_ * s) < hw * s:
+                    col[gz:Z(head)] = 0
             n += 1
-    # the sculpture groups on the attic either side of the crest (trophies and children, read as small stone figures)
-    for sgn in (-1, 1):
-        for k, dz in ((8.0, 2), (9.0, 3), (10.0, 2)):
-            a = sgn * k * s
-            for bb in (-half + 1.5, half - 1.5):
-                x, y = cx + ux * a + vx * bb, cy + uy * a + vy * bb
-                r, c = int(y), int(x)
-                vol[zb + int(17 * s):zb + int(17 * s) + dz, r, c] = arms
+
+    def put(m, bb, h):  # h voxels of sculpture over whatever stands at m metres along, bb cells across
+        x, y = cx + ux * m * s + vx * bb, cy + uy * m * s + vy * bb
+        col = vol[:, int(y), int(x)]
+        z = int(np.nonzero(col)[0].max()) + 1
+        col[z:z + h] = white
+
+    for side in (1, -1):
+        sgn = east * side
+        bb = sgn * (half - 1.5)  # on the side bodies' parapet
+        for m in (-20.1, -14.5, 14.5, 20.1):
+            if side == 1:  # a child standing by a trophy
+                put(m, bb, 3)
+                put(m + (1 if m > 0 else -1), bb, 1)
+            else:  # a virtue, or a helmet over flags
+                put(m, bb, 3)
+                put(m - 1, bb, 1)
+                put(m + 1, bb, 1)
+        for bc in (sgn * (half - 1.5), sgn * (half - 2.5)):  # over the pediment, two cells deep
+            if side == 1:  # the arms with the crown, Fame reclining on one side, the child on the other
+                for m, h in ((-1, 3), (0, 4), (1, 3), (-2.5, 2), (-3.5, 1), (2.5, 2)):
+                    put(m, bc, h)
+            else:  # trophies: an empty armour with its helmet, shields and flags
+                for m, h in ((0, 3), (-1, 2), (1, 2), (-3, 1), (3, 1)):
+                    put(m, bc, h)
     note(f"Puerta de Alcalá rebuilt: {n} columns, {L:.0f} x {Dp:.0f} m")
 
 
@@ -988,7 +1071,7 @@ def recolour_walls(vol, g, geom, pal, hex_, mat, note, name):
     for r, c in zip(rr, cc):
         col = vol[:, r, c]
         nz = np.nonzero(col)[0]
-        nz = nz[nz > g[r, c]]
+        nz = nz[nz >= g[r, c]]  # from the first voxel over the ground (g is the first free level)
         for z in nz[:-1]:
             if pal.entries[int(col[z])][3] not in (win_mat, 8, 3):
                 col[z] = v; n += 1
