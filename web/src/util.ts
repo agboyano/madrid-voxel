@@ -6,6 +6,9 @@ export const ease = (t: number) => t * t * (3 - 2 * t);
 export const smooth = (a: number, b: number, x: number) => ease(clamp((x - a) / (b - a), 0, 1));
 export const hash = (n: number) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 export const wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+// Text from map data (OSM, Wikidata, the inventories) is put into HTML escaped: anyone can edit those sources
+const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+export const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ESC[c]);
 export const coarsePointer = () => matchMedia('(pointer: coarse)').matches;
 // day of the year (1 = 1 January) on the viewer's calendar, 2026: Saturday or Sunday
 export const isWeekend = (day: number) => { const w = new Date(Date.UTC(2026, 0, day)).getUTCDay(); return w === 0 || w === 6; };

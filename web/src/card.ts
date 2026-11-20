@@ -1,9 +1,8 @@
 import type { Facts } from './types';
-import { el } from './util';
+import { el, esc } from './util';
 
 // The info card of a selected landmark: its names, kind and the facts Wikidata gives for it (scripts/fetch_wikidata.py,
 // static data written at build time; the viewer asks Wikidata nothing), with links to its website and Wikipedia.
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 export class Card {
   private readonly el = el('div', '');
