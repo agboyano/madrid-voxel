@@ -305,6 +305,7 @@ def build():
     bridge_rails = []  # (line, colour) the rails of tracks on bridges, drawn on the deck like those on the ground
     bridge_lines = []  # (line, half width, layer) of every way on a bridge: the deck's height profile is taken along them
     crossing_roads = []  # (id, tags, centreline, width) of surface carriageways, for road_markings.py
+    road_ways = []  # (line, half width, polygon, OSM id) of every carriageway on the ground (road_level.py)
     _paved = [(g_, t_["surface"]) for _, _, t_, g_ in osm.areas
               if t_.get("surface") in SURF and ("area:highway" in t_ or (t_.get("highway") and t_.get("area") == "yes"))]
     _ptree = STRtree([g_ for g_, _ in _paved])
@@ -350,6 +351,7 @@ def build():
                 road_lines.append((oid, line, C[_k]))
             road_shapes.append((poly, C[_k]))
             crossing_roads.append((oid, t, line, w))
+            road_ways.append((line, w / 2, poly, oid))
         elif hw == "cycleway":  # one red the whole way, whatever its stretches are tagged (asphalt, paving stones): drawn last
             cycle_shapes.append((poly, C["cycle"]))
         elif hw == "steps":
@@ -1002,6 +1004,7 @@ def build():
         rails=rails,
         render=render,
         rgbsum=rgbsum,
+        road_ways=road_ways,
         splash_pads=splash_pads,
         top=top,
         topi=topi,
