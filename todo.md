@@ -61,7 +61,8 @@ The lamps come from the Ayuntamiento's inventory and the viewer draws them (`scr
 ## Road tunnels
 
 The road tunnels are carved and driven (`scripts/tunnels.py`; `DECISIONS.md` and `NOTES.md`, 2026-11-20). Left:
-- **Looking inside:** the viewer lifts the camera to the ground stored in the tiles, the street over a tunnel. Walking or following a car into a tunnel needs the camera's ground to know the bores (the floor raster `tunnels.FLOOR` could be exported beside the tiles).
+- **Looking inside:** the viewer lifts the camera to the ground stored in the tiles, the street over a tunnel; only `?clip=0` (for screenshots) lets it in. Walking or following a car into a tunnel needs the camera's ground to know the bores (the floor raster `tunnels.FLOOR` could be exported beside the tiles).
+- **Night light in the bores** comes from the street lamps' light map, read by plan position; if it should come from the roof lamps alone, the shader can skip the map under the ground (`lvl < -1`).
 - **Not carved:** car-park ramps and aisles (service ways), tunnels with one portal in the map (Francisco Silvela, Paseo de la Virgen del Puerto), Calle 30, the metro and the railway.
 - **Screenshots of the other portals** (Bailén, Atocha, Plaza Mayor): the cameras tried so far did not face a portal.
 

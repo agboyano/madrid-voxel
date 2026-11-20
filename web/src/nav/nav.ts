@@ -30,6 +30,8 @@ const STEP = 1.05, HEAD = 1.9, GRAV = 16, TILT = Math.PI * 0.48, WALK_FOV = 65;
 // full detail kept around the walker (metres): asked again after this far or this long (tiles stay pinned 15 s)
 const DETAIL_R = 150, DETAIL_MOVE = 40, DETAIL_MS = 10000;
 
+const NO_CLIP = new URLSearchParams(location.search).get('clip') === '0';
+
 export class Nav {
   mode: Mode = 'orbit';
   ride: Ride | null = null;
@@ -473,10 +475,11 @@ export class Nav {
     this.zoomT = performance.now();
   }
 
-  // after OrbitControls: above the ground, the tilt limit back once you look down, and zoomed onto the street: land
+  // after OrbitControls: above the ground, the tilt limit back once you look down, and zoomed onto the street: land.
+  // ?clip=0 skips it, for screenshots under the ground the tiles store (inside a road tunnel, scripts/tunnels.py)
   clamp() {
     const w = this.world;
-    if (!w || this.mode !== 'orbit') return;
+    if (!w || this.mode !== 'orbit' || NO_CLIP) return;
     if (this.controls.maxPolarAngle > TILT && !this.turned && this.controls.getPolarAngle() <= TILT) this.controls.maxPolarAngle = TILT;
     const p = this.camera.position, g = w.groundAt(p.x, p.z) + 1.2;
     if (p.y < g) { p.y = g; this.camera.lookAt(this.controls.target); }
