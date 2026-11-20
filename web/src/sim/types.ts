@@ -15,7 +15,8 @@ export interface RoadData extends PathData {
 }
 export interface Road extends RoadData, Path { i: number; lists: Car[][] }
 
-export interface PedData extends PathData { a: number; b: number; w: number; x?: SignalRef; side?: number; bk?: number }
+// k: people per km at the busiest weekday hour, h: the half width they spread over, in cells (scripts/ped_density.py)
+export interface PedData extends PathData { a: number; b: number; w: number; x?: SignalRef; side?: number; bk?: number; k?: number; h?: number }
 export interface PedEdge extends PedData, Path { i: number }
 
 export interface TramStop extends SignalRef { s: number }
@@ -95,6 +96,7 @@ export interface Person {
   s: number;
   v: number;
   lat: number;
+  lf?: number; // where across its way a walker keeps, 0 to 1 of the way's half width (PedData.h)
   ph: number;
   wait: boolean;
   col: THREE.Color;

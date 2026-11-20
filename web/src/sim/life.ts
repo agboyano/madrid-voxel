@@ -20,6 +20,8 @@ const STEP = 1 / 30;
 const TRAM = { sec: 10.5, gap: 0.6, n: 3, v: 11, a: 1.0, b: 1.6, headway: 300 };
 const TRAM_LEN = TRAM.n * (TRAM.sec + TRAM.gap);
 const ACTIVE_R = 900;
+// people per km at density 1 on a footpath traffic.json gives no k for (data built before ped_density.py): Warsaw's figure
+const PED_K_OLD = 24;
 const CAR_COLOURS = ['#f0f0ee', '#e9e9e7', '#1c1c1e', '#2a2c30', '#8e9399', '#b9bcc0', '#5d6670', '#9b2a24', '#24467a', '#3d5a3a', '#c9b48e', '#6e1f2a'];
 const SHIRTS = ['#c8553d', '#3d6fa8', '#e8e3d6', '#2f2f33', '#7a9a5b', '#d9a441', '#8b5fa8', '#5a8fa3', '#b03a48', '#f0f0f0', '#45505c', '#c97f5d'];
 const SOFT = ['spatial', 'box-busy', 'no-room-exit', 'hold-at-line', 'keep-crossing-clear', 'next-edge-car', 'tram-crossing', 'tram'];
@@ -57,6 +59,9 @@ export class StreetLife {
   day = 180;
   // scales the agents the hour asks for (cars, people, riders; not trains or signals): ?pop= (main.ts)
   population = 1;
+  // the radius people are simulated in around the focus (main.ts, ?pedr=): at the counters' densities the 900 m of the
+  // cars would ask for 5 000-15 000 of them, and beyond a few hundred metres a person is under two pixels
+  pedR = 300;
   // Madrid's counters, hour by hour (main.ts loads life.json); until then, and without it, the generic curves below
   profiles: LifeProfiles | null = null;
   // set to an object (main.ts ?perf=sim) to have each update's logic and drawing time written into it: the steps and
@@ -78,14 +83,15 @@ export class StreetLife {
   private readonly diamonds: { holder: Tram | null }[];
   private active: { x: number; z: number } | null = null;
   private roadOn: boolean[] = [];
-  private pedOn: boolean[] = [];
+  private pedOn: boolean[] = []; // footpaths within pedR (people)
+  private bikeOn: boolean[] = []; // footpaths within ACTIVE_R (riders)
   private roadW: number[] = [];
   private pedW: number[] = [];
   private bikeW: number[] = [];
   private bikeKm = 0;
   private sources: number[] = [];
   private laneKm = 0;
-  private pedKm = 0;
+  private pedLoad = 0; // people at density 1: sum of k * L in km over the footpaths within pedR
   private readonly tramGrid = new Map<number, [number, number, Tram][]>();
   private readonly carGrid = new Map<number, Car[]>();
   private trammed = false; // a tram in tramGrid this tick
@@ -163,15 +169,18 @@ export class StreetLife {
   private setActive(x: number, z: number) {
     const R = ACTIVE_R, near = (e: { p: number[][] }) => [e.p[0], e.p[e.p.length >> 1], e.p[e.p.length - 1]].some((q) => (q[0] - x) ** 2 + (q[1] - z) ** 2 < R * R);
     this.roadOn = this.roads.map(near);
-    this.pedOn = this.peds.map(near);
+    const nearPed = (e: { p: number[][] }) => [e.p[0], e.p[e.p.length >> 1], e.p[e.p.length - 1]].some((q) => (q[0] - x) ** 2 + (q[1] - z) ** 2 < this.pedR * this.pedR);
+    this.pedOn = this.peds.map(nearPed);
+    this.bikeOn = this.peds.map(near);
     this.roadW = this.roads.map((e, i) => (this.roadOn[i] ? e.L * e.lanes * e.c : 0));
     this.laneKm = this.roads.reduce((a, e, i) => a + (this.roadOn[i] ? e.L * e.lanes : 0), 0) / 1000;
     this.sources = this.roads.filter((e, i) => this.roadOn[i] && e.L > 15 && !(this.ins.get(e.a) ?? []).some((j) => this.roadOn[j])).map((e) => e.i);
-    this.pedW = this.peds.map((e, i) => (this.pedOn[i] ? e.L * e.w : 0));
-    this.pedKm = this.peds.reduce((a, e, i) => a + (this.pedOn[i] ? e.L : 0), 0) / 1000;
-    this.bikeW = this.peds.map((e, i) => (this.pedOn[i] && e.bk ? e.L * e.bk : 0));
+    // people where the counters put them (scripts/ped_density.py): spawned by k * L, as many as sum(k * L) at density 1
+    this.pedW = this.peds.map((e, i) => (this.pedOn[i] ? e.L * (e.k ?? PED_K_OLD * e.w) : 0));
+    this.pedLoad = this.peds.reduce((a, e, i) => a + (this.pedOn[i] ? e.L * (e.k ?? PED_K_OLD) : 0), 0) / 1000;
+    this.bikeW = this.peds.map((e, i) => (this.bikeOn[i] && e.bk ? e.L * e.bk : 0));
     this.bikeKm = this.bikeW.reduce((a, w) => a + w, 0) / 1000;
-    this.riders = this.riders.filter((p) => this.pedOn[p.e]);
+    this.riders = this.riders.filter((p) => this.bikeOn[p.e]);
     const out = new Set(this.cars.filter((c) => !this.roadOn[c.e] && c !== this.keep));
     for (const c of out) this.removeCar(c);
     if (out.size) this.cars.splice(0, this.cars.length, ...this.cars.filter((c) => !out.has(c)));
@@ -201,7 +210,7 @@ export class StreetLife {
   private spawnPed() {
     const ei = pickWeighted(this.pedW), e = this.peds[ei];
     this.people.push({ kind: 'person', e: ei, dir: Math.random() < 0.5 ? 1 : -1, s: Math.random() * e.L, v: 1.05 + Math.random() * 0.55,
-      lat: 0.35 + Math.random() * 1.0, ph: Math.random() * 6.28, wait: false, col: new THREE.Color(anyOf(SHIRTS)) });
+      lat: 0.35 + Math.random() * 1.0, lf: Math.random(), ph: Math.random() * 6.28, wait: false, col: new THREE.Color(anyOf(SHIRTS)) });
   }
 
   private spawnRider() {
@@ -408,7 +417,7 @@ export class StreetLife {
     this.t += dt;
     if (((this.t / 0.5) | 0) !== (((this.t - dt) / 0.5) | 0)) this.breakDeadlocks();
     const targetCars = Math.min(MAX_CARS, Math.round(this.laneKm * 9 * density.cars));
-    const targetPeds = Math.min(MAX_PEOPLE, Math.round(this.pedKm * 24 * density.peds));
+    const targetPeds = Math.min(MAX_PEOPLE, Math.round(this.pedLoad * density.peds));
     for (let k = 0; k < 6 && this.cars.length < targetCars; k++) this.spawnCar(this.cars.length > targetCars * 0.5);
     for (let k = 0; k < 40 && this.people.length < targetPeds; k++) this.spawnPed();
     // at July's evening peak 5 riders a km per unit of weight: 30 a km on Świętokrzyski bridge (~800 an hour at
@@ -622,7 +631,8 @@ export class StreetLife {
       if (pe.s >= 0 && pe.s <= e.L) continue;
       const opts = (this.padj.get(pe.s < 0 ? e.a : e.b) ?? []).filter(([j]) => j !== pe.e && this.pedOn[j]);
       if (!opts.length) { pe.dir *= -1; pe.s = Math.min(Math.max(pe.s, 0), e.L); continue; }
-      const [j, end] = opts[pickWeighted(opts.map(([k]) => this.peds[k].w))];
+      // the busier way more often, so the crowds stay on the busy streets
+      const [j, end] = opts[pickWeighted(opts.map(([k]) => this.peds[k].k ?? this.peds[k].w))];
       const n = this.peds[j];
       pe.e = j;
       pe.dir = end === 0 ? 1 : -1;
@@ -643,7 +653,7 @@ export class StreetLife {
       pe.s += pe.v * dt * pe.dir;
       pe.ph += pe.v * dt * 1.6;
       if (pe.s >= 0 && pe.s <= e.L) return true;
-      const opts = (this.padj.get(pe.s < 0 ? e.a : e.b) ?? []).filter(([j]) => j !== pe.e && this.pedOn[j] && this.peds[j].bk);
+      const opts = (this.padj.get(pe.s < 0 ? e.a : e.b) ?? []).filter(([j]) => j !== pe.e && this.bikeOn[j] && this.peds[j].bk);
       if (!opts.length) return false;
       const [j, end] = opts[pickWeighted(opts.map(([k]) => this.peds[k].bk! * Math.max(this.peds[k].L, 5)))];
       const n = this.peds[j];
@@ -741,7 +751,9 @@ export class StreetLife {
         at(e, p.s + ds * p.dir, 0, A);
         at(e, p.s + (ds + 0.5) * p.dir, 0, B);
         const l = Math.hypot(B.x - A.x, B.y - A.y) || 1, dx = (B.x - A.x) / l, dy = (B.y - A.y) / l;
-        const lat = e.side === undefined ? p.lat : p.lat * e.side * p.dir;
+        // across the way's half width (a pedestrian street's 4 m, a sidewalk's 1.5 m), keeping to the right
+        const across = e.h !== undefined && p.lf !== undefined ? 0.35 + p.lf * Math.max(0.25, e.h - 0.35) : p.lat;
+        const lat = e.side === undefined ? across : across * e.side * p.dir;
         const x = A.x - dy * lat, y = A.y + dx * lat, h = Math.atan2(dx, dy);
         if (!p.rp || Math.hypot(p.rp.x - x, p.rp.z - y) > 6) { p.rp = new THREE.Vector3(x, A.z, y); p.rh = h; }
         p.rp.lerp(pos.set(x, A.z, y), k);
