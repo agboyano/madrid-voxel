@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { N8AOPostPass } from 'n8ao';
-import { BloomEffect, BrightnessContrastEffect, Effect, EffectAttribute, EffectComposer, EffectPass, HueSaturationEffect, RenderPass,
+import { BloomEffect, Effect, EffectAttribute, EffectComposer, EffectPass, HueSaturationEffect, RenderPass,
   SMAAEffect, ToneMappingEffect, ToneMappingMode, VignetteEffect } from 'postprocessing';
 import { clamp } from './util';
 
@@ -38,6 +38,25 @@ class DepthBlur extends Effect {
   }
 }
 
+// A touch of contrast about mid-grey, on the colour as shown (sRGB), not on linear light as postprocessing's
+// BrightnessContrastEffect does it: there, after the tone mapping's toe, anything darker than ~6 % linear (the shade
+// under a tree, water in a bridge's shadow) went below 0, and the sRGB encode then took pow() of a negative, which is
+// undefined: Chrome makes something of it, Firefox on Apple's GPUs a NaN, drawn as a black pixel.
+// Adapted from portland-voxel (matt0x6F), commit 97e1815, MIT.
+const CONTRAST = `uniform float contrast;
+vec3 toShown(vec3 c) { return mix(1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, c * 12.92, vec3(lessThanEqual(c, vec3(0.0031308)))); }
+vec3 toLinear(vec3 c) { return mix(pow((c + 0.055) / 1.055, vec3(2.4)), c / 12.92, vec3(lessThanEqual(c, vec3(0.04045)))); }
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 s = toShown(max(inputColor.rgb, 0.0));
+  outputColor = vec4(toLinear(max((s - 0.5) / (1.0 - contrast) + 0.5, 0.0)), inputColor.a);
+}`;
+
+class Contrast extends Effect {
+  constructor(contrast: number) {
+    super('Contrast', CONTRAST, { uniforms: new Map([['contrast', new THREE.Uniform(contrast)]]) });
+  }
+}
+
 // Evaluation switches for N8AO (docs/n8ao-evaluation.md), all off by default: force it on or off whatever the level,
 // a quality mode of n8ao's setQualityMode, full resolution, no depth-aware upsampling, no fade with distance, and
 // n8ao's own detection of transparent materials (see below)
@@ -71,7 +90,7 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, came
   composer.addPass(new EffectPass(camera,
     tone,
     new HueSaturationEffect({ saturation: 0.12 }),
-    new BrightnessContrastEffect({ brightness: 0, contrast: 0.06 }),
+    new Contrast(0.06),
     new VignetteEffect({ offset: 0.3, darkness: 0.45 }),
     new SMAAEffect()));
   // light: for slow GPUs, no ambient occlusion and no depth blur, the two passes that read depth all over the screen
