@@ -10,7 +10,8 @@ is idle and saves a screenshot.
 
 View parameters map one-to-one to the viewer's URL query (web/src/main.ts):
 view, cam (px,py,pz,tx,ty,tz in voxel coordinates), hour, date (M-D),
-weather, ui and tilt. --query appends any other raw query string.
+weather, ui and tilt. --query appends any other raw query string. The live
+weather is off (live=0) unless --weather live.
 
 --level fixes the viewer's "Render size" (0 to 1) through its ?level= query,
 which also stops the viewer adapting it. The viewer otherwise lowers it on slow
@@ -64,6 +65,10 @@ def start_server(url: str) -> subprocess.Popen:
 
 def build_query(args: argparse.Namespace) -> str:
     params = {k: getattr(args, k) for k in VIEW_PARAMS if getattr(args, k) is not None}
+    # the viewer switches to the weather now (Open-Meteo) on today's date: off, so that a capture does not depend on
+    # the day it is taken, unless the live weather is what is asked for
+    if args.weather != "live" and "live=" not in args.query:
+        params["live"] = "0"
     query = urllib.parse.urlencode(params, safe=",")
     return "&".join(q for q in (query, args.query) if q)
 

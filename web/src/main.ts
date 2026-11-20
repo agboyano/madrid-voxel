@@ -27,6 +27,7 @@ import { $, clamp, coarsePointer, dataUrl, ease, el, fetchJson, lerp, setDataAss
 import { floodlight } from './sky';
 import { Card } from './card';
 import { type Climate, Precip, typical, type Weather, WEATHERS } from './weather';
+import { fetchLiveWeather, type LiveWeather } from './live';
 import type { World } from './world';
 import { loadLampMap, makeUniforms, makeVoxelMaterial } from './voxelMaterial';
 import './style.css';
@@ -87,10 +88,11 @@ let simShown = 0;
 const setLight = () => { post.setLight(level < LIGHT_POST); daylight.aoOff = level < LIGHT_POST && qs.get('n8') !== 'on'; };
 setLight();
 const nav = new Nav(camera, controls, renderer.domElement, scene, (v) => flyTo(v), onMode);
-const bar = new Bar({ days: DAYS, weathers: ['typical', ...Object.keys(WEATHERS)], onDay: (d) => { setDay(d); share(); trackLater('date', { day: d }); },
+const bar = new Bar({ days: DAYS, weathers: ['live', 'typical', ...Object.keys(WEATHERS)], onDay: (d) => { setDay(d); share(); trackLater('date', { day: d }); },
   onDayEnd: () => { if (weatherName === 'typical') setWeather('typical'); },
   onHour: (h) => { setHour(h); share(); trackLater('hour', { hour: +h.toFixed(1) }); },
-  onWeather: (w) => { setWeather(w); share(); track('weather', { weather: w }); } });
+  onWeather: (w) => { weatherPicked = true; setWeather(w); share(); track('weather', { weather: w }); } });
+bar.offer('live', false); // until Open-Meteo answers (refreshLive)
 const precip = new Precip(scene);
 const card = new Card();
 const map = new THREE.Box3();
@@ -117,7 +119,7 @@ nav.input.onPad = (on) => { hud?.setPad(on); track('gamepad', { on }); };
 const touch = coarsePointer() ? new TouchControls(nav) : null;
 new ResizeObserver(() => { barRect = null; }).observe(bar.el);
 el('div', '', `<div>by <a href="https://github.com/agboyano/madrid-voxel" target="_blank" rel="noopener">Agboyano</a>, based on <a href="https://github.com/stared/warsaw-vibe-voxel" target="_blank" rel="noopener">warsaw-vibe-voxel</a> by Piotr Migdał</div>
-  <div>PNOA-LiDAR and PNOA © IGN/CNIG, Catastro, Ayuntamiento de Madrid and <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></div>`).id = 'credits';
+  <div>PNOA-LiDAR and PNOA © IGN/CNIG, Catastro, Ayuntamiento de Madrid, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> and <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></div>`).id = 'credits';
 if (qs.get('ui') === '0') document.body.classList.add('noui');
 addEventListener('resize', onResize);
 addEventListener('keydown', (e) => {
@@ -193,13 +195,41 @@ function offerWeathers(d: number) {
   const snow = climate?.snowy[d - 1] ?? true;
   bar.offer('snow', snow);
   if (!snow && weatherName === 'snow') setWeather('typical');
+  // the weather now, on today only: on any other day, or once it is lost, back to the typical weather
+  bar.offer('live', !!live && d === TODAY);
+  if (weatherName === 'live' && (!live || d !== TODAY)) setWeather('typical');
+}
+
+// Live weather (live.ts): asked for once the city is in and every LIVE_EVERY while the tab is visible. Until the first
+// answer, and whenever there is none, the viewer keeps the weather it shows and the menu has no "live". The first
+// answer switches to it only on today's date and if no weather was picked (in the menu or the link, ?weather=live
+// aside); a failed refresh keeps the last answer until it is LIVE_STALE old. ?live=0 never asks.
+const LIVE_EVERY = 15 * 60e3, LIVE_STALE = 60 * 60e3;
+let live: LiveWeather | null = null, weatherPicked = false, liveAsked = 0, liveTimer = 0;
+async function refreshLive(lonlat: [number, number]) {
+  clearTimeout(liveTimer);
+  if (document.hidden) return;
+  liveAsked = Date.now();
+  const got = await fetchLiveWeather(lonlat[0], lonlat[1]);
+  const first = !live && !!got;
+  if (got) live = got;
+  else if (live && Date.now() - live.at > LIVE_STALE) live = null;
+  offerWeathers(daylight.day);
+  if (live && (weatherName === 'live' || (first && !weatherPicked && daylight.day === TODAY))) setWeather('live');
+  liveTimer = setTimeout(() => refreshLive(lonlat), LIVE_EVERY);
+}
+function startLive(lonlat: [number, number] | undefined) {
+  if (!lonlat || qs.get('live') === '0') return;
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - liveAsked > LIVE_EVERY) refreshLive(lonlat); });
+  refreshLive(lonlat);
 }
 
 let weatherName = 'typical';
 let fade: { from: Weather; to: Weather; t0: number } | null = null;
 function setWeather(name: string, now = false) {
+  if (name === 'live' && !live) name = 'typical';
   weatherName = name;
-  const t = name === 'typical' && climate ? typical(climate, daylight.day) : null;
+  const t = name === 'live' ? live : name === 'typical' && climate ? typical(climate, daylight.day) : null;
   const to = t?.w ?? WEATHERS[name] ?? WEATHERS.clear;
   bar.setWeather(name, t?.said ?? '');
   fade = now ? null : { from: { ...daylight.weather }, to, t0: performance.now() };
@@ -337,6 +367,7 @@ async function boot() {
   const md = qs.get('date')?.split('-').map(Number);
   setDay(md ? dayOfYear(new Date(SOLAR_YEAR, md[0] - 1, md[1])) : TODAY);
   setWeather((qs.get('weather') ?? '') in WEATHERS ? qs.get('weather')! : 'typical', true);
+  weatherPicked = !!qs.get('weather') && qs.get('weather') !== 'live';
   setHour(qs.get('hour') ? +qs.get('hour')! : timesOf(daylight.day)['golden hour']);
   city = await installCity({ streamer, uniforms, meta, scene, focus, camera, caption, budget });
   labels = new Labels(meta.labels, onLabel);
@@ -344,6 +375,7 @@ async function boot() {
   hud = new Hud(renderer.domElement, nav.mode);
   if (nav.input.pad) hud.setPad(true);
   bar.search.setItems(searchItems(meta));
+  startLive(meta.lonlat);
   fetchJson<{ places: Place[] }>(dataUrl('places.json')).then(({ places }) => bar.search.setItems([...searchItems(meta),
     ...places.map(([name, kind, x, y, size, alt]) => ({ name, alt, kind, go: () => goPlace(x, y, size, { name, kind }) }))]));
   fountains = new Fountains(scene, meta.jets ?? []);
