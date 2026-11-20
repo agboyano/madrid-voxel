@@ -660,3 +660,20 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **A flag over the pediment:** at 1 m its pole is a grey chimney.
   - **The pediment's relief modelled:** at 1 m a figure is one voxel; the frieze is suggested, not drawn.
   - **The 1980 and 2006 extensions:** they are separate buildings on their own footprints and keep their LiDAR shape.
+
+## 2026-11-20: Changes adopted from portland-voxel
+
+- **Decision:** adopt three of portland-voxel's own commits:
+  - the escaping of map-data text in labels and search (e3283aa);
+  - the contrast applied to the shown colour (97e1815);
+  - a live weather (after 7c2c4e5), called from the browser to Open-Meteo instead of through a Worker.
+- **Not adopted, after measuring** (`scripts/deck_road_report.py`, `NOTES.md`, "Road steps and crossing decks"):
+  - **bridge decks drawn per way** (07c6500): no two bridge ways cross in the area;
+  - **the levelling of the ground under roads** (69c55f9): its steps are few and mostly on car-park ramps, which it would fill in. Only its `steps()` measurement is kept, in `scripts/road_level.py`.
+- **Why:** the first two are bugs Madrid shared with Portland (script in OSM names; black pixels in Firefox). The live weather was asked for by the user, and must fall back silently to the current behaviour when the service fails.
+- **Rejected:**
+  - **Portland's citywide chunks and its 1–32 m quadtree LOD:** for 374 km²; Madrid's area is 12.5 km², and the 2/4 m levels were already rejected on 2026-11-11.
+  - **Its render scale and 1080p tile cap:** the viewer has its own adaptive level and no screen-space LOD.
+  - **The Cloudflare Worker:** the site is static on GitHub Pages.
+  - **Street names painted on the roads:** not chosen this time.
+

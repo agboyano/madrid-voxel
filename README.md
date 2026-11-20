@@ -17,7 +17,7 @@ It is a port of [warsaw-vibe-voxel](https://github.com/stared/warsaw-vibe-voxel)
 
 ## In the viewer
 
-- **The city at any date, hour and weather:** sun and shadows at the true solar position, lit windows and street lamps at night, rain and snow. The default weather, `typical`, is drawn from how often each kind of weather happens in Madrid on that day.
+- **The city at any date, hour and weather:** sun and shadows at the true solar position, lit windows and street lamps at night, rain and snow. The default weather, `typical`, is drawn from how often each kind of weather happens in Madrid on that day. On today's date the viewer switches to `live`, the weather in Madrid now, when Open-Meteo answers; when it does not, the map stays on `typical`.
 - **Trees through the year:** each tree leafs out, colours and drops its leaves on its genus's dates. In winter deciduous trees show their trunks and bare limbs.
 - **Landmarks:** labels in Spanish and English, and cards with the year built, architect, height, style and heritage designation.
 - **Search** (`/`): places, landmarks and viewpoints, plus *Follow a car* and *Follow someone*.
@@ -124,7 +124,7 @@ Data the map is built from:
 - **Tree inventory**: "Arbolado en parques y zonas verdes de Madrid (detalle)", Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **Street-lighting inventory**: "Unidades luminosas (farolas)" and "Unidades luminosas (farolas) en parques históricos y singulares" (2022), Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **[Wikidata](https://www.wikidata.org/)**: landmark names and facts, [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
-- **[Open-Meteo](https://open-meteo.com/)**: the ERA5 historical weather archive, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), for how likely each kind of weather is on each day.
+- **[Open-Meteo](https://open-meteo.com/)**: the ERA5 historical weather archive, for how likely each kind of weather is on each day, and the forecast API's current conditions for the live weather (asked by the visitor's browser), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **[iNaturalist](https://www.inaturalist.org/)**: leaf annotations of observations in regions with Madrid's climate (Spain, Portugal, Italy, Greece, southern France, Cyprus, Turkey, Israel, Lebanon, the Maghreb, California), aggregated by week, for when each genus leafs out and colours.
 - **[Copernicus Sentinel-2](https://sentinel.esa.int/web/sentinel/missions/sentinel-2)** L2A, 2022–2024, through the [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/): contains modified Copernicus Sentinel data, for the colour of irrigated lawns and dry meadows through the year.
 - **Traffic and footfall counts**: "Tráfico. Histórico de datos del tráfico desde 2013" (October 2026, the measurement points in the map) and "Aforos de peatones y bicicletas" (2023), Ayuntamiento de Madrid, [datos.madrid.es](https://datos.madrid.es/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), for how busy the streets are at each hour.
@@ -142,4 +142,5 @@ Software:
 - **This project:** the Madrid port's own code is under the MIT licence, in [LICENSE](LICENSE). It covers the code only; the generated data keeps the licences of its sources (below).
 - **Original project:** [warsaw-vibe-voxel](https://github.com/stared/warsaw-vibe-voxel) by Piotr Migdał. The viewer, the tile format and most of the fusion rules come from it. MIT licence, kept in [LICENSE-warsaw-vibe-voxel](LICENSE-warsaw-vibe-voxel).
 - **Los Angeles port:** [dtla-voxel](https://github.com/sigman78/dtla-voxel) by sigman78. The point-cloud rasterisation, the area helpers, the downloads by area (OSM in tiles), the crossings, the structure of the 2D layers, the distant skyline, the shadow biases, the sun at true north, the content-hashed data files and the per-pass GPU timing are adapted from it ([docs/improvements.md](docs/improvements.md#decisions-against-dtla-voxel)). MIT licence, kept in [LICENSE-dtla-voxel](LICENSE-dtla-voxel).
+- **Portland port:** [portland-voxel](https://github.com/matt0x6F/portland-voxel) by matt0x6F. The escaping of map-data text, the contrast on the shown colour, the live weather and the road-step measurement (`scripts/road_level.py`) are adapted from it. MIT licence.
 - **Generated data** in `web/public/data` derives from the sources above: OpenStreetMap (ODbL), IGN/CNIG (CC BY 4.0), the Ayuntamiento de Madrid (CC BY 4.0), Catastro and Wikidata (CC0).

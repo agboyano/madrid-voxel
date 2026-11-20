@@ -1756,3 +1756,23 @@ Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish
   - `trees-before-prado-*`: before.
   - `trees-after-prado-{aerial,street}-{jan,jun,nov}` and `trees-after-retiro-jan`: after.
   - `trees-trunkmin-{0.1,0.25,0.4}-jan`: the narrowest trunk, compared.
+
+## Live weather (2026-11-20)
+
+- `web/src/live.ts` asks Open-Meteo's forecast API (`api.open-meteo.com/v1/forecast`, `current=temperature_2m,weather_code,cloud_cover,snow_depth`) for the map's centre (`meta.lonlat`), from the browser: the site is static on GitHub Pages, with no server of its own. Nothing about the visitor is sent. The answer has CORS headers and needs no key.
+- Mapping (one table, `CODES` in `live.ts`): WMO codes 71-77, 85-86 snow; 51-67, 80-82, 95-99 rain; 3, 45, 48 cloudy, and any clear or partly cloudy sky with 70 % cloud cover or more; anything else clear. Snow lying over 1 cm (`snow_depth`) turns `cover` on. The menu shows the WMO words and the temperature ("light rain, 12°C").
+- Behaviour (`main.ts`, `refreshLive`):
+  - boot is unchanged: the typical (or linked) weather is set first and never waits for the network;
+  - the request goes out once the city is in, then every 15 min while the tab is visible; the menu's `live` button is hidden until an answer arrives;
+  - the first answer switches to `live` only on today's date and when no weather was picked (in the menu, or in the link other than `?weather=live`);
+  - any failure (offline, timeout after 5 s, HTTP error, a body of another shape) leaves everything as it was, silently (`console.debug`); a failed refresh keeps the last answer until it is an hour old, then the map returns to `typical`;
+  - moving the date off today while on `live` returns to `typical`; `?live=0` never asks.
+- `scripts/screenshot.py` adds `live=0` unless `--weather live`, so captures do not depend on the day they are taken. Other `web/tools/` scripts that pass no `weather=` and today's date can switch to `live`.
+- Check: `node web/tools/livetest.mjs` runs the viewer with Open-Meteo answering, aborted, returning HTTP 500, returning garbage or another shape, answering after 10 s, with a weather picked, on another day, with `?live=0`, and as it really is. Every case passed (2026-11-20).
+
+## Road steps and crossing decks (2026-11-20)
+
+`scripts/deck_road_report.py` (layers only, about 10 min for the full area) measures the two problems portland-voxel fixed with per-way bridge decks and `road_level.level()`:
+- **Crossing decks:** of the 57 bridge ways in the area, none crosses another without a shared node, so one deck height per cell loses nothing.
+- **Road steps:** 108 ground steps of 2 m or more along 4 084 ground carriageways; 219 carriageways have a DTM jump of 1.5 m or more between neighbouring samples. The worst (9, 9 and 4 steps) are `service` driveways and parking aisles, most likely the ramps down into underground car parks, and no named street has more than 2.
+
