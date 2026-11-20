@@ -1795,3 +1795,35 @@ Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish
 - **Looking inside:** the viewer keeps the camera over the ground stored in the tiles, which over a tunnel is the street, so a camera placed inside a bore is lifted to the street (`nav.ts`, `clamp`). `?clip=0` turns that off for screenshots: `scripts/screenshot.py <name> --cam ... --query clip=0`. Inside shots: `docs/img/tunnel-after-de-inside.png` (Doctor Esquerdo's underpass by day, cars heading for its north portal), `tunnel-after-de-inside-night.png` and `tunnel-after-odonnell-inside.png`.
 - **At night the bores are lit warm all over:** the street lamps' baked light map (`lampmap.bin`) is read by plan position, whatever the height, so it reaches the tunnels under the lit streets. It reads as tunnel lighting; the roof lamps glow on top of it.
 
+## Pedestrian density (2026-11-20)
+
+`scripts/ped_density.py` gives every footpath a density from the Ayuntamiento's pedestrian counters (`DECISIONS.md`, 2026-11-20).
+
+**Counter columns** (`life_profiles.COUNTER_COLUMNS`, the one place they are mapped): `fecha` → date, `hora` → hour (the start of the hour counted), `identificador` → station, `peatones` (or `bicicletas`) → count, `direccion` → address, `observaciones_direccion` → side (`Acera Pares`, `Acera Impares`, `Calle peatonal`), `latitude`, `longitude` (dots as thousands separators). The addresses are UTF-8 read once as Latin-1 and saved again (`Gran VÃ\xada`); `ped_density._unmangle` undoes it.
+
+**The 19 counters in the map**, people per km at the weekday's busiest hour (2023, without July, August and December, at 1.33 m/s):
+
+| Counter | k | Counter | k |
+| --- | --- | --- | --- |
+| Gran Vía 33 (odd side) | 1 350 | Toledo 23 | 231 |
+| Gran Vía 34 (even side) | 1 259 | Princesa 1 | 203 |
+| Fuencarral 22 (pedestrian) | 659 | Hortaleza 18 | 177 |
+| Arenal (pedestrian) | 448 | Goya | 170 |
+| Plaza del Emperador Carlos V | 332 | Atocha 95 | 147 |
+| Bailén 10 | 323 | San Bernardo 36 | 133 |
+| Alberto Aguilera 56 | 258 | Génova 12 | 129 |
+| Mayor 13 | 252 | Huertas 29 (pedestrian) | 125 |
+| Alcalá 34 | 235 | Paseo de Recoletos 2 | 119 |
+| | | Ronda de Valencia 16 | 85 |
+
+**Footpaths by rule** (330 km in all): counter 20.1 km, core 3.7, pedestrian streets 62.7, main-road sidewalks 29.5, side-street sidewalks (assumed) 77.8, other paths (assumed) 136.8. Every counter matched a footpath of its street.
+
+**Simulated against the counters** (19:00, a weekday, the camera on the street, 4 000 people):
+- Gran Vía: the counters ask for 7 298 people within 300 m, so each street gets 55 % of its density: 433 per km expected, 481 counted.
+- Arenal: 4 503 asked, 89 %: 388 expected, 410 counted.
+- Sol: 346 per km against 494 at full density (4 000 of 5 827).
+
+**Cost** (`web/tools/simcost.mjs`, Sol, 19:00, level 1, this machine): 4 000 people, frames 7.6 % longer than with no street life (main thread 10.3 against 3.4 ms; logic 3.0 ms, drawing 3.6 ms); 3 129 people (population 0.5, phones), 6.8 %. On Gran Vía the view itself is slow (141 ms a frame) and the street life adds nothing measurable (−1.1 %).
+
+**Screenshots:** `docs/img/peds-before-*.png` and `peds-after-*.png`: Sol and Arenal at 18:00 and Gran Vía at 19:00 on a weekday, the Retiro at noon on a Sunday.
+

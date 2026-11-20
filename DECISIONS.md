@@ -690,3 +690,18 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **Drawing only the portals** (a dark opening in the wall): the cars would still vanish there, and the camera could not enter.
   - **Floors from OSM's layer alone** (a fixed depth per layer): the ramps' real bottoms in the LiDAR set the portals, and the layer only orders tunnels that cross.
 
+## 2026-11-20: Pedestrian density from the Ayuntamiento's counters
+
+- **Decision:** every footpath carries a density `k`, people per km at the weekday's busiest hour (`scripts/ped_density.py`, written into `traffic.json` by `traffic.py`), and the viewer puts that many people on it, times the hourly profile and the population (`web/src/sim/life.ts`).
+  - **Source:** the permanent counters of "Aforos de peatones y bicicletas" (datos.madrid.es 300321, CC BY 4.0), 2023, weekdays without July, August and December: each counter's mean hourly count at its busiest hour, divided by the viewer's mean walking speed (1.33 m/s). A flow of q people an hour walked at v is a density q / v.
+  - **Assignment, in order:** the counter of the edge's own street within 800 m (a sidewalk takes the street of the road within 15 m); the commercial core without a counter (Preciados, Carmen, Montera, Puerta del Sol) Fuencarral's, a judgment from the Ayuntamiento's December 2024 note on the busiest streets, not a measurement; pedestrian and living streets the median of the pedestrian-street counters (448 per km); main-road sidewalks the median of the sidewalk counters without Gran Vía (190). Assumed without data: side-street sidewalks half that (95), any other path 40.
+  - **Where:** people are simulated within 300 m of the camera (`?pedr=`), cars and riders within 900 m as before; beyond 300 m a person is a few pixels. The cap stays at 4 000; where the counters ask for more, every street is scaled alike.
+  - **Population:** desktops 1 (0.7 before), phones 0.5.
+  - **Width:** each footpath has a half width `h` (OSM `width`, else 4 m pedestrian streets, 3 m living streets, 1.5 m sidewalks, 1 m paths) and people walk spread across it.
+- **Why:** the viewer had Warsaw's 24 people per km at the busiest hour, 0.7 of it on desktops: one person every 50 m in Sol, 5 to 80 times fewer than the counters measure.
+- **Rejected:**
+  - **Virtual sidewalks** for the streets OSM maps without one: not this time (`todo.md`).
+  - **Commercial or phone data** (Telefónica Smart Steps, Vodafone Analytics, TC Group's shop-front sensors, MITMA and INE): not open, not at street level, or not comparable with the municipal counts.
+  - **The 100-point campaigns** (300197): no coordinates and no hours.
+  - **Keeping the 900 m circle and scaling down:** the counters' densities would come out at a third or less near the camera.
+

@@ -46,6 +46,15 @@ The lamps come from the Ayuntamiento's inventory and the viewer draws them (`scr
 - **Heights are assumptions:** the inventory has none (`STYLE_HEIGHT`, `WALL_HEIGHT` in `lamps.py`). Replace them if the Ayuntamiento's luminaire catalogue gives heights by model.
 - **Lamps on bridge decks get no light on the ground:** the map has one level (40 on the Viaducto de Segovia).
 
+## Pedestrians
+
+The footpaths carry the counters' densities (`scripts/ped_density.py`; `DECISIONS.md` and `NOTES.md`, 2026-11-20). Left:
+- **Streets with no sidewalk in OSM stay empty:** 54 % of the streets within 900 m of Sol have no sidewalk or footway mapped beside them. Virtual sidewalks on both sides (in `traffic.py`, kept off the buildings) would put people there.
+- **Counts after June 2024:** the published series ends then; later data has to be asked of the Dirección General de Planificación e Infraestructuras de Movilidad.
+- **The 100-point campaigns** (datos.madrid.es 300197, May and October) would add streets, but have no coordinates and no hours: they need geocoding and scaling by the nearest permanent counter's profile.
+- **Sidewalks wider than their default:** OSM gives most sidewalks no `width`, so they take 1.5 m either side; Gran Vía's are about 8 m and its crowd walks in a file along the kerb (`docs/img/peds-after-granvia.png`). A width per street (from the carriageway's edge to the facades) would spread them.
+- **The busiest views hit the cap:** within 300 m of Gran Vía the counters ask for 7 300 people; the 4 000 are spread at 55 % of each street's density.
+
 ## Pipeline and viewer
 
 - **Construction sites** were not reviewed one by one at full scale (OSM `landuse=construction`, buildings finished after the 2024 flight).
