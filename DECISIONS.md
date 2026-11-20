@@ -677,3 +677,16 @@ Log of non-trivial decisions: date, decision, reason and rejected alternatives.
   - **The Cloudflare Worker:** the site is static on GitHub Pages.
   - **Street names painted on the roads:** not chosen this time.
 
+## 2026-11-20: Road tunnels carved under the streets
+
+- **Decision:** carve the road tunnels into the volume and drive them (`scripts/tunnels.py`, called from `layers.build` and `voxelize.py`), so that a ramp such as Doctor Esquerdo's at O'Donnell leads into a bore instead of ending against a wall of ground.
+  - **Which:** ways tagged `tunnel=yes` of the classes primary to living_street, layer −1 or −2, grouped by shared nodes, with at least two portals in the map. A portal is a node shared with a surface road whose bottom, read along that road 1-5 m out, stands 3 m or more under the street. 15 groups, 5.4 km in the map (`NOTES.md`, "Road tunnels").
+  - **Floor:** each portal at its ramp's bottom; between them a harmonic interpolation over the tunnel's own graph (Bailén's seven portals give one continuous floor). Then 1 m of roof and at least 4 m of headroom under the street (5 m where it allows), no limit within 10 m of a portal (the trench reaches the lintel), and 5 m of headroom plus the roof under any higher tunnel it crosses: O'Donnell's (−2) runs 6 m under Doctor Esquerdo's underpass (−1). Never steeper than 8 % away from those limits.
+  - **Drawn:** an asphalt floor with a dashed centre line, concrete walls and roof where soil would show, and a roof lamp every 6 m in a new material (`M_TUNNEL_LAMP`, 23) that the viewer lights day and night. Where a portal had to sit under its ramp's bottom (the DTM loses the ramp under the lintel, by 1-3 m at five portals), the ramp is cut down to it at 10 %.
+  - **Traffic:** the carved ways join the road graph at their floor (`tunnels.FLOOR`), and `fit()` does not apply its deck rule to them, which would lift their cars onto the street over the roof.
+- **Why:** the user asked for the tunnels, starting with Doctor Esquerdo under O'Donnell. The tile format already holds voids under the ground (the walkers' underpasses), so nothing changes in it.
+- **Not carved:** service ways (car-park ramps and aisles), the metro and the railway, Calle 30 and other tunnels deeper than layer −2, and tunnels with fewer than two portals in the map (their section would show at the map's edge: Francisco Silvela, Paseo de la Virgen del Puerto).
+- **Rejected:**
+  - **Drawing only the portals** (a dark opening in the wall): the cars would still vanish there, and the camera could not enter.
+  - **Floors from OSM's layer alone** (a fixed depth per layer): the ramps' real bottoms in the LiDAR set the portals, and the layer only orders tunnels that cross.
+

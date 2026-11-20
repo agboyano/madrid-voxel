@@ -156,6 +156,7 @@ Grid coordinates are used everywhere downstream: OSM geometries (`osm.py:16-19`)
 | `monuments.py` | Monuments as boxes at lon/lat, facing and heights (`:191-420`); `build` (`:451`) | the volume | mutates `vol`; `MON_TOP` (label heights) | landmarks.details |
 | `roofgardens.py` | Gardens on roofs, read from the ortho; `WHOLE` = Kopernik's roof paths | osm, ortho, `phenology.json["leaf"]` | mutates `vol`; `PATHS` for traffic | voxelize, landmarks |
 | `underpass.py` | Carves level −1 pedestrian passages and stairwells; `WALK` and `IDS` for traffic | `osm.json` (raw, again) | mutates `vol` | voxelize, traffic |
+| `tunnels.py` | Plans the road tunnels (`plan`, from `layers.build`) and carves them, their roof lamps and their ramps' ends (`carve`); `FLOOR` and `IDS` for traffic | `osm.json` (raw), `g` | mutates `vol` and `g` | layers, voxelize, traffic |
 | `debris.py` | `drop_debris` (small floating clumps, `:9`) and `support_floating` (trunks and posts under hanging pieces) | `vol`, `g` | mutates `vol`; `data/debug/floating*.json`, `supports.json` | voxelize, patch |
 | `labels.py` | All map labels: curated + Wikidata-notable (ranked by pl+en pageviews) + parks over 2.5 ha; `far` tiers, radii (`:754-784`). Run standalone, it rewrites `meta.labels` from `data/cache/final_top.npy` and `final_g.npy` (`:785-801`) | landmarks, `notable.json`, osm | `labels` list in `meta.json` | voxelize |
 | `trees.py` | Merges the city DB, OSM `natural=tree` and the 2010-13 API inventory; `is_conifer`; `attach_crowns` | `data/raw/trees/{bos_trees,bos_crowns,um_drzewa}.json`, osm nodes | list of dicts (grid x, y, species…) | voxelize |
@@ -729,6 +730,7 @@ allows it):
 - `fetch_trees.py`: the AOI margin.
 - `lamps.py`: snap, wall and road distances, heights and the avenue width in metres, converted with `VOXEL_SIZE`; `lamps.bin` stores positions in cells and heights in decimetres;
 - `lampmap.py`: `TEXEL` (2 m), heights and arm offsets in metres, converted with `VOXEL_SIZE`;
+- `tunnels.py`: headroom, roof, lane width, ramp distances, lamp spacing and the centre line's dashes in metres, converted with `VOXEL_SIZE`; slopes are ratios. `road_level.py` and `deck_road_report.py` likewise;
 - `lamps.ts`: every dimension in metres times `1 / meta.voxel`; the near radius and its 50 m step too. The shader samples the light map by `vVox.xz / uSize`, in cells, so the map covers the grid whatever the voxel.
 
 Assumptions in Madrid code that still tie to 1 m:
@@ -1775,4 +1777,20 @@ Zooming down onto the Retiro on a slow computer, 128 m squares flashed a pinkish
 `scripts/deck_road_report.py` (layers only, about 10 min for the full area) measures the two problems portland-voxel fixed with per-way bridge decks and `road_level.level()`:
 - **Crossing decks:** of the 57 bridge ways in the area, none crosses another without a shared node, so one deck height per cell loses nothing.
 - **Road steps:** 108 ground steps of 2 m or more along 4 084 ground carriageways; 219 carriageways have a DTM jump of 1.5 m or more between neighbouring samples. The worst (9, 9 and 4 steps) are `service` driveways and parking aisles, most likely the ramps down into underground car parks, and no named street has more than 2.
+
+## Road tunnels (2026-11-20)
+
+`scripts/tunnels.py` plans the road tunnels in `layers.build` and carves them in `voxelize.py`, before the walkers' underpasses (`DECISIONS.md`, 2026-11-20). Measured on the full area:
+- 15 groups, 49 ways, 5.4 km in the map:
+  - Bailén, Ferraz, Cuesta de San Vicente and Plaza de España: 2.2 km, 7 portals;
+  - O'Donnell: 1.26 km, layer −2;
+  - Plaza Mayor: 0.47 km in the map, layer −2;
+  - Atocha (2 × 300 m), Ronda de Segovia, Princesa–Santa Cruz de Marcenado, Mariano de Cavia, Doctor Esquerdo (2 × 83 m), Alfonso XII, Alcalá, and three short unnamed ones.
+- Left out: tunnels with fewer than two portals in the map (Francisco Silvela, Paseo de la Virgen del Puerto, Calle del Comercio, Trafalgar, Alcalde Sáinz de Baranda, Pío Baroja), service ways, Calle 30 and deeper layers.
+- Carved: 45 137 cells and 888 roof lamps. 1 906 ramp cells were cut down at 10 % to meet a portal whose floor sits 1-3 m under the ramp's bottom in the DTM (12 portals). `carriageway_sanity` stays at 0 after the tunnels.
+- The crossing at Doctor Esquerdo and O'Donnell: the underpass's floor at 94-95, its roof at 99 under the street (101); O'Donnell's floor at 88-89 under it.
+- Traffic: each carved way is driven on its own profile (`tunnels.PROFILE`); a cell's floor raster (`tunnels.FLOOR`) keeps the lowest of the tunnels crossing it, which first sent Doctor Esquerdo's cars down to O'Donnell's floor at the crossing. Doctor Esquerdo's paths now run at 94-95, O'Donnell's at 88-96.
+- Build: `voxelize.py` 578 s and 14.5 GB peak, as before the tunnels (579 s, 14.5 GB).
+- Screenshots: `docs/img/tunnel-before-de-street.png` and `tunnel-after-de-street.png`, the south ramp of Doctor Esquerdo: the wall at its end is now the portal.
+- **The camera cannot look inside:** the viewer keeps it over the ground stored in the tiles, which over a tunnel is the street, so a camera placed inside a bore is lifted to the street. The cars drive through, hidden under the roof.
 

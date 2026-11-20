@@ -58,6 +58,13 @@ The lamps come from the Ayuntamiento's inventory and the viewer draws them (`scr
 - **Touch and gamepad controls on real devices.** They were tested in headless Chromium with an emulated phone and a fake gamepad (`NOTES.md`, "Viewer: touch and gamepad controls"). The stick now works on a real phone in portrait and landscape. Still to check: the other mobile browser (iOS Safari or Android Chrome, whichever was not tested), and whether the pad shows over plain HTTP on the local network (a real Xbox controller works).
 - **Published site:** once published, check it after each data change. The workflow deploys `web/dist` on every push to `main`.
 
+## Road tunnels
+
+The road tunnels are carved and driven (`scripts/tunnels.py`; `DECISIONS.md` and `NOTES.md`, 2026-11-20). Left:
+- **Looking inside:** the viewer lifts the camera to the ground stored in the tiles, the street over a tunnel. Walking or following a car into a tunnel needs the camera's ground to know the bores (the floor raster `tunnels.FLOOR` could be exported beside the tiles).
+- **Not carved:** car-park ramps and aisles (service ways), tunnels with one portal in the map (Francisco Silvela, Paseo de la Virgen del Puerto), Calle 30, the metro and the railway.
+- **Screenshots of the other portals** (Bailén, Atocha, Plaza Mayor): the cameras tried so far did not face a portal.
+
 ## Future (PLAN.md Phase 7)
 
 - **Municipal 2026 flight** (30 pts/m², 7 cm imagery), once on the Geoportal: a `fetch_` script, an entry in `SOURCES` in `prep_lidar.py` with its class table, and `resolution` 0.5 or 0.25 in `pipeline.toml`.
