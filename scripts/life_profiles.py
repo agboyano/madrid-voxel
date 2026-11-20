@@ -118,27 +118,47 @@ def _coord(s, whole):
     return -v if neg else v
 
 
+# The counters' CSV columns (Spanish) by their English names: the one place they are mapped (NOTES.md)
+COUNTER_COLUMNS = {"date": 0, "hour": 1, "station": 2, "count": 3, "address": 7, "side": 8, "lat": 9, "lon": 10}
+# fecha, hora, identificador, peatones (or bicicletas), direccion, observaciones_direccion, latitude, longitude
+
+
+def counter_rows(name, year=COUNTERS_YEAR):
+    """The hourly counts of one kind (peds, bikes) inside the AOI in one year: (station, day, hour, count) for each
+    row, and the stations as {station: (column i, row j, address, side)} once the rows are read (a dict filled as
+    they go: read it after the loop)."""
+    col = COUNTER_COLUMNS
+    stations, inside = {}, {}
+
+    def rows():
+        with open(fetch(COUNTERS_PKG, COUNTERS[name]), encoding="utf-8-sig") as fh:
+            it = csv.reader(fh, delimiter=";")
+            next(it)
+            for row in it:
+                sid = row[col["station"]]
+                if sid not in inside:
+                    i, j = to_grid(*_LONLAT_TO_UTM.transform(_coord(row[col["lon"]], 1), _coord(row[col["lat"]], 2)))
+                    inside[sid] = 0 <= i < W and 0 <= j < D
+                    if inside[sid]:
+                        stations[sid] = (float(i), float(j), row[col["address"]].strip(), row[col["side"]].strip())
+                if not inside[sid] or not row[col["count"]].strip():
+                    continue
+                dd, mm, yy = (int(v) for v in row[col["date"]].split(" ")[0].split("/"))
+                if yy != year:
+                    continue
+                yield sid, date(yy, mm, dd), int(row[col["hour"]].split(":")[0]), float(row[col["count"]])
+    return rows(), stations
+
+
 def counter_profiles(name):
     """The hourly counters of one kind inside the AOI: the median shape per day type, and the month factors."""
     hours = defaultdict(lambda: np.zeros((2, 24)))  # (station, day) -> sums, counts per hour
-    inside = {}
-    with open(fetch(COUNTERS_PKG, COUNTERS[name]), encoding="utf-8-sig") as fh:
-        rows = csv.reader(fh, delimiter=";")
-        next(rows)
-        for row in rows:
-            sid = row[2]
-            if sid not in inside:
-                i, j = to_grid(*_LONLAT_TO_UTM.transform(_coord(row[10], 1), _coord(row[9], 2)))
-                inside[sid] = 0 <= i < W and 0 <= j < D
-            if not inside[sid] or not row[3].strip():
-                continue
-            dd, mm, yy = (int(v) for v in row[0].split(" ")[0].split("/"))
-            day, hh = date(yy, mm, dd), int(row[1].split(":")[0])
-            if yy != COUNTERS_YEAR:
-                continue
-            a = hours[sid, day]
-            a[0, hh] += float(row[3])
-            a[1, hh] += 1
+    rows, stations = counter_rows(name)
+    for sid, day, hh, n in rows:
+        a = hours[sid, day]
+        a[0, hh] += n
+        a[1, hh] += 1
+    inside = stations
     per = defaultdict(lambda: {"weekday": [], "weekend": [], "months": defaultdict(list)})
     for (sid, day), a in hours.items():
         if (a[1] >= 1).all():
@@ -161,7 +181,7 @@ def counter_profiles(name):
     out = {k: [round(float(x / top), 3) for x in m] for k, m in med.items()}
     mon = np.nanmedian(months, axis=0)
     out["month"] = [round(float(x / np.nanmax(mon)), 3) for x in mon]
-    return out, len(shapes["weekday"]), sum(inside.values())
+    return out, len(shapes["weekday"]), len(inside)
 
 
 def main():
