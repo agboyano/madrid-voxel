@@ -13,6 +13,7 @@ build() returns the layers by name; voxelize.py fills the 3D volume from them:
            water, bridge_area
   trees    vegetation(): veg, crown_top, crown_bot, leaf_at, leafidx, trunks, trunk_info, trunk_ok_db, taken, young,
            needles, all_trees
+  tunnels  the road tunnels to carve and their ramps (tunnels.plan)
   scalars  BASE (metres a.s.l. of voxel 0), H (volume height), MAX_TREE, SACRED; osm, z (the raw inputs)
 """
 
@@ -1013,6 +1014,9 @@ def build():
     )
     L.update(vegetation(L))
     L.update(decks(L))
+    # the road tunnels to carve, on the final ground (tunnels.py; voxelize.py digs them)
+    import tunnels
+    L["tunnels"] = tunnels.plan(g, note=note)
     return L
 
 

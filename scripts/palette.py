@@ -10,6 +10,7 @@ import webcolors
 
 # ---------------------------------------------------------------- materials / palette
 M_SOLID, M_WALL, M_GLASS, M_LEAF, M_WATER, M_LAMP, M_METAL, M_FLOODLIT, M_GRASS, M_MARK, M_SOIL, M_CAR, M_ROOF, M_CONCRETE, M_CLOCK, M_BRONZE, M_SIGN = range(17)
+M_TUNNEL_LAMP = 23  # a road tunnel's roof lamp (tunnels.py), lit day and night (web/src/voxelMaterial.ts MAT.TUNNEL_LAMP)
 
 
 class Palette:
