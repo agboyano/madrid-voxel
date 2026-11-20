@@ -553,7 +553,7 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
                 p = [[x, y, z] for (x, y, _), z in zip(p, zs)]
                 on_roof[pnode(seg[0])], on_roof[pnode(seg[-1])] = zs[0], zs[-1]
         e = dict(a=pnode(seg[0]), b=pnode(seg[-1]), p=p, L=round(L, 1),
-                 w=WEIGHT.get(t["highway"], 1.0) * (1.5 if t.get("footway") == "sidewalk" else 1.0))
+                 w=WEIGHT.get(t["highway"], 1.0) * (1.5 if t.get("footway") == "sidewalk" else 1.0), _t=t)
         bk = bike_weight(t)
         if bk:
             e["bk"] = bk
@@ -820,6 +820,9 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
     for c in ctrls:
         c["x"], c["y"] = round(c["x"], 1), round(c["y"], 1)
         del c["n"]
+    # how many people walk each footpath, from the Ayuntamiento's counters (ped_density.py): k and h on every edge
+    import ped_density
+    ped_density.assign(peds, rl, note)
     nsig = sum(1 for e in roads if "sig" in e)
     ncross = sum(1 for e in peds if "x" in e)
     note(f"traffic: {len(roads)} directed road edges ({round(sum(e['L'] * e['lanes'] for e in roads) / 1000, 1)} lane-km), "
