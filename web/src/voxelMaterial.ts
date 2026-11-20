@@ -5,7 +5,8 @@ import { dataTexture, dataUrl, fetchGzip } from './util';
 
 // material ids, as in scripts/voxelize.py
 export const MAT = { SOLID: 0, WALL: 1, GLASS: 2, LEAF: 3, WATER: 4, LAMP: 5, METAL: 6, FLOODLIT: 7, GRASS: 8, MARK: 9, SOIL: 10, CAR: 11,
-  ROOF: 12, CONCRETE: 13, CLOCK: 14, BRONZE: 15, SIGN: 16, JET: 17, SIGNBAND: 18, RIBBON: 19, CLASSIC: 20, WINDOW: 21, TENEMENT: 22 } as const;
+  ROOF: 12, CONCRETE: 13, CLOCK: 14, BRONZE: 15, SIGN: 16, JET: 17, SIGNBAND: 18, RIBBON: 19, CLASSIC: 20, WINDOW: 21, TENEMENT: 22,
+  TUNNEL_LAMP: 23 } as const;
 
 type U<T> = { value: T };
 export interface VoxelUniforms {
@@ -273,6 +274,9 @@ const SURFACE = `
     float tower = smoothstep(20.0, 28.0, lvl), wash = 1.0 - 0.3 * smoothstep(28.0, 190.0, lvl);
     vec3 light = mix(vec3(1.0, 0.78, 0.5) * 0.6 * (1.0 - 0.6 * smoothstep(4.0, 18.0, lvl)), uFloodlight * wash * 2.4, tower);
     gEmissive = vert ? col * light * uNight : vec3(0.0);
+  } else if (m == ${MAT.TUNNEL_LAMP}) {
+    // a road tunnel's roof lamp (scripts/tunnels.py): lit day and night, as tunnel lighting is
+    gEmissive = base * 2.0; gRough = 0.3;
   } else if (m == ${MAT.WINDOW}) {
     gRough = 0.15; gMetal = 0.35;
     col *= 0.6;
