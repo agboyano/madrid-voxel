@@ -36,6 +36,9 @@ def _num(v, default=None):
 
 
 OPEN_CUT = set()  # layer -1 ways that are open cuts, not tunnels (voxelize.py)
+TUNNELS = set()  # road tunnels carved into the volume (tunnels.py): driven at their floor
+TUNNEL_FLOOR = None  # (D, W) the carved floor's level under and round them, -1 elsewhere (tunnels.FLOOR)
+TUNNEL_PROFILE = {}  # way id -> (samples, floor): a way's own floor, where tunnels cross (tunnels.PROFILE)
 
 
 def underground(t):
@@ -287,8 +290,13 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
         x, y = nodes[nid]
         return m <= x < W - m and m <= y < D - m
 
-    def z_at(x, y, bridge):
+    def z_at(x, y, bridge, tunnel=None):
         c, r = min(max(int(x), 0), W - 1), min(max(int(y), 0), D - 1)
+        if tunnel in TUNNEL_PROFILE:  # in a carved tunnel: on its own floor (not one crossing under it)
+            P, zf = TUNNEL_PROFILE[tunnel]
+            return int(zf[np.argmin(np.hypot(P[:, 0] - x, P[:, 1] - y))])
+        if tunnel is not None and TUNNEL_FLOOR is not None and TUNNEL_FLOOR[r, c] >= 0:
+            return int(TUNNEL_FLOOR[r, c])
         # on a deck: tagged bridge ways, and anything over water that has a deck above it (untagged bridge sidewalks)
         if (bridge or (water is not None and water[r, c])) and nd_mean[r, c] >= 1.5:  # decks stand >= 2 m
             return int(g[r, c] + round(nd_mean[r, c]))
@@ -323,14 +331,14 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
                 res.append((w, run))
         return res
 
-    def pts_of(seq, bridge):
+    def pts_of(seq, bridge, tunnel=None):
         """points of a node chain; long segments get a point every 3 m with its own height, so a vehicle follows a
         bridge deck (or a ramp) instead of the straight line between two far-apart OSM nodes"""
         out = []
         for a, b in zip(seq, seq[1:] + [None]):
             xa, ya = nodes[a]
             br = bridge or a in bridge_nodes
-            out.append([round(xa, 1), round(ya, 1), z_at(xa, ya, br)])
+            out.append([round(xa, 1), round(ya, 1), z_at(xa, ya, br, tunnel)])
             if b is None:
                 continue
             xb, yb = nodes[b]
@@ -339,7 +347,7 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
             for k in range(1, int(L // 3)):
                 f = k * 3 / L
                 x, y = xa + (xb - xa) * f, ya + (yb - ya) * f
-                out.append([round(x, 1), round(y, 1), z_at(x, y, on)])
+                out.append([round(x, 1), round(y, 1), z_at(x, y, on, tunnel)])
         # a lone point standing off both neighbours (a bridge end node reading a lamp base, a gap cell) is noise:
         # a vehicle would hop over it or dip into the deck
         for i in range(1, len(out) - 1):
@@ -352,7 +360,8 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
         return float(sum(math.dist(a[:2], b[:2]) for a, b in zip(p, p[1:])))
 
     # ---------------- roads
-    rways = [w for w in ways if w["tags"]["highway"] in DRIVE and (not underground(w["tags"]) or w["id"] in OPEN_CUT)
+    rways = [w for w in ways if w["tags"]["highway"] in DRIVE and (not underground(w["tags"]) or w["id"] in OPEN_CUT
+                                                                   or w["id"] in TUNNELS)
              and w["tags"].get("access") not in ("no", "private") and w["tags"].get("area") != "yes"]
     sig_nodes = {n for n, t in ntags.items() if t.get("highway") == "traffic_signals" and n in nodes}
     # controllers: cluster signal nodes
@@ -397,7 +406,7 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
         if not ow and not rev:
             dirs.append((seg[::-1], int(lb), "backward"))
         for s, nl, dname in dirs:
-            p = pts_of(s, bridge)
+            p = pts_of(s, bridge, w["id"] if w["id"] in TUNNELS else None)
             L = length(p)
             if L < 1:
                 continue
@@ -764,7 +773,9 @@ def build(g, nd_mean, note, surf=None, water=None, vol=None, solid=None, roofs=N
         deg = Counter([e["a"] for e in roads] + [e["b"] for e in roads])
         for e in roads:
             lo, hi = e["o0"] - 0.8, e["o0"] + (e["lanes"] - 1) * 3.0 + 0.8
-            e["p"], lift, _ = fit(e["p"], np.linspace(lo, hi, max(2, int(hi - lo) + 1)), vol, solid, W, D, decks=True)
+            # (not in a carved tunnel: the deck rule would lift its cars onto the street over the roof)
+            e["p"], lift, _ = fit(e["p"], np.linspace(lo, hi, max(2, int(hi - lo) + 1)), vol, solid, W, D,
+                                  decks=e["w"] not in TUNNELS)
             n_lift += lift
             if deg[e["a"]] == 1 or deg[e["b"]] == 1:  # a dead end at a tunnel's portal (the link into the roundabout
                 # under Poniatowski's viaduct): its last node on the deck over the portal, the car climbed the wall
@@ -822,5 +833,7 @@ if __name__ == "__main__":  # traffic.json alone, from the last full build's vol
     tin = pickle.load(open("data/cache/traffic_in.pkl", "rb"))
     import underpass
     OPEN_CUT, underpass.WALK, underpass.IDS = tin.pop("open_cut"), tin.pop("walk"), tin.pop("ids")
+    TUNNELS, TUNNEL_FLOOR = tin.pop("tunnels", set()), tin.pop("tunnel_floor", None)
+    TUNNEL_PROFILE = tin.pop("tunnel_profile", {})
     json.dump(build(note=print, vol=np.load("data/cache/final_vol.npy", mmap_mode="r"), **tin),
               open("web/public/data/traffic.json", "w"), separators=(",", ":"))

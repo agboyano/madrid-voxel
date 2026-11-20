@@ -516,6 +516,9 @@ for f in feats:
         bkind[f["rr"], f["cc"]] = 2
 from shapely.geometry import Polygon as _Poly
 landmarks.PIERS = [_Poly(l.coords) for oid, t, l in osm.lines if t.get("bridge:support") and l.is_closed and len(l.coords) >= 4]
+import tunnels
+tunnels.carve(vol, g, L["tunnels"], C, pal, note)  # before the walkers' underpasses, which keep clear of them
+carriageway_sanity(lambda r, c: vol[g[r, c] - 1, r, c], "after the road tunnels")
 import underpass
 underpass.build(vol, g, pal, C, osm, note)
 carriageway_sanity(lambda r, c: vol[g[r, c] - 1, r, c], "after the underpasses")
@@ -614,10 +617,12 @@ deck_near[_rb, _cb] = _top - g[_rb, _cb]
 _solid = ~_skip
 _solid[0] = False
 traffic.OPEN_CUT = OPEN_CUT
+traffic.TUNNELS, traffic.TUNNEL_FLOOR, traffic.TUNNEL_PROFILE = tunnels.IDS, tunnels.FLOOR, tunnels.PROFILE
 _tin = dict(g=g, nd_mean=deck_near, surf=qa, water=(gcol == C["water"]) & (_dd <= 2), solid=_solid,
             roofs=unary_union([b for b, *_ in GARDEN_ROOFS.values()]), paths=roofgardens.PATHS)
 if os.environ.get("LMCACHE"):  # what traffic.py takes, to rebuild traffic.json alone (uv run python scripts/traffic.py)
-    pickle.dump(dict(_tin, open_cut=OPEN_CUT, walk=underpass.WALK, ids=underpass.IDS), open("data/cache/traffic_in.pkl", "wb"))
+    pickle.dump(dict(_tin, open_cut=OPEN_CUT, walk=underpass.WALK, ids=underpass.IDS, tunnels=tunnels.IDS,
+                     tunnel_floor=tunnels.FLOOR, tunnel_profile=tunnels.PROFILE), open("data/cache/traffic_in.pkl", "wb"))
 json.dump(traffic.build(note=note, vol=vol, **_tin), open(OUT / "traffic.json", "w"), separators=(",", ":"))
 json.dump(report, open(DBG / "report.json", "w"), indent=1, ensure_ascii=False)
 
